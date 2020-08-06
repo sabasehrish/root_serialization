@@ -11,7 +11,7 @@
 
 #include "Source.h"
 #include "SerializerWrapper.h"
-#include "Outputer.h"
+#include "OutputerBase.h"
 #include "EventAuxReader.h"
 #include "FunctorTask.h"
 
@@ -32,13 +32,13 @@ public:
     }
   }
 
-  void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const Outputer& outputer) {
+  void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer) {
     doNextEvent(index, group,  outputer);
   }
 
 private:
 
-  void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const Outputer& outputer) { 
+  void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer) { 
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
@@ -52,7 +52,7 @@ private:
     }
   }
 
-  void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const Outputer& outputer) {
+  void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer) {
     using namespace std::string_literals;
     auto i = ++index;
     i-=1;

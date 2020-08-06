@@ -6,12 +6,13 @@
 #include <string>
 #include <iostream>
 
+#include "OutputerBase.h"
 #include "EventIdentifier.h"
 #include "SerializerWrapper.h"
 
-class Outputer {
+class Outputer :public OutputerBase {
 public:
-  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const {
+  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const final{
     using namespace std::string_literals;
 
     std::unique_lock lock{mutex_};

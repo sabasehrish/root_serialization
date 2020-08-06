@@ -4,11 +4,12 @@
 #include <vector>
 #include "EventIdentifier.h"
 #include "SerializerWrapper.h"
+#include "TaskHolder.h"
 
 class OutputerBase {
  public:
   virtual ~OutputerBase() = default;
 
-  virtual void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const = 0;
+  virtual void outputAsync(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const = 0;
 };
 #endif

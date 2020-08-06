@@ -11,8 +11,14 @@
 #include "SerializerWrapper.h"
 
 class Outputer :public OutputerBase {
-public:
-  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const final{
+ public:
+  void outputAsync(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
+    output(iEventID, iSerializers);
+    iCallback.doneWaiting();
+  }
+  
+ private:
+  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const {
     using namespace std::string_literals;
 
     std::unique_lock lock{mutex_};

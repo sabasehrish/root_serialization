@@ -42,9 +42,8 @@ private:
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
-			  outputer.output(eventAuxReader_->doWork(),
-					  serializers_);
-			  const_cast<TaskHolder&>(callback).doneWaiting();
+			  outputer.outputAsync(eventAuxReader_->doWork(),
+					       serializers_, std::move(callback));
 			}));
     
     for(auto& s: serializers_) {

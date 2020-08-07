@@ -13,6 +13,8 @@
 #include "tbb/global_control.h"
 #include "tbb/task_scheduler_init.h"
 
+#include "SerialTaskQueue.h"
+#include "SerialTaskQueue.cc"
 
 int main(int argc, char* argv[]) {
 

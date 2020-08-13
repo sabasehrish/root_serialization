@@ -12,15 +12,17 @@
 #include "Source.h"
 #include "SerializerWrapper.h"
 #include "OutputerBase.h"
+#include "Waiter.h"
 #include "EventAuxReader.h"
 #include "FunctorTask.h"
 
 class Lane {
 public:
-  Lane(std::string const& iFileName): source_(iFileName) {
+ Lane(std::string const& iFileName, double iScaleFactor): source_(iFileName) {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     serializers_.reserve(source_.branches().size());
+    waiters_.reserve(source_.branches().size());
     for( int ib = 0; ib< source_.branches().size(); ++ib) {
       auto b = source_.branches()[ib];
       auto address = reinterpret_cast<void**>(b->GetAddress());
@@ -29,6 +31,7 @@ public:
       }
       
       serializers_.emplace_back(b->GetName(), address,source_.classForEachBranch()[ib]);
+      waiters_.emplace_back(ib, iScaleFactor);
     }
   }
 
@@ -46,8 +49,15 @@ private:
 					       serializers_, std::move(callback));
 			}));
     
+    size_t index=0;
     for(auto& s: serializers_) {
-      s.doWorkAsync(group, holder);
+      auto* waiter = &waiters_[index];
+      TaskHolder waitH(group,
+		       make_functor_task([holder,waiter,this]() {
+			   waiter->waitAsync(serializers_,std::move(holder));
+			 }));
+      s.doWorkAsync(group, waitH);
+      ++index;
     }
   }
 
@@ -68,6 +78,7 @@ private:
 
   Source source_;
   std::vector<SerializerWrapper> serializers_;
+  std::vector<Waiter> waiters_;
   std::optional<EventAuxReader> eventAuxReader_;
 };
 

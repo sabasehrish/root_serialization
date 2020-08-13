@@ -18,8 +18,9 @@
 
 int main(int argc, char* argv[]) {
 
-  if(not (argc > 1 and argc < 5) ) {
-    std::cout <<"1 to 3 arguments required\n";
+  if(not (argc > 1 and argc < 6) ) {
+    std::cout <<"1 to 4 arguments required\n"
+                "cms_read_threaded [# threads] [# conconcurrent events] [time scale factor]\n";
     return 1;
   }
 
@@ -40,13 +41,18 @@ int main(int argc, char* argv[]) {
 
   std::vector<Lane> lanes;
   unsigned int nLanes = 4;
-  if(argc == 4) {
+  if(argc > 3) {
     nLanes = atoi(argv[3]);
+  }
+
+  double scale = 0.;
+  if(argc == 5) {
+    scale = atof(argv[4]);
   }
 
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(argv[1]);
+    lanes.emplace_back(argv[1],scale);
   }
   Outputer out;
   std::atomic<long> ievt{0};

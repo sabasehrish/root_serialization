@@ -105,6 +105,6 @@ int main(int argc, char* argv[]) {
   
   std::cout <<"Serialization times"<<std::endl;
   for(auto const& p: serializerTimes) {
-    std::cout <<p.first<<" time: "<<p.second.count()<<"us\n";
+    std::cout <<"time: "<<p.second.count()<<"us \tname: "<<p.first<<"\n";
   }
 }

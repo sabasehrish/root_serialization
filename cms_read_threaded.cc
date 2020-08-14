@@ -19,9 +19,9 @@
 
 int main(int argc, char* argv[]) {
 
-  if(not (argc > 1 and argc < 6) ) {
-    std::cout <<"1 to 4 arguments required\n"
-                "cms_read_threaded [# threads] [# conconcurrent events] [time scale factor]\n";
+  if(not (argc > 1 and argc < 7) ) {
+    std::cout <<"1 to 5 arguments required\n"
+                "cms_read_threaded <filename> [# threads] [# conconcurrent events] [time scale factor] [max # events]\n";
     return 1;
   }
 
@@ -47,13 +47,19 @@ int main(int argc, char* argv[]) {
   }
 
   double scale = 0.;
-  if(argc == 5) {
+  if(argc > 4) {
     scale = atof(argv[4]);
   }
 
+  unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
+  if(argc == 6) {
+    nEvents = atoi(argv[5]);
+  }
+
+
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(argv[1],scale);
+    lanes.emplace_back(argv[1],scale, nEvents);
   }
   Outputer out;
   std::atomic<long> ievt{0};
@@ -67,6 +73,8 @@ int main(int argc, char* argv[]) {
     });
     
   group.wait();
+
+
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
 
   //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events

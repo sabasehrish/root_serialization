@@ -12,7 +12,7 @@
 
 class Source {
 public:
-  Source(std::string const& iName);
+  Source(std::string const& iName, unsigned long long iNEvents);
   Source(Source&&) = default;
   Source(Source const&) = default;
 
@@ -21,7 +21,7 @@ public:
   std::vector<TBranch*> const& branches() {return branches_;}
 
   bool gotoEvent(long iEventIndex) {
-    if(iEventIndex<numberOfEvents()) {
+    if(iEventIndex<numberOfEvents() and iEventIndex < maxNEvents_) {
       auto start = std::chrono::high_resolution_clock::now();
       events_->GetEntry(iEventIndex);
       accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
@@ -37,14 +37,16 @@ private:
   }
 
   std::unique_ptr<TFile> file_;
+  const unsigned long long maxNEvents_;
   TTree* events_;
   std::vector<TBranch*> branches_;
   std::vector<TClass*> classes_;
   std::chrono::microseconds accumulatedTime_;
 };
 
-inline Source::Source(std::string const& iName) :
+inline Source::Source(std::string const& iName, unsigned long long iNEvents) :
   file_{TFile::Open(iName.c_str())},
+  maxNEvents_{iNEvents},
   accumulatedTime_{std::chrono::microseconds::zero()}
 {
   events_ = file_->Get<TTree>("Events");

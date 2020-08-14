@@ -18,7 +18,7 @@
 
 class Lane {
 public:
- Lane(std::string const& iFileName, double iScaleFactor): source_(iFileName) {
+ Lane(std::string const& iFileName, double iScaleFactor, unsigned long long iNEvents): source_(iFileName, iNEvents) {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     serializers_.reserve(source_.branches().size());

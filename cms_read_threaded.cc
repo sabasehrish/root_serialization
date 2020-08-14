@@ -69,13 +69,14 @@ int main(int argc, char* argv[]) {
   group.wait();
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
 
+  //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
   std::cout <<"----------"<<std::endl;
   std::cout <<"Read file "<<argv[1]<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
 	    <<"time scale "<<scale<<"\n";
   std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
-  std::cout <<" number events: "<<ievt.load()<<std::endl;
+  std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
 
   std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();

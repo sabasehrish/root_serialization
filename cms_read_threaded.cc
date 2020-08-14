@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <iomanip>
 
 #include "Outputer.h"
 #include "Lane.h"
@@ -78,6 +79,7 @@ int main(int argc, char* argv[]) {
   std::cout <<"----------"<<std::endl;
 
   std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();
+  std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
 
   std::vector<std::pair<const char*, std::chrono::microseconds>> serializerTimes;
   serializerTimes.reserve(lanes[0].serializers().size());
@@ -88,11 +90,13 @@ int main(int argc, char* argv[]) {
       isFirst = false;
       for(auto& s: lane.serializers()) {
 	serializerTimes.emplace_back(s.name(), s.accumulatedTime());
+	serializerTime += s.accumulatedTime();
       }
     } else {
       int i =0;
       for(auto& s: lane.serializers()) {
 	serializerTimes[i++].second += s.accumulatedTime();
+	serializerTime += s.accumulatedTime();
       }
     }
   }
@@ -102,9 +106,10 @@ int main(int argc, char* argv[]) {
   std::sort(serializerTimes.begin(),serializerTimes.end(), [](auto const& iLHS, auto const& iRHS) {
       return iLHS.second > iRHS.second;
     });
-  
-  std::cout <<"Serialization times"<<std::endl;
+
+  std::cout <<"Serialization total time: "<<serializerTime.count()<<"us\n";
+  std::cout <<"Serialization times\n";
   for(auto const& p: serializerTimes) {
-    std::cout <<"time: "<<p.second.count()<<"us \tname: "<<p.first<<"\n";
+    std::cout <<"time: "<<p.second.count()<<"us "<<std::setprecision(4)<<(100.*p.second.count()/serializerTime.count())<<"%\tname: "<<p.first<<"\n";
   }
 }

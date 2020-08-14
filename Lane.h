@@ -39,6 +39,9 @@ public:
     doNextEvent(index, group,  outputer);
   }
 
+  std::vector<SerializerWrapper> const& serializers() const { return serializers_;}
+
+  std::chrono::microseconds sourceAccumulatedTime() const { return source_.accumulatedTime(); }
 private:
 
   void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer) { 

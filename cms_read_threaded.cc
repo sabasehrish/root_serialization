@@ -58,6 +58,7 @@ int main(int argc, char* argv[]) {
   std::atomic<long> ievt{0};
   tbb::task_group group;
   
+  auto start = std::chrono::high_resolution_clock::now();
   group.run([&]() {
       for(auto& lane : lanes) {
 	lane.processEventsAsync(ievt, group, out);
@@ -65,4 +66,45 @@ int main(int argc, char* argv[]) {
     });
     
   group.wait();
+  std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
+
+  std::cout <<"----------"<<std::endl;
+  std::cout <<"Read file "<<argv[1]<<"\n"
+	    <<"# threads "<<parallelism<<"\n"
+	    <<"# concurrent events "<<nLanes <<"\n"
+	    <<"time scale "<<scale<<"\n";
+  std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
+  std::cout <<" number events: "<<ievt.load()<<std::endl;
+  std::cout <<"----------"<<std::endl;
+
+  std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();
+
+  std::vector<std::pair<const char*, std::chrono::microseconds>> serializerTimes;
+  serializerTimes.reserve(lanes[0].serializers().size());
+  bool isFirst = true;
+  for(auto const& lane: lanes) {
+    sourceTime += lane.sourceAccumulatedTime();
+    if(isFirst) {
+      isFirst = false;
+      for(auto& s: lane.serializers()) {
+	serializerTimes.emplace_back(s.name(), s.accumulatedTime());
+      }
+    } else {
+      int i =0;
+      for(auto& s: lane.serializers()) {
+	serializerTimes[i++].second += s.accumulatedTime();
+      }
+    }
+  }
+
+  std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
+
+  std::sort(serializerTimes.begin(),serializerTimes.end(), [](auto const& iLHS, auto const& iRHS) {
+      return iLHS.second > iRHS.second;
+    });
+  
+  std::cout <<"Serialization times"<<std::endl;
+  for(auto const& p: serializerTimes) {
+    std::cout <<p.first<<" time: "<<p.second.count()<<"us\n";
+  }
 }

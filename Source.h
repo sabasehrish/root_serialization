@@ -3,6 +3,8 @@
 
 #include <string>
 #include <memory>
+#include <chrono>
+#include <iostream>
 #include "TClass.h"
 #include "TBranch.h"
 #include "TTree.h"
@@ -11,6 +13,8 @@
 class Source {
 public:
   Source(std::string const& iName);
+  Source(Source&&) = default;
+  Source(Source const&) = default;
 
   std::vector<TClass*> const& classForEachBranch() {return classes_;}
 
@@ -18,12 +22,15 @@ public:
 
   bool gotoEvent(long iEventIndex) {
     if(iEventIndex<numberOfEvents()) {
+      auto start = std::chrono::high_resolution_clock::now();
       events_->GetEntry(iEventIndex);
+      accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
       return true;
     }
     return false;
   }
 
+  std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 private:
   long numberOfEvents() { 
     return events_->GetEntriesFast();
@@ -33,10 +40,12 @@ private:
   TTree* events_;
   std::vector<TBranch*> branches_;
   std::vector<TClass*> classes_;
+  std::chrono::microseconds accumulatedTime_;
 };
 
 inline Source::Source(std::string const& iName) :
-  file_{TFile::Open(iName.c_str())}
+  file_{TFile::Open(iName.c_str())},
+  accumulatedTime_{std::chrono::microseconds::zero()}
 {
   events_ = file_->Get<TTree>("Events");
   auto l = events_->GetListOfBranches();

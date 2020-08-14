@@ -12,6 +12,9 @@ public:
   Serializer(Serializer&& ):
     bufferFile_{TBuffer::kWrite} {}
 
+  Serializer(Serializer const&):
+    bufferFile_{TBuffer::kWrite} {}
+
   std::vector<char> serialize(void* address, TClass* tClass) {
     bufferFile_.Reset();
     tClass->WriteBuffer(bufferFile_, address);

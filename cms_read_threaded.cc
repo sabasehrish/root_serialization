@@ -12,7 +12,7 @@
 
 #include "tbb/task_group.h"
 #include "tbb/global_control.h"
-#include "tbb/task_scheduler_init.h"
+#include "tbb/task_arena.h"
 
 #include "SerialTaskQueue.h"
 #include "SerialTaskQueue.cc"
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
   //Have to avoid having Streamers modify themselves after they have been used
   TVirtualStreamerInfo::Optimize(false);
 
-  size_t parallelism = tbb::task_scheduler_init::default_num_threads();
+  size_t parallelism = tbb::this_task_arena::max_concurrency();
   if(argc > 2) {
     parallelism = atoi(argv[2]);
   }
@@ -63,17 +63,21 @@ int main(int argc, char* argv[]) {
   }
   Outputer out;
   std::atomic<long> ievt{0};
-  tbb::task_group group;
   
-  auto start = std::chrono::high_resolution_clock::now();
-  group.run([&]() {
-      for(auto& lane : lanes) {
-	lane.processEventsAsync(ievt, group, out);
-      }
-    });
-    
-  group.wait();
+  tbb::task_arena arena(parallelism);
 
+  decltype(std::chrono::high_resolution_clock::now()) start;
+  arena.execute([&lanes, &ievt, &out, &start]() {
+    tbb::task_group group;
+    start = std::chrono::high_resolution_clock::now();
+    group.run([&]() {
+        for(auto& lane : lanes) {
+          lane.processEventsAsync(ievt, group, out);
+        }
+      });
+    
+    group.wait();
+  });
 
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
 

@@ -29,6 +29,7 @@ public:
   std::vector<char> const& blob() const {return blob_;}
 
   char const* name() const {return name_;}
+  char const* className() const { return class_->GetName(); }
   std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 private:
   std::vector<char> blob_;

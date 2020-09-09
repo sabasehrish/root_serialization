@@ -8,6 +8,7 @@
 #include <iomanip>
 
 #include "Outputer.h"
+#include "PDSOutputer.h"
 #include "Lane.h"
 
 #include "tbb/task_group.h"
@@ -61,7 +62,7 @@ int main(int argc, char* argv[]) {
   for(unsigned int i = 0; i< nLanes; ++i) {
     lanes.emplace_back(argv[1],scale, nEvents);
   }
-  Outputer out;
+  PDSOutputer out("test.pds");
   std::atomic<long> ievt{0};
   
   tbb::task_arena arena(parallelism);

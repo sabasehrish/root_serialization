@@ -10,15 +10,15 @@
 #include "TTree.h"
 #include "TFile.h"
 
+#include "DataProductRetriever.h"
+
 class Source {
 public:
   Source(std::string const& iName, unsigned long long iNEvents);
   Source(Source&&) = default;
   Source(Source const&) = default;
 
-  std::vector<TClass*> const& classForEachBranch() {return classes_;}
-
-  std::vector<TBranch*> const& branches() {return branches_;}
+  std::vector<DataProductRetriever>& dataProducts() { return dataProducts_; }
 
   bool gotoEvent(long iEventIndex) {
     if(iEventIndex<numberOfEvents() and iEventIndex < maxNEvents_) {
@@ -39,8 +39,7 @@ private:
   std::unique_ptr<TFile> file_;
   const unsigned long long maxNEvents_;
   TTree* events_;
-  std::vector<TBranch*> branches_;
-  std::vector<TClass*> classes_;
+  std::vector<DataProductRetriever> dataProducts_;
   std::chrono::microseconds accumulatedTime_;
 };
 
@@ -52,18 +51,19 @@ inline Source::Source(std::string const& iName, unsigned long long iNEvents) :
   events_ = file_->Get<TTree>("Events");
   auto l = events_->GetListOfBranches();
 
-  classes_.reserve(l->GetEntriesFast());
-  branches_.reserve(l->GetEntriesFast());
+  dataProducts_.reserve(l->GetEntriesFast());
   for( int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
-    branches_.push_back(b);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
     b->SetupAddresses();
     TClass* class_ptr=nullptr;
     EDataType type;
     b->GetExpectedType(class_ptr,type);
-    classes_.push_back( class_ptr);
+
+    dataProducts_.emplace_back(reinterpret_cast<void**>(b->GetAddress()),
+                               b->GetName(),
+                               class_ptr);
   }
 }
 #endif

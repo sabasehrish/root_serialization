@@ -12,7 +12,7 @@
 
 class SerializerWrapper {
 public:
-  SerializerWrapper(char const* iName, void** iAddress, TClass* tClass):
+ SerializerWrapper(std::string_view iName, void** iAddress, TClass* tClass):
   name_{iName}, address_(iAddress), class_(tClass), serializer_{},
   accumulatedTime_{std::chrono::microseconds::zero()} {}
 
@@ -28,12 +28,12 @@ public:
   }
   std::vector<char> const& blob() const {return blob_;}
 
-  char const* name() const {return name_;}
+  std::string_view  name() const {return name_;}
   char const* className() const { return class_->GetName(); }
   std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 private:
   std::vector<char> blob_;
-  char const* name_;
+  std::string_view name_;
   void** address_;
   TClass* class_;
   Serializer serializer_;

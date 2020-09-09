@@ -65,7 +65,7 @@ class PDSOutputer :public OutputerBase {
     size_t index = 0;
     for(auto const& s: iSerializers) {
       auto itFind = std::lower_bound(typeNames.begin(), typeNames.end(), s.className());
-      std::string name = s.name();
+      std::string name{s.name()};
       name.push_back('\0');
       dataProducts.emplace_back(itFind - typeNames.begin(), name);
       dataProductIndices_.emplace_back(name,index++);

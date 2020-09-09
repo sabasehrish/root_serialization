@@ -21,16 +21,16 @@ public:
  Lane(std::string const& iFileName, double iScaleFactor, unsigned long long iNEvents): source_(iFileName, iNEvents) {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
-    serializers_.reserve(source_.branches().size());
-    waiters_.reserve(source_.branches().size());
-    for( int ib = 0; ib< source_.branches().size(); ++ib) {
-      auto b = source_.branches()[ib];
-      auto address = reinterpret_cast<void**>(b->GetAddress());
-      if(eventAuxiliaryBranchName == b->GetName()) {
+    serializers_.reserve(source_.dataProducts().size());
+    waiters_.reserve(source_.dataProducts().size());
+    for( int ib = 0; ib< source_.dataProducts().size(); ++ib) {
+      auto const& dp = source_.dataProducts()[ib];
+      auto address = dp.address();
+      if(eventAuxiliaryBranchName == dp.name()) {
 	eventAuxReader_ = EventAuxReader(address);
       }
       
-      serializers_.emplace_back(b->GetName(), address,source_.classForEachBranch()[ib]);
+      serializers_.emplace_back(dp.name(), address,dp.classType());
       waiters_.emplace_back(ib, iScaleFactor);
     }
   }

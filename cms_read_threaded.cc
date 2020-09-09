@@ -62,7 +62,8 @@ int main(int argc, char* argv[]) {
   for(unsigned int i = 0; i< nLanes; ++i) {
     lanes.emplace_back(argv[1],scale, nEvents);
   }
-  PDSOutputer out("test.pds");
+  //PDSOutputer out("test.pds");
+  Outputer out;
   std::atomic<long> ievt{0};
   
   tbb::task_arena arena(parallelism);
@@ -95,7 +96,7 @@ int main(int argc, char* argv[]) {
   std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();
   std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
 
-  std::vector<std::pair<const char*, std::chrono::microseconds>> serializerTimes;
+  std::vector<std::pair<std::string_view, std::chrono::microseconds>> serializerTimes;
   serializerTimes.reserve(lanes[0].serializers().size());
   bool isFirst = true;
   for(auto const& lane: lanes) {

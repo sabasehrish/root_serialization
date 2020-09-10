@@ -26,6 +26,10 @@ class PDSOutputer :public OutputerBase {
   }
   
  private:
+  static inline size_t bytesToWords(size_t nBytes) {
+    return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
+  }
+
   void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
     if(firstTime_) {
       writeFileHeader(iSerializers);
@@ -80,7 +84,7 @@ class PDSOutputer :public OutputerBase {
 
     size_t bufferPosition = 0;
     std::vector<uint32_t> buffer;
-    const auto nWordsInTypeNames = (nCharactersInTypeNames + nCharactersInTypeNames %4)/4;
+    const auto nWordsInTypeNames = bytesToWords(nCharactersInTypeNames);
     buffer.resize(1+transitions.size()/4+1+nWordsInTypeNames+1+1+nCharactersInDataProducts/4);
 
     //The different record types stored
@@ -153,7 +157,7 @@ class PDSOutputer :public OutputerBase {
     for(auto const& s: iSerializers) {
       recordSize +=1+1;
       auto const blobSize = s.blob().size();
-      recordSize += blobSize/4 + ((blobSize % 4) == 0 ? 0: 1);//handle padding
+      recordSize += bytesToWords(blobSize); //handles padding
     }
     //initialize with 0
     std::vector<uint32_t> buffer(size_t(recordSize+2), 0);
@@ -164,12 +168,13 @@ class PDSOutputer :public OutputerBase {
     for(auto const& s: iSerializers) {
       buffer[bufferIndex++]=dataProductIndex++;
       auto const blobSize = s.blob().size();
-      uint32_t sizeInWords = ((blobSize % 4) == 0 ? 0: 1);
+      uint32_t sizeInWords = bytesToWords(blobSize);
       buffer[bufferIndex++]=sizeInWords;
       std::copy(s.blob().begin(), s.blob().end(), reinterpret_cast<char*>( &(*(buffer.begin()+bufferIndex)) ) );
       bufferIndex += sizeInWords;
     }
     buffer[bufferIndex++] = recordSize;
+    assert(buffer.size() == bufferIndex);
 
     file_.write(reinterpret_cast<char*>(buffer.data()), buffer.size()*4);
   }

@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include "TClass.h"
+#include "TBufferFile.h"
 
 #include "DataProductRetriever.h"
 
@@ -51,10 +52,12 @@ private:
   std::vector<std::string> readTypes(buffer_iterator&, buffer_iterator);
   std::vector<ProductInfo> readProductInfo(buffer_iterator&, buffer_iterator);
   uint32_t readword();
+  uint32_t readwordNoCheck();
   std::vector<uint32_t> readWords(uint32_t);
   bool readEvent(long iEventIndex); //returns true if an event was read
   bool skipToNextEvent(); //returns true if an event was skipped
   bool readEventContent();
+  void deserializeDataProducts(buffer_iterator, buffer_iterator);
 
   std::ifstream file_;
   const unsigned long long maxNEvents_;
@@ -68,6 +71,12 @@ inline uint32_t PDSSource::readword() {
   int32_t word;
   file_.read(reinterpret_cast<char*>(&word), 4);
   assert(file_.rdstate() == std::ios_base::goodbit);
+  return word;
+}
+
+inline uint32_t PDSSource::readwordNoCheck() {
+  int32_t word;
+  file_.read(reinterpret_cast<char*>(&word), 4);
   return word;
 }
 
@@ -168,9 +177,6 @@ inline bool PDSSource::readEvent(long iEventIndex) {
 
 inline bool PDSSource::readEventContent() {
   std::cout <<"readEventContent"<<std::endl;
-  if( file_.rdstate() & std::ios_base::eofbit) {
-    return false;
-  }
   std::array<uint32_t, kEventHeaderSizeInWords+1> headerBuffer;
   file_.read(reinterpret_cast<char*>(headerBuffer.data()), (kEventHeaderSizeInWords+1)*4);
   if( file_.rdstate() & std::ios_base::eofbit) {
@@ -187,8 +193,28 @@ inline bool PDSSource::readEventContent() {
   assert(crossCheckBufferSize == bufferSize);
 
   ++presentEventIndex_;
+
+  deserializeDataProducts(buffer.begin(), buffer.end()-1);
+
   return true;
 }
+
+void PDSSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) {
+  TBufferFile bufferFile{TBuffer::kRead};
+
+  while(it < itEnd) {
+    auto productIndex = *(it++);
+    auto storedSize = *(it++);
+    
+    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize*4, kFALSE);
+    dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, dataBuffers_[productIndex]);
+  //std::cout <<" size "<<bufferFile.Length()<<"\n";
+    bufferFile.Reset();
+    it = it+storedSize;
+  }
+  assert(it==itEnd);
+}
+
 
 inline bool PDSSource::skipToNextEvent() {
   file_.seekg(kEventHeaderSizeInWords*4, std::ios_base::cur);
@@ -197,7 +223,10 @@ inline bool PDSSource::skipToNextEvent() {
   }
   assert(file_.rdstate() == std::ios_base::goodbit);
 
-  int32_t bufferSize = readword();
+  int32_t bufferSize = readwordNoCheck();
+  if( file_.rdstate() & std::ios_base::eofbit) {
+    return false;
+  }
 
   file_.seekg(bufferSize*4,std::ios_base::cur);
   assert(file_.rdstate() == std::ios_base::goodbit);

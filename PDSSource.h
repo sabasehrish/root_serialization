@@ -192,7 +192,8 @@ void PDSSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEn
   while(it < itEnd) {
     auto productIndex = *(it++);
     auto storedSize = *(it++);
-    
+   
+    //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
     bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize*4, kFALSE);
     dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, dataBuffers_[productIndex]);
   //std::cout <<" size "<<bufferFile.Length()<<"\n";

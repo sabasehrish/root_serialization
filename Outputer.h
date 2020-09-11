@@ -27,7 +27,7 @@ class Outputer :public OutputerBase {
     std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
     /*
     for(auto& s: iSerializers) {
-      std::cout<<"   "s+s.name()+" size "+std::to_string(s.blob().size())+"\n" <<std::flush;
+      std::cout<<"   "s+std::string(s.name())+" size "+std::to_string(s.blob().size())+"\n" <<std::flush;
     }
     */
   }

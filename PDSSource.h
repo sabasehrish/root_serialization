@@ -10,28 +10,17 @@
 #include "TClass.h"
 #include "TBufferFile.h"
 
+#include "SourceBase.h"
 #include "DataProductRetriever.h"
 
-class PDSSource {
+class PDSSource : public SourceBase {
 public:
   PDSSource(std::string const& iName, unsigned long long iNEvents);
   PDSSource(PDSSource&&) = default;
   PDSSource(PDSSource const&) = default;
   ~PDSSource();
 
-  std::vector<DataProductRetriever>& dataProducts() { return dataProducts_; }
-
-  bool gotoEvent(long iEventIndex) {
-    if(iEventIndex < maxNEvents_) {
-      auto start = std::chrono::high_resolution_clock::now();
-      auto more = readEvent(iEventIndex);
-      accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
-      return more;
-    }
-    return false;
-  }
-
-  std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
+  std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
 
   struct ProductInfo{
   ProductInfo(std::string iName, uint32_t iIndex) : name_(std::move(iName)), index_{iIndex} {}
@@ -54,17 +43,15 @@ private:
   uint32_t readword();
   uint32_t readwordNoCheck();
   std::vector<uint32_t> readWords(uint32_t);
-  bool readEvent(long iEventIndex); //returns true if an event was read
+  bool readEvent(long iEventIndex) final; //returns true if an event was read
   bool skipToNextEvent(); //returns true if an event was skipped
   bool readEventContent();
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
 
   std::ifstream file_;
-  const unsigned long long maxNEvents_;
   long presentEventIndex_ = 0;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<void*> dataBuffers_;
-  std::chrono::microseconds accumulatedTime_;
 };
 
 inline uint32_t PDSSource::readword() {
@@ -121,10 +108,10 @@ inline std::vector<std::string> PDSSource::readStringsArray(buffer_iterator& itB
       break;
     }
     itChars = itChars+s.size()+1;
-    std::cout <<s<<std::endl;
+    //std::cout <<s<<std::endl;
     toReturn.emplace_back(std::move(s));
   }
-  std::cout << (void*)itChars << " "<<&(*itBuffer)<<std::endl;
+  //std::cout << (void*)itChars << " "<<&(*itBuffer)<<std::endl;
   assert(itChars <= reinterpret_cast<const char*>(&(*itBuffer)));
   return toReturn;
 }
@@ -159,7 +146,7 @@ inline std::vector<PDSSource::ProductInfo> PDSSource::readProductInfo(buffer_ite
     std::string name(itChars);
     itBuffer = itBuffer + bytesToWords(name.size()+1);
     assert(itBuffer <= itEnd);
-    std::cout <<name <<" "<<classIndex<<std::endl;
+    //std::cout <<name <<" "<<classIndex<<std::endl;
     info.emplace_back(std::move(name), classIndex);
   }
 
@@ -176,7 +163,7 @@ inline bool PDSSource::readEvent(long iEventIndex) {
 }
 
 inline bool PDSSource::readEventContent() {
-  std::cout <<"readEventContent"<<std::endl;
+  //std::cout <<"readEventContent"<<std::endl;
   std::array<uint32_t, kEventHeaderSizeInWords+1> headerBuffer;
   file_.read(reinterpret_cast<char*>(headerBuffer.data()), (kEventHeaderSizeInWords+1)*4);
   if( file_.rdstate() & std::ios_base::eofbit) {
@@ -189,7 +176,7 @@ inline bool PDSSource::readEventContent() {
   std::vector<uint32_t> buffer = readWords(bufferSize+1);
 
   int32_t crossCheckBufferSize = buffer[bufferSize];
-  std::cout <<bufferSize<<" "<<crossCheckBufferSize<<std::endl;
+  //std::cout <<bufferSize<<" "<<crossCheckBufferSize<<std::endl;
   assert(crossCheckBufferSize == bufferSize);
 
   ++presentEventIndex_;
@@ -240,9 +227,8 @@ inline bool PDSSource::skipToNextEvent() {
 
 
 inline PDSSource::PDSSource(std::string const& iName, unsigned long long iNEvents) :
-  file_{iName, std::ios_base::binary},
-  maxNEvents_{iNEvents},
-  accumulatedTime_{std::chrono::microseconds::zero()}
+                 SourceBase(iNEvents),
+  file_{iName, std::ios_base::binary}
 {
   auto bufferSize = readPreamble();
   
@@ -258,7 +244,7 @@ inline PDSSource::PDSSource(std::string const& iName, unsigned long long iNEvent
   auto productInfo = readProductInfo(itBuffer, itEnd);
   assert(itBuffer != itEnd);
   assert(itBuffer+1 == itEnd);
-  std::cout <<*itBuffer <<" "<<bufferSize<<std::endl;
+  //std::cout <<*itBuffer <<" "<<bufferSize<<std::endl;
   assert(*itBuffer == bufferSize);
 
   dataProducts_.reserve(productInfo.size());

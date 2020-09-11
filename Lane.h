@@ -6,10 +6,11 @@
 #include <atomic>
 #include <utility>
 #include <optional>
+#include <memory>
 
 #include "tbb/task_group.h"
 
-#include "Source.h"
+#include "SourceBase.h"
 #include "SerializerWrapper.h"
 #include "OutputerBase.h"
 #include "Waiter.h"
@@ -18,13 +19,13 @@
 
 class Lane {
 public:
- Lane(std::string const& iFileName, double iScaleFactor, unsigned long long iNEvents): source_(iFileName, iNEvents) {
+ Lane(std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)) {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
-    serializers_.reserve(source_.dataProducts().size());
-    waiters_.reserve(source_.dataProducts().size());
-    for( int ib = 0; ib< source_.dataProducts().size(); ++ib) {
-      auto const& dp = source_.dataProducts()[ib];
+    serializers_.reserve(source_->dataProducts().size());
+    waiters_.reserve(source_->dataProducts().size());
+    for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
+      auto const& dp = source_->dataProducts()[ib];
       auto address = dp.address();
       if(eventAuxiliaryBranchName == dp.name()) {
 	eventAuxReader_ = EventAuxReader(address);
@@ -41,7 +42,7 @@ public:
 
   std::vector<SerializerWrapper> const& serializers() const { return serializers_;}
 
-  std::chrono::microseconds sourceAccumulatedTime() const { return source_.accumulatedTime(); }
+  std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
 
   void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer) { 
@@ -68,7 +69,7 @@ private:
     using namespace std::string_literals;
     auto i = ++index;
     i-=1;
-    if(source_.gotoEvent(i)) {
+    if(source_->gotoEvent(i)) {
       std::cout <<"event "+std::to_string(i)+"\n"<<std::flush;
       
       //std::cout <<"make doNextEvent task"<<std::endl;
@@ -79,7 +80,7 @@ private:
     }
   }
 
-  Source source_;
+  std::unique_ptr<SourceBase> source_;
   std::vector<SerializerWrapper> serializers_;
   std::vector<Waiter> waiters_;
   std::optional<EventAuxReader> eventAuxReader_;

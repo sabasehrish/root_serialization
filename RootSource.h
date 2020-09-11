@@ -1,5 +1,5 @@
-#if !defined(Source_h)
-#define Source_h
+#if !defined(RootSource_h)
+#define RootSource_h
 
 #include <string>
 #include <memory>
@@ -11,42 +11,37 @@
 #include "TFile.h"
 
 #include "DataProductRetriever.h"
+#include "SourceBase.h"
 
-class Source {
+class RootSource : public SourceBase {
 public:
-  Source(std::string const& iName, unsigned long long iNEvents);
-  Source(Source&&) = default;
-  Source(Source const&) = default;
+  RootSource(std::string const& iName, unsigned long long iNEvents);
+  RootSource(RootSource&&) = default;
+  RootSource(RootSource const&) = default;
 
-  std::vector<DataProductRetriever>& dataProducts() { return dataProducts_; }
+  std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
 
-  bool gotoEvent(long iEventIndex) {
-    if(iEventIndex<numberOfEvents() and iEventIndex < maxNEvents_) {
-      auto start = std::chrono::high_resolution_clock::now();
+  bool readEvent(long iEventIndex) final {
+    if(iEventIndex<numberOfEvents()) {
       events_->GetEntry(iEventIndex);
-      accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
       return true;
     }
     return false;
   }
 
-  std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 private:
   long numberOfEvents() { 
     return events_->GetEntriesFast();
   }
 
   std::unique_ptr<TFile> file_;
-  const unsigned long long maxNEvents_;
   TTree* events_;
   std::vector<DataProductRetriever> dataProducts_;
-  std::chrono::microseconds accumulatedTime_;
 };
 
-inline Source::Source(std::string const& iName, unsigned long long iNEvents) :
-  file_{TFile::Open(iName.c_str())},
-  maxNEvents_{iNEvents},
-  accumulatedTime_{std::chrono::microseconds::zero()}
+inline RootSource::RootSource(std::string const& iName, unsigned long long iNEvents) :
+                  SourceBase(iNEvents),
+  file_{TFile::Open(iName.c_str())}
 {
   events_ = file_->Get<TTree>("Events");
   auto l = events_->GetListOfBranches();

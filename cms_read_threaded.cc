@@ -9,6 +9,8 @@
 
 #include "Outputer.h"
 #include "PDSOutputer.h"
+#include "PDSSource.h"
+#include "RootSource.h"
 #include "Lane.h"
 
 #include "tbb/task_group.h"
@@ -57,10 +59,30 @@ int main(int argc, char* argv[]) {
     nEvents = atoi(argv[5]);
   }
 
+  std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> factory;
+  std::string fileName(argv[1]);
+  {
+    auto pos = fileName.find('.');
+    if( fileName.substr(pos) == ".root") {
+      factory = [](std::string const& iName, unsigned long long iNEvents) {
+        return std::make_unique<RootSource>(iName, iNEvents);
+      };
+    }
+    else if( fileName.substr(pos) == ".pds") {
+      factory = [](std::string const& iName, unsigned long long iNEvents) {
+        return std::make_unique<PDSSource>(iName, iNEvents);
+      };
+    }
+    else {
+      std::cout <<"unknown file type "<<fileName.substr(pos)<<std::endl;
+      return 1;
+    }
+
+  }
 
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(argv[1],scale, nEvents);
+    lanes.emplace_back(factory(argv[1], nEvents), scale);
   }
   //PDSOutputer out("test.pds");
   Outputer out;

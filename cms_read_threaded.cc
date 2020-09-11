@@ -22,9 +22,9 @@
 
 int main(int argc, char* argv[]) {
 
-  if(not (argc > 1 and argc < 7) ) {
-    std::cout <<"1 to 5 arguments required\n"
-                "cms_read_threaded <filename> [# threads] [# conconcurrent events] [time scale factor] [max # events]\n";
+  if(not (argc > 1 and argc < 8) ) {
+    std::cout <<"1 to 6 arguments required\n"
+                "cms_read_threaded <filename> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<output file name>]\n";
     return 1;
   }
 
@@ -55,8 +55,22 @@ int main(int argc, char* argv[]) {
   }
 
   unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
-  if(argc == 6) {
+  if(argc > 5) {
     nEvents = atoi(argv[5]);
+  }
+
+  std::unique_ptr<OutputerBase> out;
+  if(argc == 7) {
+    std::string name(argv[6]);
+    auto pos = name.find('.');
+    if(name.substr(pos) == ".pds") {
+      out = std::make_unique<PDSOutputer>(name);
+    } else {
+      std::cout <<"unknown output file extension "<<name.substr(pos)<<std::endl;
+      return 1;
+    }
+  } else {
+    out = std::make_unique<Outputer>();
   }
 
   std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> factory;
@@ -84,19 +98,18 @@ int main(int argc, char* argv[]) {
   for(unsigned int i = 0; i< nLanes; ++i) {
     lanes.emplace_back(factory(argv[1], nEvents), scale);
   }
-  //PDSOutputer out("test.pds");
-  Outputer out;
   std::atomic<long> ievt{0};
   
   tbb::task_arena arena(parallelism);
 
   decltype(std::chrono::high_resolution_clock::now()) start;
-  arena.execute([&lanes, &ievt, &out, &start]() {
+  auto pOut = out.get();
+  arena.execute([&lanes, &ievt, pOut, &start]() {
     tbb::task_group group;
     start = std::chrono::high_resolution_clock::now();
     group.run([&]() {
         for(auto& lane : lanes) {
-          lane.processEventsAsync(ievt, group, out);
+          lane.processEventsAsync(ievt, group, *pOut);
         }
       });
     

@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "lz4.h"
+
 #include "TClass.h"
 #include "TBufferFile.h"
 
@@ -181,7 +183,13 @@ inline bool PDSSource::readEventContent() {
 
   ++presentEventIndex_;
 
-  deserializeDataProducts(buffer.begin(), buffer.end()-1);
+  int32_t uncompressedBufferSize = buffer[0];
+  std::vector<uint32_t> uBuffer(size_t(uncompressedBufferSize), 0);
+  LZ4_decompress_safe(reinterpret_cast<char*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
+                      (bufferSize-1)*4,
+                      uncompressedBufferSize*4);
+
+  deserializeDataProducts(uBuffer.begin(), uBuffer.end());
 
   return true;
 }

@@ -8,6 +8,8 @@
 #include <cstring>
 #include <fstream>
 
+#include "lz4.h"
+
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
 #include "SerializerWrapper.h"
@@ -153,30 +155,37 @@ class PDSOutputer :public OutputerBase {
   }
   void writeDataProducts(std::vector<SerializerWrapper> const& iSerializers) {
     //Calculate buffer size needed
-    uint32_t recordSize = 0;
+    uint32_t bufferSize = 0;
     for(auto const& s: iSerializers) {
-      recordSize +=1+1;
+      bufferSize +=1+1;
       auto const blobSize = s.blob().size();
-      recordSize += bytesToWords(blobSize); //handles padding
+      bufferSize += bytesToWords(blobSize); //handles padding
     }
     //initialize with 0
-    std::vector<uint32_t> buffer(size_t(recordSize+2), 0);
+    std::vector<uint32_t> buffer(size_t(bufferSize), 0);
 
-    uint32_t bufferIndex = 0;
-    buffer[bufferIndex++] = recordSize;
-    uint32_t dataProductIndex = 0;
-    for(auto const& s: iSerializers) {
-      buffer[bufferIndex++]=dataProductIndex++;
-      auto const blobSize = s.blob().size();
-      uint32_t sizeInWords = bytesToWords(blobSize);
-      buffer[bufferIndex++]=sizeInWords;
-      std::copy(s.blob().begin(), s.blob().end(), reinterpret_cast<char*>( &(*(buffer.begin()+bufferIndex)) ) );
-      bufferIndex += sizeInWords;
+    {
+      uint32_t bufferIndex = 0;
+      uint32_t dataProductIndex = 0;
+      for(auto const& s: iSerializers) {
+        buffer[bufferIndex++]=dataProductIndex++;
+        auto const blobSize = s.blob().size();
+        uint32_t sizeInWords = bytesToWords(blobSize);
+        buffer[bufferIndex++]=sizeInWords;
+        std::copy(s.blob().begin(), s.blob().end(), reinterpret_cast<char*>( &(*(buffer.begin()+bufferIndex)) ) );
+        bufferIndex += sizeInWords;
+      }
+      assert(buffer.size() == bufferIndex);
     }
-    buffer[bufferIndex++] = recordSize;
-    assert(buffer.size() == bufferIndex);
-
-    file_.write(reinterpret_cast<char*>(buffer.data()), buffer.size()*4);
+    auto const bound = LZ4_compressBound(buffer.size()*4);
+    std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+3, 0);
+    auto const cSize = LZ4_compress_default(reinterpret_cast<char*>(&(*buffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+2))), buffer.size()*4, bound);
+    //std::cout <<"compressed "<<float(cSize)/(buffer.size()*4)<<std::endl;
+    uint32_t const recordSize = bytesToWords(cSize)+1;
+    cBuffer[0] = recordSize;
+    cBuffer[1] = buffer.size();
+    cBuffer[recordSize+1]=recordSize;
+    file_.write(reinterpret_cast<char*>(cBuffer.data()), (recordSize+2)*4);
   }
 
 private:

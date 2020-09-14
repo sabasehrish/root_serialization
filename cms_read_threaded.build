@@ -7,11 +7,14 @@ ROOTINCLUDE=${ROOTBASE}/include
 TBBBASE=/cvmfs/cms.cern.ch/slc7_amd64_gcc820/external/tbb/2020_U2
 TBBLIBDIR=${TBBBASE}/lib
 TBBINCLUDE=${TBBBASE}/include
+LZ4BASE=/cvmfs/cms.cern.ch/slc7_amd64_gcc820/external/lz4/1.9.2
+LZ4LIBDIR=${LZ4BASE}/lib
+LZ4INCLUDE=${LZ4BASE}/include
 CMSSW_BASE=/cvmfs/cms.cern.ch/slc7_amd64_gcc820/cms/cmssw/CMSSW_11_2_0_pre2
 CMSSWINCLUDE=${CMSSW_BASE}/src
 CMSSWLIBDIR=${CMSSW_BASE}/lib/slc7_amd64_gcc820
 
-${CXX} -O2 -std=c++17 -o cms_read_threaded -I${ROOTINCLUDE} -L${ROOTLIBDIR} -I${CMSSWINCLUDE} -I${TBBINCLUDE} -L${TBBLIBDIR} -lCore -lRIO -lTree -ltbb -pthread cms_read_threaded.cc
+${CXX} -O2 -std=c++17 -g -o cms_read_threaded -I${ROOTINCLUDE} -L${ROOTLIBDIR} -I${CMSSWINCLUDE} -I${TBBINCLUDE} -L${TBBLIBDIR} -I${LZ4INCLUDE} -L${LZ4LIBDIR} -lCore -lRIO -lTree -ltbb -llz4 -pthread cms_read_threaded.cc
 echo ""
 echo "remember to set LD_LIBRARY_PATH with ${ROOTLIBDIR}"
 

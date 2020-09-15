@@ -13,6 +13,7 @@ class Waiter {
  Waiter(unsigned int iDataProductIndex, double iScaleFactor):
   scale_{iScaleFactor},
     index_{iDataProductIndex} {}
+
     void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, TaskHolder iCallback) const {
       iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index= index_]() {
 	  using namespace std::chrono_literals;

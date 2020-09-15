@@ -58,7 +58,7 @@ private:
       auto* waiter = &waiters_[index];
       TaskHolder waitH(group,
 		       make_functor_task([holder,waiter,this]() {
-			   waiter->waitAsync(serializers_,std::move(holder));
+			   waiter->waitAsync(source_->dataProducts(),std::move(holder));
 			 }));
       s.doWorkAsync(group, waitH);
       ++index;

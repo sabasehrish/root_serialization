@@ -23,7 +23,10 @@ public:
 
   bool readEvent(long iEventIndex) final {
     if(iEventIndex<numberOfEvents()) {
-      events_->GetEntry(iEventIndex);
+      auto it = dataProducts_.begin();
+      for(auto b: branches_) {
+	(it++)->setSize( b->GetEntry(iEventIndex) );
+      }
       return true;
     }
     return false;
@@ -37,6 +40,7 @@ private:
   std::unique_ptr<TFile> file_;
   TTree* events_;
   std::vector<DataProductRetriever> dataProducts_;
+  std::vector<TBranch*> branches_;
 };
 
 inline RootSource::RootSource(std::string const& iName, unsigned long long iNEvents) :
@@ -47,6 +51,7 @@ inline RootSource::RootSource(std::string const& iName, unsigned long long iNEve
   auto l = events_->GetListOfBranches();
 
   dataProducts_.reserve(l->GetEntriesFast());
+  branches_.reserve(l->GetEntriesFast());
   for( int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
@@ -59,6 +64,7 @@ inline RootSource::RootSource(std::string const& iName, unsigned long long iNEve
     dataProducts_.emplace_back(reinterpret_cast<void**>(b->GetAddress()),
                                b->GetName(),
                                class_ptr);
+    branches_.emplace_back(b);
   }
 }
 #endif

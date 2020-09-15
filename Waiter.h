@@ -4,19 +4,19 @@
 #include <vector>
 #include <thread>
 #include "EventIdentifier.h"
-#include "SerializerWrapper.h"
+#include "DataProductRetriever.h"
 #include "TaskHolder.h"
 
 class Waiter {
  public:
 
- Waiter(unsigned int iSerializerIndex, double iScaleFactor):
+ Waiter(unsigned int iDataProductIndex, double iScaleFactor):
   scale_{iScaleFactor},
-    index_{iSerializerIndex} {}
-    void waitAsync(std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const {
-      iCallback.group()->run([iCallback, &iSerializers, scale=scale_, index= index_]() {
+    index_{iDataProductIndex} {}
+    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, TaskHolder iCallback) const {
+      iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index= index_]() {
 	  using namespace std::chrono_literals;
-	  auto sleep = scale*iSerializers[index].blob().size()*1us;
+	  auto sleep = scale*iRetrievers[index].size()*1us;
 	  //std::cout <<"sleep "<<sleep.count()<<std::endl;
 	  std::this_thread::sleep_for( sleep);
 	  //std::cout <<"awake"<<std::endl;

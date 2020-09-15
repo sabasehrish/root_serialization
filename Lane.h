@@ -71,18 +71,6 @@ private:
       d.getAsync(std::move(waitH));
       ++index;
     }
-
-    /*
-    for(auto& w: waiters_) {
-      auto& s = serializers_[index];
-      TaskHolder sH(group,
-		    make_functor_task([holder,&group, &s]() {
-			s.doWorkAsync(group, std::move(holder));
-		      }));
-      w.waitAsync(source_->dataProducts(),std::move(sH));
-      ++index;
-    }
-    */
   }
 
   void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer) {

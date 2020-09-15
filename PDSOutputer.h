@@ -180,10 +180,13 @@ class PDSOutputer :public OutputerBase {
     auto const bound = LZ4_compressBound(buffer.size()*4);
     std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+3, 0);
     auto const cSize = LZ4_compress_default(reinterpret_cast<char*>(&(*buffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+2))), buffer.size()*4, bound);
+    //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
     //std::cout <<"compressed "<<float(cSize)/(buffer.size()*4)<<std::endl;
     uint32_t const recordSize = bytesToWords(cSize)+1;
     cBuffer[0] = recordSize;
-    cBuffer[1] = buffer.size();
+    //Record the actual number of bytes used in the last word of the compression buffer in the lowest
+    // 2 bits of the word
+    cBuffer[1] = buffer.size()*4 + (cSize % 4);
     cBuffer[recordSize+1]=recordSize;
     file_.write(reinterpret_cast<char*>(cBuffer.data()), (recordSize+2)*4);
   }

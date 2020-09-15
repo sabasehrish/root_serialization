@@ -183,10 +183,14 @@ inline bool PDSSource::readEventContent() {
 
   ++presentEventIndex_;
 
-  int32_t uncompressedBufferSize = buffer[0];
+  //lower 2 bits are the number of bytes used in the last word of the compressed sized
+  int32_t uncompressedBufferSize = buffer[0]/4;
+  int32_t bytesInLastWord = buffer[0] % 4;
+  int32_t compressedBufferSizeInBytes = (bufferSize-1)*4 + (bytesInLastWord == 0? 0 : (-4+bytesInLastWord));
+  //std::cout <<"compressed "<<compressedBufferSizeInBytes <<" uncompressed "<<uncompressedBufferSize*4<<" extra bytes "<<bytesInLastWord<<std::endl;
   std::vector<uint32_t> uBuffer(size_t(uncompressedBufferSize), 0);
   LZ4_decompress_safe(reinterpret_cast<char*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
-                      (bufferSize-1)*4,
+                      compressedBufferSizeInBytes,
                       uncompressedBufferSize*4);
 
   deserializeDataProducts(uBuffer.begin(), uBuffer.end());

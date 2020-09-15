@@ -54,13 +54,13 @@ private:
 			}));
     
     size_t index=0;
-    for(auto& s: serializers_) {
-      auto* waiter = &waiters_[index];
-      TaskHolder waitH(group,
-		       make_functor_task([holder,waiter,this]() {
-			   waiter->waitAsync(source_->dataProducts(),std::move(holder));
-			 }));
-      s.doWorkAsync(group, waitH);
+    for(auto& w: waiters_) {
+      auto& s = serializers_[index];
+      TaskHolder sH(group,
+		    make_functor_task([holder,&group, &s]() {
+			s.doWorkAsync(group, std::move(holder));
+		      }));
+      w.waitAsync(source_->dataProducts(),std::move(sH));
       ++index;
     }
   }

@@ -46,6 +46,8 @@ public:
 private:
 
   void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer) { 
+    //Process order: retrieve data product, do wait, serialize, do output, call iCallback 
+
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
@@ -54,6 +56,23 @@ private:
 			}));
     
     size_t index=0;
+    for(auto& d: source_->dataProducts()) {
+      TaskHolder waitH(group,
+		       make_functor_task([holder,&group,index,this]() {
+			  auto& s = serializers_[index];
+			  TaskHolder sH(group,
+					make_functor_task([holder,&group, &s]() {
+					    s.doWorkAsync(group, std::move(holder));
+					  }));
+			  auto& w = waiters_[index];
+			  w.waitAsync(source_->dataProducts(),std::move(sH));
+			 }) );
+
+      d.getAsync(std::move(waitH));
+      ++index;
+    }
+
+    /*
     for(auto& w: waiters_) {
       auto& s = serializers_[index];
       TaskHolder sH(group,
@@ -63,6 +82,7 @@ private:
       w.waitAsync(source_->dataProducts(),std::move(sH));
       ++index;
     }
+    */
   }
 
   void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer) {

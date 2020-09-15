@@ -14,6 +14,11 @@
 
 #include "SourceBase.h"
 #include "DataProductRetriever.h"
+#include "DelayedProductRetriever.h"
+
+class PDSDelayedRetriever : public DelayedProductRetriever {
+  void getAsync(int index, TaskHolder) override {}
+};
 
 class PDSSource : public SourceBase {
 public:
@@ -54,6 +59,7 @@ private:
   long presentEventIndex_ = 0;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<void*> dataBuffers_;
+  PDSDelayedRetriever delayedRetriever_;
 };
 
 inline uint32_t PDSSource::readword() {
@@ -269,9 +275,11 @@ inline PDSSource::PDSSource(std::string const& iName, unsigned long long iNEvent
     TClass* cls = TClass::GetClass(types[pi.classIndex()].c_str());
     dataBuffers_[index] = cls->New();
     assert(cls);
-    dataProducts_.emplace_back(&dataBuffers_[index++],
+    dataProducts_.emplace_back(index,
+			       &dataBuffers_[index++],
                                pi.name(),
-                               cls);
+                               cls,
+			       &delayedRetriever_);
   }
 }
 

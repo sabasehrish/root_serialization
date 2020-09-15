@@ -11,7 +11,13 @@
 #include "TFile.h"
 
 #include "DataProductRetriever.h"
+#include "DelayedProductRetriever.h"
+
 #include "SourceBase.h"
+
+class RootDelayedRetriever : public DelayedProductRetriever {
+  void getAsync(int index, TaskHolder) override {}
+};
 
 class RootSource : public SourceBase {
 public:
@@ -39,6 +45,7 @@ private:
 
   std::unique_ptr<TFile> file_;
   TTree* events_;
+  RootDelayedRetriever delayedReader_;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<TBranch*> branches_;
 };
@@ -61,9 +68,11 @@ inline RootSource::RootSource(std::string const& iName, unsigned long long iNEve
     EDataType type;
     b->GetExpectedType(class_ptr,type);
 
-    dataProducts_.emplace_back(reinterpret_cast<void**>(b->GetAddress()),
+    dataProducts_.emplace_back(i,
+			       reinterpret_cast<void**>(b->GetAddress()),
                                b->GetName(),
-                               class_ptr);
+                               class_ptr,
+			       &delayedReader_);
     branches_.emplace_back(b);
   }
 }

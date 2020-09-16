@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
 
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(factory(argv[1], nEvents), scale);
+    lanes.emplace_back(i, factory(argv[1], nEvents), scale);
   }
   std::atomic<long> ievt{0};
   

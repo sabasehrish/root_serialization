@@ -13,7 +13,7 @@
 
 class Outputer :public OutputerBase {
  public:
-  void outputAsync(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
+  void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
     queue_.push(*iCallback.group(), [this, iEventID, &iSerializers, callback=std::move(iCallback)]() mutable {
 	output(iEventID, iSerializers);
 	callback.doneWaiting();

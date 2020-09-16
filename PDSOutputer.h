@@ -20,7 +20,7 @@ class PDSOutputer :public OutputerBase {
  public:
   PDSOutputer(std::string const& iFileName): file_(iFileName, std::ios_base::out| std::ios_base::binary) {}
 
-  void outputAsync(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
+  void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
     queue_.push(*iCallback.group(), [this, iEventID, &iSerializers, callback=std::move(iCallback)]() mutable {
 	const_cast<PDSOutputer*>(this)->output(iEventID, iSerializers);
 	callback.doneWaiting();

@@ -19,7 +19,7 @@
 
 class Lane {
 public:
- Lane(std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)) {
+ Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     serializers_.reserve(source_->dataProducts().size());
@@ -51,7 +51,7 @@ private:
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
-			  outputer.outputAsync(eventAuxReader_->doWork(),
+			  outputer.outputAsync(this->index_, eventAuxReader_->doWork(),
 					       serializers_, std::move(callback));
 			}));
     
@@ -92,6 +92,7 @@ private:
   std::vector<SerializerWrapper> serializers_;
   std::vector<Waiter> waiters_;
   std::optional<EventAuxReader> eventAuxReader_;
+  unsigned int index_;
 };
 
 #endif

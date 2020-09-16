@@ -31,6 +31,8 @@ class DataProductRetriever {
     delayedReader_->getAsync(index_, std::move(iCallback));
   }
 
+  int index() const { return index_;}
+
  private:
   void** address_;
   size_t size_ = 0;

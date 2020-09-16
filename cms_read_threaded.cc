@@ -64,13 +64,13 @@ int main(int argc, char* argv[]) {
     std::string name(argv[6]);
     auto pos = name.find('.');
     if(name.substr(pos) == ".pds") {
-      out = std::make_unique<PDSOutputer>(name);
+      out = std::make_unique<PDSOutputer>(name, nLanes);
     } else {
       std::cout <<"unknown output file extension "<<name.substr(pos)<<std::endl;
       return 1;
     }
   } else {
-    out = std::make_unique<Outputer>();
+    out = std::make_unique<Outputer>(nLanes);
   }
 
   std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> factory;
@@ -97,7 +97,9 @@ int main(int argc, char* argv[]) {
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
     lanes.emplace_back(i, factory(argv[1], nEvents), scale);
+    out->setupForLane(i, lanes.back().dataProducts());
   }
+
   std::atomic<long> ievt{0};
   
   tbb::task_arena arena(parallelism);
@@ -129,37 +131,11 @@ int main(int argc, char* argv[]) {
   std::cout <<"----------"<<std::endl;
 
   std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();
-  std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
-
-  std::vector<std::pair<std::string_view, std::chrono::microseconds>> serializerTimes;
-  serializerTimes.reserve(lanes[0].serializers().size());
-  bool isFirst = true;
   for(auto const& lane: lanes) {
     sourceTime += lane.sourceAccumulatedTime();
-    if(isFirst) {
-      isFirst = false;
-      for(auto& s: lane.serializers()) {
-	serializerTimes.emplace_back(s.name(), s.accumulatedTime());
-	serializerTime += s.accumulatedTime();
-      }
-    } else {
-      int i =0;
-      for(auto& s: lane.serializers()) {
-	serializerTimes[i++].second += s.accumulatedTime();
-	serializerTime += s.accumulatedTime();
-      }
-    }
   }
 
   std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 
-  std::sort(serializerTimes.begin(),serializerTimes.end(), [](auto const& iLHS, auto const& iRHS) {
-      return iLHS.second > iRHS.second;
-    });
-
-  std::cout <<"Serialization total time: "<<serializerTime.count()<<"us\n";
-  std::cout <<"Serialization times\n";
-  for(auto const& p: serializerTimes) {
-    std::cout <<"time: "<<p.second.count()<<"us "<<std::setprecision(4)<<(100.*p.second.count()/serializerTime.count())<<"%\tname: "<<p.first<<"\n";
-  }
+  out->printSummary();
 }

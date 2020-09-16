@@ -22,7 +22,7 @@ public:
  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
-    serializers_.reserve(source_->dataProducts().size());
+    //serializers_.reserve(source_->dataProducts().size());
     waiters_.reserve(source_->dataProducts().size());
     for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
       auto const& dp = source_->dataProducts()[ib];
@@ -31,7 +31,7 @@ public:
 	eventAuxReader_ = EventAuxReader(address);
       }
       
-      serializers_.emplace_back(dp.name(), address,dp.classType());
+      //serializers_.emplace_back(dp.name(), address,dp.classType());
       waiters_.emplace_back(ib, iScaleFactor);
     }
   }
@@ -40,7 +40,9 @@ public:
     doNextEvent(index, group,  outputer);
   }
 
-  std::vector<SerializerWrapper> const& serializers() const { return serializers_;}
+  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(); }
+
+  //std::vector<SerializerWrapper> const& serializers() const { return serializers_;}
 
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
@@ -52,17 +54,17 @@ private:
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
 			  outputer.outputAsync(this->index_, eventAuxReader_->doWork(),
-					       serializers_, std::move(callback));
+					       std::move(callback));
 			}));
     
     size_t index=0;
     for(auto& d: source_->dataProducts()) {
       TaskHolder waitH(group,
-		       make_functor_task([holder,&group,index,this]() {
-			  auto& s = serializers_[index];
+		       make_functor_task([&group, &outputer, index, &d, holder, this]() {
+			  auto laneIndex = this->index_;
 			  TaskHolder sH(group,
-					make_functor_task([holder,&group, &s]() {
-					    s.doWorkAsync(group, std::move(holder));
+					make_functor_task([holder, laneIndex, &d, &outputer]() {
+					    outputer.productReadyAsync(laneIndex, d, std::move(holder));
 					  }));
 			  auto& w = waiters_[index];
 			  w.waitAsync(source_->dataProducts(),std::move(sH));
@@ -89,7 +91,7 @@ private:
   }
 
   std::unique_ptr<SourceBase> source_;
-  std::vector<SerializerWrapper> serializers_;
+  //std::vector<SerializerWrapper> serializers_;
   std::vector<Waiter> waiters_;
   std::optional<EventAuxReader> eventAuxReader_;
   unsigned int index_;

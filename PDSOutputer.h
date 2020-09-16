@@ -13,20 +13,40 @@
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
 #include "SerializerWrapper.h"
+#include "DataProductRetriever.h"
+#include "summarize_serializers.h"
 
 #include "SerialTaskQueue.h"
 
 class PDSOutputer :public OutputerBase {
  public:
-  PDSOutputer(std::string const& iFileName): file_(iFileName, std::ios_base::out| std::ios_base::binary) {}
+ PDSOutputer(std::string const& iFileName, unsigned int iNLanes): file_(iFileName, std::ios_base::out| std::ios_base::binary) {}
 
-  void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, TaskHolder iCallback) const final {
-    queue_.push(*iCallback.group(), [this, iEventID, &iSerializers, callback=std::move(iCallback)]() mutable {
-	const_cast<PDSOutputer*>(this)->output(iEventID, iSerializers);
+  void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final {
+    auto& s = serializers_[iLaneIndex];
+    s.reserve(iDPs.size());
+    for(auto const& dp: iDPs) {
+      s.emplace_back(dp.name(), dp.address(), dp.classType());
+    }
+  }
+
+  void productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const final {
+    auto& laneSerializers = serializers_[iLaneIndex];
+    auto group = iCallback.group();
+    laneSerializers[iDataProduct.index()].doWorkAsync(*group, std::move(iCallback));
+  }
+
+  void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const final {
+    queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback)]() mutable {
+	const_cast<PDSOutputer*>(this)->output(iEventID, serializers_[iLaneIndex]);
 	callback.doneWaiting();
       });
   }
   
+  void printSummary() const final {
+    summarize_serializers(serializers_);
+  }
+
  private:
   static inline size_t bytesToWords(size_t nBytes) {
     return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
@@ -196,6 +216,7 @@ private:
 
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
+  mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   bool firstTime_ = true;
 };
 

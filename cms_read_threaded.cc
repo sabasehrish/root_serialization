@@ -9,6 +9,7 @@
 
 #include "Outputer.h"
 #include "PDSOutputer.h"
+#include "DummyOutputer.h"
 #include "PDSSource.h"
 #include "RootSource.h"
 #include "Lane.h"
@@ -19,6 +20,18 @@
 
 #include "SerialTaskQueue.h"
 #include "SerialTaskQueue.cc"
+
+namespace {
+  std::pair<std::string, std::string> parseCompound(const char* iArg) {
+    std::string sArg(iArg);
+    auto found = sArg.find('=');
+    auto next = found;
+    if(found != std::string::npos) {
+      return std::pair(sArg.substr(0,found), sArg.substr(found+1));
+    }
+    return std::pair(sArg, std::string());
+  }
+}
 
 int main(int argc, char* argv[]) {
 
@@ -61,34 +74,37 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<OutputerBase> out;
   if(argc == 7) {
-    std::string name(argv[6]);
-    auto pos = name.find('.');
-    if(name.substr(pos) == ".pds") {
-      out = std::make_unique<PDSOutputer>(name, nLanes);
+    auto [outputType, outputInfo] = parseCompound(argv[6]);
+    if(outputType == "PDSOutputer") {
+      out = std::make_unique<PDSOutputer>(outputInfo, nLanes);
+    } else if(outputType == "SerializeOutputer") {
+      out = std::make_unique<Outputer>(nLanes);
+    } else if(outputType == "DummyOutputer") {
+      out = std::make_unique<DummyOutputer>();
     } else {
-      std::cout <<"unknown output file extension "<<name.substr(pos)<<std::endl;
+      std::cout <<"unknown output type "<<outputType<<std::endl;
       return 1;
     }
   } else {
-    out = std::make_unique<Outputer>(nLanes);
+    out = std::make_unique<DummyOutputer>();
   }
 
   std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> factory;
-  std::string fileName(argv[1]);
+
+  auto [sourceType, fileName] = parseCompound(argv[1]);
   {
-    auto pos = fileName.find('.');
-    if( fileName.substr(pos) == ".root") {
+    if( sourceType == "RootSource") {
       factory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<RootSource>(iName, iNEvents);
       };
     }
-    else if( fileName.substr(pos) == ".pds") {
+    else if( sourceType == "PDSSource") {
       factory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<PDSSource>(iName, iNEvents);
       };
     }
     else {
-      std::cout <<"unknown file type "<<fileName.substr(pos)<<std::endl;
+      std::cout <<"unknown source type "<<sourceType<<std::endl;
       return 1;
     }
 
@@ -96,7 +112,7 @@ int main(int argc, char* argv[]) {
 
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, factory(argv[1], nEvents), scale);
+    lanes.emplace_back(i, factory(fileName, nEvents), scale);
     out->setupForLane(i, lanes.back().dataProducts());
   }
 

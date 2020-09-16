@@ -276,10 +276,11 @@ inline PDSSource::PDSSource(std::string const& iName, unsigned long long iNEvent
     dataBuffers_[index] = cls->New();
     assert(cls);
     dataProducts_.emplace_back(index,
-			       &dataBuffers_[index++],
+			       &dataBuffers_[index],
                                pi.name(),
                                cls,
 			       &delayedRetriever_);
+    ++index;
   }
 }
 

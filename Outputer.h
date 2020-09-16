@@ -18,7 +18,6 @@ class Outputer :public OutputerBase {
  public:
   Outputer(unsigned int iLaneIndex): serializers_(iLaneIndex) {}
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final {
-    std::cout <<"setup "<<iLaneIndex<<" size "<<iDPs.size()<<std::endl;
     auto& s = serializers_[iLaneIndex];
     s.reserve(iDPs.size());
     for(auto const& dp: iDPs) {
@@ -30,7 +29,6 @@ class Outputer :public OutputerBase {
     assert(iLaneIndex < serializers_.size());
     auto& laneSerializers = serializers_[iLaneIndex];
     auto group = iCallback.group();
-    std::cout <<" product "<<iDataProduct.index() <<" lane "<<iLaneIndex<<" serializer "<<serializers_.size()<<std::endl;
     assert(iDataProduct.index() < laneSerializers.size() );
     laneSerializers[iDataProduct.index()].doWorkAsync(*group, std::move(iCallback));
   }

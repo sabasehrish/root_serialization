@@ -2,7 +2,7 @@
 #define EventAuxReader_h
 
 #include "EventIdentifier.h"
-#include "DataFormats/Provenance/interface/EventAuxiliary.h"
+#include "cms/EventAuxiliary.h"
 
 class EventAuxReader {
 public:

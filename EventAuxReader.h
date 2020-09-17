@@ -9,8 +9,12 @@ public:
   EventAuxReader(void** iAddress): address_(iAddress){}
 
   EventIdentifier doWork() {
-    auto aux = *reinterpret_cast<edm::EventAuxiliary**>(address_); 
-    return EventIdentifier{aux->run(), aux->luminosityBlock(), aux->event()};
+    if(address_) {
+      auto aux = *reinterpret_cast<edm::EventAuxiliary**>(address_); 
+      return EventIdentifier{aux->run(), aux->luminosityBlock(), aux->event()};
+    } else {
+      return EventIdentifier{0,0,0};
+    }
   }
 private:
   void** address_;

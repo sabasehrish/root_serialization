@@ -1,0 +1,2 @@
+#define threaded_io_test_VERSION_MAJOR @threaded_io_test_VERSION_MAJOR@
+#define threaded_io_test_VERSION_MINOR @threaded_io_test_VERSION_MINOR@

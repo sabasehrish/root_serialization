@@ -10,9 +10,8 @@
 #include "SerializeOutputer.h"
 #include "PDSOutputer.h"
 #include "DummyOutputer.h"
-#include "PDSSource.h"
-#include "RootSource.h"
-#include "EmptySource.h"
+#include "sourceFactoryGenerator.h"
+
 #include "Lane.h"
 
 #include "tbb/task_group.h"
@@ -93,30 +92,11 @@ int main(int argc, char* argv[]) {
     outFactory = [](){return std::make_unique<DummyOutputer>();};
   }
 
-  std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> sourceFactory;
-
   auto [sourceType, fileName] = parseCompound(argv[1]);
-  {
-    if( sourceType == "RootSource") {
-      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-        return std::make_unique<RootSource>(iName, iNEvents);
-      };
-    }
-    else if( sourceType == "PDSSource") {
-      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-        return std::make_unique<PDSSource>(iName, iNEvents);
-      };
-    } 
-    else if( sourceType == "EmptySource") {
-      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-        return std::make_unique<EmptySource>(iNEvents);
-      };
-    }
-    else {
-      std::cout <<"unknown source type "<<sourceType<<std::endl;
-      return 1;
-    }
-
+  auto sourceFactory = sourceFactoryGenerator(sourceType);
+  if(not sourceFactory) {
+    std::cout <<"unknown source type "<<sourceType<<std::endl;
+    return 1;
   }
 
   std::cout <<"begin warmup"<<std::endl;

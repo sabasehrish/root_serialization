@@ -211,7 +211,7 @@ inline bool PDSSource::readEventContent() {
   return true;
 }
 
-void PDSSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) {
+inline void PDSSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) {
   TBufferFile bufferFile{TBuffer::kRead};
 
   while(it < itEnd) {

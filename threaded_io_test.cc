@@ -73,39 +73,42 @@ int main(int argc, char* argv[]) {
     nEvents = atoi(argv[5]);
   }
 
-  std::unique_ptr<OutputerBase> out;
+
+  std::function<std::unique_ptr<OutputerBase>()> outFactory;
+  std::string outputerName = "DummyOutputer";
   if(argc == 7) {
+    outputerName = argv[6];
     auto [outputType, outputInfo] = parseCompound(argv[6]);
     if(outputType == "PDSOutputer") {
-      out = std::make_unique<PDSOutputer>(outputInfo, nLanes);
+      outFactory = [outputInfo, nLanes]() { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
     } else if(outputType == "SerializeOutputer") {
-      out = std::make_unique<SerializeOutputer>(nLanes);
+      outFactory = [nLanes]() {return std::make_unique<SerializeOutputer>(nLanes);};
     } else if(outputType == "DummyOutputer") {
-      out = std::make_unique<DummyOutputer>();
+      outFactory = []() { return std::make_unique<DummyOutputer>();};
     } else {
       std::cout <<"unknown output type "<<outputType<<std::endl;
       return 1;
     }
   } else {
-    out = std::make_unique<DummyOutputer>();
+    outFactory = [](){return std::make_unique<DummyOutputer>();};
   }
 
-  std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> factory;
+  std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> sourceFactory;
 
   auto [sourceType, fileName] = parseCompound(argv[1]);
   {
     if( sourceType == "RootSource") {
-      factory = [](std::string const& iName, unsigned long long iNEvents) {
+      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<RootSource>(iName, iNEvents);
       };
     }
     else if( sourceType == "PDSSource") {
-      factory = [](std::string const& iName, unsigned long long iNEvents) {
+      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<PDSSource>(iName, iNEvents);
       };
     } 
     else if( sourceType == "EmptySource") {
-      factory = [](std::string const& iName, unsigned long long iNEvents) {
+      sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<EmptySource>(iNEvents);
       };
     }
@@ -116,9 +119,29 @@ int main(int argc, char* argv[]) {
 
   }
 
+  std::cout <<"begin warmup"<<std::endl;
+  {
+    //warm up the system by processing 1 event 
+    tbb::task_arena arena(1);
+    auto out = outFactory();
+    Lane lane(0, sourceFactory(fileName, 1), 0);
+    out->setupForLane(0, lane.dataProducts());
+    auto pOut = out.get();
+    arena.execute([&lane,pOut]() {
+        tbb::task_group group;
+        std::atomic<long> ievt{0};
+        group.run([&]() {
+            lane.processEventsAsync(ievt, group, *pOut);
+          });
+        group.wait();
+      });
+  }
+  std::cout <<"finished warmup"<<std::endl;
+
+  auto out = outFactory();
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, factory(fileName, nEvents), scale);
+    lanes.emplace_back(i, sourceFactory(fileName, nEvents), scale);
     out->setupForLane(i, lanes.back().dataProducts());
   }
 
@@ -144,7 +167,8 @@ int main(int argc, char* argv[]) {
 
   //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
   std::cout <<"----------"<<std::endl;
-  std::cout <<"Read file "<<argv[1]<<"\n"
+  std::cout <<"Source "<<argv[1]<<"\n"
+            <<"Outputer "<<outputerName<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
 	    <<"time scale "<<scale<<"\n";

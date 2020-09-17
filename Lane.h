@@ -5,7 +5,6 @@
 #include <vector>
 #include <atomic>
 #include <utility>
-#include <optional>
 #include <memory>
 
 #include "tbb/task_group.h"
@@ -14,26 +13,15 @@
 #include "SerializerWrapper.h"
 #include "OutputerBase.h"
 #include "Waiter.h"
-#include "EventAuxReader.h"
 #include "FunctorTask.h"
 
 class Lane {
 public:
  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
     
-    const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     waiters_.reserve(source_->dataProducts().size());
     for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
-      auto const& dp = source_->dataProducts()[ib];
-      auto address = dp.address();
-      if(eventAuxiliaryBranchName == dp.name()) {
-	eventAuxReader_ = EventAuxReader(address);
-      }
-      
       waiters_.emplace_back(ib, iScaleFactor);
-    }
-    if(not eventAuxReader_) {
-      eventAuxReader_ = EventAuxReader(nullptr);
     }
   }
 
@@ -54,7 +42,7 @@ private:
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
 		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
-			  outputer.outputAsync(this->index_, eventAuxReader_->doWork(),
+			  outputer.outputAsync(this->index_, source_->eventIdentifier(),
 					       std::move(callback));
 			}));
     
@@ -96,7 +84,6 @@ private:
   std::unique_ptr<SourceBase> source_;
   //std::vector<SerializerWrapper> serializers_;
   std::vector<Waiter> waiters_;
-  std::optional<EventAuxReader> eventAuxReader_;
   unsigned int index_;
   bool verbose_ = false;
 };

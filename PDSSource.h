@@ -28,6 +28,7 @@ public:
   ~PDSSource();
 
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
+  EventIdentifier eventIdentifier() final { return eventID_;}
 
   struct ProductInfo{
   ProductInfo(std::string iName, uint32_t iIndex) : name_(std::move(iName)), index_{iIndex} {}
@@ -57,6 +58,7 @@ private:
 
   std::ifstream file_;
   long presentEventIndex_ = 0;
+  EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<void*> dataBuffers_;
   PDSDelayedRetriever delayedRetriever_;
@@ -180,6 +182,11 @@ inline bool PDSSource::readEventContent() {
   assert(file_.rdstate() == std::ios_base::goodbit);
 
   int32_t bufferSize = headerBuffer[kEventHeaderSizeInWords];
+
+  unsigned long long eventIDTopWord = headerBuffer[3];
+  eventIDTopWord = eventIDTopWord <<32;
+  unsigned long long eventID = eventIDTopWord+headerBuffer[4];
+  eventID_ = {headerBuffer[1], headerBuffer[2], eventID};
 
   std::vector<uint32_t> buffer = readWords(bufferSize+1);
 

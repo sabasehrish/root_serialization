@@ -2,6 +2,7 @@
 #define SourceBase_h
 
 #include "DataProductRetriever.h"
+#include "EventIdentifier.h"
 
 #include <vector>
 #include <chrono>
@@ -14,6 +15,7 @@ class SourceBase {
   virtual ~SourceBase() {}
 
   virtual std::vector<DataProductRetriever>& dataProducts() = 0;
+  virtual EventIdentifier eventIdentifier() = 0;
 
   bool gotoEvent(long iEventIndex);
 

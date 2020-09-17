@@ -5,6 +5,7 @@
 #include <memory>
 #include <chrono>
 #include <iostream>
+#include <optional>
 #include "TClass.h"
 #include "TBranch.h"
 #include "TTree.h"
@@ -12,6 +13,7 @@
 
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
+#include "EventAuxReader.h"
 
 #include "SourceBase.h"
 
@@ -26,6 +28,7 @@ public:
   RootSource(RootSource const&) = default;
 
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
+  EventIdentifier eventIdentifier() final { return eventAuxReader_->doWork();}
 
   bool readEvent(long iEventIndex) final {
     if(iEventIndex<numberOfEvents()) {
@@ -46,6 +49,7 @@ private:
   std::unique_ptr<TFile> file_;
   TTree* events_;
   RootDelayedRetriever delayedReader_;
+  std::optional<EventAuxReader> eventAuxReader_;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<TBranch*> branches_;
 };
@@ -56,6 +60,8 @@ inline RootSource::RootSource(std::string const& iName, unsigned long long iNEve
 {
   events_ = file_->Get<TTree>("Events");
   auto l = events_->GetListOfBranches();
+
+  const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
 
   dataProducts_.reserve(l->GetEntriesFast());
   branches_.reserve(l->GetEntriesFast());
@@ -74,6 +80,12 @@ inline RootSource::RootSource(std::string const& iName, unsigned long long iNEve
                                class_ptr,
 			       &delayedReader_);
     branches_.emplace_back(b);
+    if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
+      eventAuxReader_ = EventAuxReader(dataProducts_.back().address());
+    }
+  }
+  if(not eventAuxReader_) {
+    eventAuxReader_ = EventAuxReader(nullptr);
   }
 }
 #endif

@@ -16,9 +16,6 @@
 #include "tbb/global_control.h"
 #include "tbb/task_arena.h"
 
-#include "SerialTaskQueue.h"
-#include "SerialTaskQueue.cc"
-
 namespace {
   std::pair<std::string, std::string> parseCompound(const char* iArg) {
     std::string sArg(iArg);

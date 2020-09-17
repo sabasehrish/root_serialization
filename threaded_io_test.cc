@@ -7,7 +7,7 @@
 #include <atomic>
 #include <iomanip>
 
-#include "Outputer.h"
+#include "SerializeOutputer.h"
 #include "PDSOutputer.h"
 #include "DummyOutputer.h"
 #include "PDSSource.h"
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     if(outputType == "PDSOutputer") {
       out = std::make_unique<PDSOutputer>(outputInfo, nLanes);
     } else if(outputType == "SerializeOutputer") {
-      out = std::make_unique<Outputer>(nLanes);
+      out = std::make_unique<SerializeOutputer>(nLanes);
     } else if(outputType == "DummyOutputer") {
       out = std::make_unique<DummyOutputer>();
     } else {

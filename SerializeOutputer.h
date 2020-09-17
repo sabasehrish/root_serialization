@@ -1,5 +1,5 @@
-#if !defined(Outputer_h)
-#define Outputer_h
+#if !defined(SerializeOutputer_h)
+#define SerializeOutputer_h
 
 #include <vector>
 #include <string>
@@ -14,9 +14,9 @@
 
 #include "SerialTaskQueue.h"
 
-class Outputer :public OutputerBase {
+class SerializeOutputer :public OutputerBase {
  public:
-  Outputer(unsigned int iLaneIndex): serializers_(iLaneIndex) {}
+  SerializeOutputer(unsigned int iLaneIndex): serializers_(iLaneIndex) {}
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final {
     auto& s = serializers_[iLaneIndex];
     s.reserve(iDPs.size());

@@ -14,7 +14,7 @@ CMSSW_BASE=/cvmfs/cms.cern.ch/slc7_amd64_gcc820/cms/cmssw/CMSSW_11_2_0_pre2
 CMSSWINCLUDE=${CMSSW_BASE}/src
 CMSSWLIBDIR=${CMSSW_BASE}/lib/slc7_amd64_gcc820
 
-${CXX} -O2 -std=c++17 -g -o cms_read_threaded -I${ROOTINCLUDE} -L${ROOTLIBDIR} -I${CMSSWINCLUDE} -I${TBBINCLUDE} -L${TBBLIBDIR} -I${LZ4INCLUDE} -L${LZ4LIBDIR} -lCore -lRIO -lTree -ltbb -llz4 -pthread cms_read_threaded.cc
+${CXX} -O2 -std=c++17 -g -o threaded_io_test -I${ROOTINCLUDE} -L${ROOTLIBDIR} -I${CMSSWINCLUDE} -I${TBBINCLUDE} -L${TBBLIBDIR} -I${LZ4INCLUDE} -L${LZ4LIBDIR} -lCore -lRIO -lTree -ltbb -llz4 -pthread threaded_io_test.cc
 echo ""
 echo "remember to set LD_LIBRARY_PATH with ${ROOTLIBDIR}"
 

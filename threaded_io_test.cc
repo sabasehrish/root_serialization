@@ -12,6 +12,7 @@
 #include "DummyOutputer.h"
 #include "PDSSource.h"
 #include "RootSource.h"
+#include "EmptySource.h"
 #include "Lane.h"
 
 #include "tbb/task_group.h"
@@ -101,6 +102,11 @@ int main(int argc, char* argv[]) {
     else if( sourceType == "PDSSource") {
       factory = [](std::string const& iName, unsigned long long iNEvents) {
         return std::make_unique<PDSSource>(iName, iNEvents);
+      };
+    } 
+    else if( sourceType == "EmptySource") {
+      factory = [](std::string const& iName, unsigned long long iNEvents) {
+        return std::make_unique<EmptySource>(iNEvents);
       };
     }
     else {

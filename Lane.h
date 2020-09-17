@@ -22,7 +22,6 @@ public:
  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
     
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
-    //serializers_.reserve(source_->dataProducts().size());
     waiters_.reserve(source_->dataProducts().size());
     for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
       auto const& dp = source_->dataProducts()[ib];
@@ -31,8 +30,10 @@ public:
 	eventAuxReader_ = EventAuxReader(address);
       }
       
-      //serializers_.emplace_back(dp.name(), address,dp.classType());
       waiters_.emplace_back(ib, iScaleFactor);
+    }
+    if(not eventAuxReader_) {
+      eventAuxReader_ = EventAuxReader(nullptr);
     }
   }
 
@@ -40,9 +41,9 @@ public:
     doNextEvent(index, group,  outputer);
   }
 
-  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(); }
+  void setVerbose(bool iSet) { verbose_ = iSet; }
 
-  //std::vector<SerializerWrapper> const& serializers() const { return serializers_;}
+  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(); }
 
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
@@ -80,7 +81,9 @@ private:
     auto i = ++index;
     i-=1;
     if(source_->gotoEvent(i)) {
-      std::cout <<"event "+std::to_string(i)+"\n"<<std::flush;
+      if(verbose_) {
+        std::cout <<"event "+std::to_string(i)+"\n"<<std::flush;
+      }
       
       //std::cout <<"make doNextEvent task"<<std::endl;
       TaskHolder recursiveTask(group, make_functor_task([this, &index, &group, &outputer]() {
@@ -95,6 +98,7 @@ private:
   std::vector<Waiter> waiters_;
   std::optional<EventAuxReader> eventAuxReader_;
   unsigned int index_;
+  bool verbose_ = false;
 };
 
 #endif

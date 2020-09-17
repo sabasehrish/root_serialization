@@ -7,9 +7,7 @@
 #include <atomic>
 #include <iomanip>
 
-#include "SerializeOutputer.h"
-#include "PDSOutputer.h"
-#include "DummyOutputer.h"
+#include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
 
 #include "Lane.h"
@@ -73,23 +71,18 @@ int main(int argc, char* argv[]) {
   }
 
 
-  std::function<std::unique_ptr<OutputerBase>()> outFactory;
+  std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
   std::string outputerName = "DummyOutputer";
   if(argc == 7) {
     outputerName = argv[6];
     auto [outputType, outputInfo] = parseCompound(argv[6]);
-    if(outputType == "PDSOutputer") {
-      outFactory = [outputInfo, nLanes]() { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
-    } else if(outputType == "SerializeOutputer") {
-      outFactory = [nLanes]() {return std::make_unique<SerializeOutputer>(nLanes);};
-    } else if(outputType == "DummyOutputer") {
-      outFactory = []() { return std::make_unique<DummyOutputer>();};
-    } else {
+    outFactory = outputerFactoryGenerator(outputType, outputInfo);
+    if(not outFactory) {
       std::cout <<"unknown output type "<<outputType<<std::endl;
       return 1;
     }
   } else {
-    outFactory = [](){return std::make_unique<DummyOutputer>();};
+    outFactory = outputerFactoryGenerator(outputerName, "");
   }
 
   auto [sourceType, fileName] = parseCompound(argv[1]);
@@ -103,7 +96,7 @@ int main(int argc, char* argv[]) {
   {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
-    auto out = outFactory();
+    auto out = outFactory(1);
     Lane lane(0, sourceFactory(fileName, 1), 0);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
@@ -118,7 +111,7 @@ int main(int argc, char* argv[]) {
   }
   std::cout <<"finished warmup"<<std::endl;
 
-  auto out = outFactory();
+  auto out = outFactory(nLanes);
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
     lanes.emplace_back(i, sourceFactory(fileName, nEvents), scale);

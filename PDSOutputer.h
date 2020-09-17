@@ -20,7 +20,9 @@
 
 class PDSOutputer :public OutputerBase {
  public:
- PDSOutputer(std::string const& iFileName, unsigned int iNLanes): file_(iFileName, std::ios_base::out| std::ios_base::binary) {}
+ PDSOutputer(std::string const& iFileName, unsigned int iNLanes): file_(iFileName, std::ios_base::out| std::ios_base::binary),
+    serializers_{std::size_t(iNLanes)}{
+}
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final {
     auto& s = serializers_[iLaneIndex];

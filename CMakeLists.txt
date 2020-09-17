@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # set the project name
 project(threaded_io_test VERSION 0.1)
+
+# want debug symbols
+set(CMAKE_CXX_FLAGS "-g")
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)

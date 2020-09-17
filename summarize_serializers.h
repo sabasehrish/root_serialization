@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 #include "SerializerWrapper.h"
 
 inline void summarize_serializers(std::vector<std::vector<SerializerWrapper>> const& iSerializersPerLane) {

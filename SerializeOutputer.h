@@ -16,7 +16,7 @@
 
 class SerializeOutputer :public OutputerBase {
  public:
-  SerializeOutputer(unsigned int iLaneIndex): serializers_(iLaneIndex) {}
+ SerializeOutputer(unsigned int iLaneIndex, bool iVerbose): serializers_(iLaneIndex), verbose_(iVerbose) {}
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final {
     auto& s = serializers_[iLaneIndex];
     s.reserve(iDPs.size());
@@ -47,8 +47,9 @@ class SerializeOutputer :public OutputerBase {
  private:
   void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) const {
     using namespace std::string_literals;
-
-    std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
+    if(verbose_) {
+      std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
+    }
     /*
     for(auto& s: iSerializers) {
       std::cout<<"   "s+std::string(s.name())+" size "+std::to_string(s.blob().size())+"\n" <<std::flush;
@@ -58,6 +59,7 @@ class SerializeOutputer :public OutputerBase {
 private:
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   mutable SerialTaskQueue queue_;
+  bool verbose_;
 };
 
 #endif

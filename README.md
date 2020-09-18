@@ -96,9 +96,13 @@ Does no work. If no outputer is given, this is the one used. Specify by just usi
 ```
 
 #### SerializeOutputer
-Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name
+Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name and an optional 'verbose' parameter
 ```
 > cms_read_threaded RootSource=test.root 1 1 0 10 SerializeOutputer
+```
+or
+```
+> cms_read_threaded RootSource=test.root 1 1 0 10 SerializeOutputer=verbose
 ```
 
 #### PDSOutputer

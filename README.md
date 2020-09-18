@@ -1,0 +1,102 @@
+# root_serialization
+
+This is a testing structure for doing performance experiments with various I/O packages from within an multi-threaded program. The program mimics behaviors common for
+HEP data processing frameworks.
+
+## Getting started
+The CMakeLists.txt uses 3rd party packages from /cvmfs which are identical to the packages used by the CMS experiment's CMSSW_11_2_0_pre6 software release. No CMS
+code is needed to build the code from this repository. CMS header files and shared libraries are needed if data files containing CMS data are being read.
+
+To build
+1. git clone ....
+1. cd root_serialization
+1. mkdir build
+1. cd build
+1. cmake ../
+1. make
+
+This will create the executable `threaded_io_test`.
+
+## threaded_io_test design
+The testing structure has 2 customizable component types
+1. `Source`s: These supply the _event_ data products used for testing.
+1. `Outputer`s: These read the _event_ data products. Some Outputers also write that data out for storage.
+
+In order to mimic the time taken to process event data, the testing structure has `Waiter`s. A `Waiter` read one _event_ data product and based on a property of that data
+product calls sleep for a length proportional to that property.
+
+The testing structure can process multiple _events_ concurrently. Each concurrent _event_ has its own set of `Waiter`s, one for each data product. The processing of 
+an _event_ is handled by a `Lane`. Concurrent _events_ are then done by having multiple `Lane`s. The `Waiter`s within a `Lane` are considered to be completely 
+independent and can be run concurrently.
+
+All `Lane`s share the same `Outputer`. Therefore an `Outputer` is required to be thread safe.
+
+For the moment, each `Lane` also has its own copy of the `Source`. That is likely to be changed in the future to better mimic the behavior of actual HEP processing
+framemworks.
+
+The want data is processed is as follows:
+1. When a `Lane` is no longer processing an _event_ it requests a new one from the system. The system advances an atomic counter and tells the `Lane` to use
+the _event_ associated with that index.
+1. The `Lane` then passes the _event_ index to the `Source` and asks it to asynchronously retrieve the _event_ data products.
+1. Once the `Source` has retrieved the data products, it signals to the `Waiter`s to run asynchronously.
+1. Once each `Waiter` has finished, the system signals to the `Outputer` that the particular _event_ data product is available for the `Outputer`. The `Outputer`
+can then asynchronously process that data product.
+1. Once the `Outputer` has finished with all the data products, the system signals the `Outputer` that the _event_ has finished. The `Outputer` can then do
+additional asynchronous work.
+1. When the `Outputer` finishes its end of _event_ work, the `Lane` is considered to be done with that _event_ and the cycle repeats.
+
+## Running tests
+The `threaded_io_test` takes up to 5 command line arguments
+```
+cms_read_threaded <Source configuration> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<Outputer configuration>]
+```
+
+1. `<Source configuration>` : which `Source` to use and any additional information needed to configure it. Options are described below.
+1. `[# threads]` : number of threads to use in the job.
+1. `[# concurrent events]` : number of _events_ (that is `Lane`s) to use. Best if number of events is less than  or equal to number of threads.
+1. `[time scale factor]` : used to convert the property of the _event_ data products into microseconds used for the sleep call. A value of 0 means no sleeping.
+1. `[<Outputer configuration>]` : optional, used to specify which `Outputer` to use and any additional information needed to configure it. The exact options are
+described below.
+
+## Available Components
+
+### Sources
+
+#### EmptySource
+Does not generate any _event_ data products. Specify by just using its name, e.g. 
+```
+> cms_read_threaded EmptySource 1 1 0 10
+```
+#### RootSource
+Reads a standard ROOT file. In addition to its name, one needs to give the file to read, e.g.
+```
+> cms_read_threaded RootSource=test.root 1 1 0 10
+```
+
+#### PDSSource
+Reads a _packed data streams_ format file. In addition to its name, one needs to give the file to read, e.g.
+```
+> cms_read_threaded PDSSource=test.pds 1 1 0 10
+```
+
+### Outputers
+
+#### DummyOutputer
+Does no work. If no outputer is given, this is the one used. Specify by just using its name
+```
+> cms_read_threaded EmptySource 1 1 0 10 DummyOutputer
+```
+
+#### SerializeOutputer
+Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name
+```
+> cms_read_threaded RootSource=test.root 1 1 0 10 SerializeOutputer
+```
+
+#### PDSOutputer
+Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write
+```
+> cms_read_threaded RootSource=test.root 1 1 0 10 PDSOutputer=test.pds
+```
+
+

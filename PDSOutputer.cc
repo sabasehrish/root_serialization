@@ -3,7 +3,7 @@
 #include "lz4.h"
 #include <iostream>
 #include <cstring>
-
+#include <set>
 
 void PDSOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];

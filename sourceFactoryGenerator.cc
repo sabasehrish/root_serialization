@@ -1,6 +1,7 @@
 #include "sourceFactoryGenerator.h"
 
 #include "RootSource.h"
+#include "RepeatingRootSource.h"
 #include "PDSSource.h"
 #include "EmptySource.h"
 
@@ -10,6 +11,10 @@ sourceFactoryGenerator(std::string_view iType) {
   if( iType == "RootSource") {
     sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
       return std::make_unique<RootSource>(iName, iNEvents);
+    };
+  } else if( iType == "RepeatingRootSource") {
+    sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
+      return std::make_unique<RepeatingRootSource>(iName, 10, iNEvents);
     };
   } else if( iType == "PDSSource") {
     sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {

@@ -73,6 +73,14 @@ Reads a standard ROOT file. In addition to its name, one needs to give the file 
 > cms_read_threaded RootSource=test.root 1 1 0 10
 ```
 
+#### RepeatingRootSource
+Reads the first 10 events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read, e.g.
+
+```
+> cms_read_threaded RepeatingRootSource=test.root 1 1 0 1000
+```
+
+
 #### PDSSource
 Reads a _packed data streams_ format file. In addition to its name, one needs to give the file to read, e.g.
 ```

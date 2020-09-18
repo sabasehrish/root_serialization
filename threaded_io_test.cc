@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
     outFactory = outputerFactoryGenerator(outputerName, "");
   }
 
-  auto [sourceType, fileName] = parseCompound(argv[1]);
-  auto sourceFactory = sourceFactoryGenerator(sourceType);
+  auto [sourceType, sourceOptions] = parseCompound(argv[1]);
+  auto sourceFactory = sourceFactoryGenerator(sourceType, sourceOptions);
   if(not sourceFactory) {
     std::cout <<"unknown source type "<<sourceType<<std::endl;
     return 1;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
     auto out = outFactory(1);
-    Lane lane(0, sourceFactory(fileName, 1), 0);
+    Lane lane(0, sourceFactory(1), 0);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
     arena.execute([&lane,pOut]() {
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
   auto out = outFactory(nLanes);
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, sourceFactory(fileName, nEvents), scale);
+    lanes.emplace_back(i, sourceFactory(nEvents), scale);
     out->setupForLane(i, lanes.back().dataProducts());
   }
 

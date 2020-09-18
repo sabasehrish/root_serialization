@@ -5,23 +5,32 @@
 #include "PDSSource.h"
 #include "EmptySource.h"
 
-std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> 
-sourceFactoryGenerator(std::string_view iType) {
-  std::function<std::unique_ptr<SourceBase>(std::string const&, unsigned long long)> sourceFactory;
+std::function<std::unique_ptr<SourceBase>(unsigned long long)> 
+sourceFactoryGenerator(std::string_view iType, std::string_view iOptions) {
+  std::function<std::unique_ptr<SourceBase>(unsigned long long)> sourceFactory;
   if( iType == "RootSource") {
-    sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-      return std::make_unique<RootSource>(iName, iNEvents);
+    std::string fileName( iOptions );
+    sourceFactory = [fileName]( unsigned long long iNEvents) {
+      return std::make_unique<RootSource>(fileName, iNEvents);
     };
   } else if( iType == "RepeatingRootSource") {
-    sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-      return std::make_unique<RepeatingRootSource>(iName, 10, iNEvents);
+    std::string fileName( iOptions );
+    unsigned int nUniqueEvents = 10;
+    auto pos = fileName.find(':');
+    if(pos != std::string::npos) {
+      nUniqueEvents = std::stoul(fileName.substr(pos+1));
+      fileName = fileName.substr(0,pos);
+    }
+    sourceFactory = [fileName, nUniqueEvents](unsigned long long iNEvents) {
+      return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNEvents);
     };
   } else if( iType == "PDSSource") {
-    sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
-      return std::make_unique<PDSSource>(iName, iNEvents);
+    std::string fileName( iOptions );
+    sourceFactory = [fileName](unsigned long long iNEvents) {
+      return std::make_unique<PDSSource>(fileName, iNEvents);
     };
   } else if( iType == "EmptySource") {
-    sourceFactory = [](std::string const& iName, unsigned long long iNEvents) {
+    sourceFactory = [](unsigned long long iNEvents) {
       return std::make_unique<EmptySource>(iNEvents);
     };
   }

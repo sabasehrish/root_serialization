@@ -25,6 +25,7 @@ class DataProductRetriever {
   std::string const& name() const { return name_;}
   TClass* classType() const { return class_;}
 
+  void setAddress(void** iAddress) { address_ = iAddress; }
   void setSize(size_t iSize) { size_ = iSize;}
 
   void getAsync(TaskHolder iCallback) {

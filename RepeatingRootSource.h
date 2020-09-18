@@ -25,6 +25,7 @@ public:
   RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned long long iNEvents);
   RepeatingRootSource(RepeatingRootSource&&) = default;
   RepeatingRootSource(RepeatingRootSource const&) = default;
+  ~RepeatingRootSource() final;
 
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
   EventIdentifier eventIdentifier() final { return identifierPerEvent_[presentEventIndex_];}

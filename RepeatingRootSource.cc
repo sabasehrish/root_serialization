@@ -48,9 +48,19 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     } else {
       identifierPerEvent_[i] = {1,1,static_cast<unsigned long long>(i)};
     }
-  }
-  
+  }  
 }
+
+RepeatingRootSource::~RepeatingRootSource() {
+  for(auto& buffers: dataBuffersPerEvent_) {
+    auto it = buffers.begin();
+    for(auto& d: dataProducts_) {
+      d.classType()->Destructor(it->address_);
+      ++it;
+    }
+  }
+}
+
 
 bool RepeatingRootSource::readEvent(long iEventIndex) {
   presentEventIndex_ = iEventIndex % nUniqueEvents_;

@@ -21,7 +21,7 @@ class SerializeOutputer :public OutputerBase {
     auto& s = serializers_[iLaneIndex];
     s.reserve(iDPs.size());
     for(auto const& dp: iDPs) {
-      s.emplace_back(dp.name(), dp.address(), dp.classType());
+      s.emplace_back(dp.name(), dp.classType());
     }
   }
 
@@ -30,7 +30,7 @@ class SerializeOutputer :public OutputerBase {
     auto& laneSerializers = serializers_[iLaneIndex];
     auto group = iCallback.group();
     assert(iDataProduct.index() < laneSerializers.size() );
-    laneSerializers[iDataProduct.index()].doWorkAsync(*group, std::move(iCallback));
+    laneSerializers[iDataProduct.index()].doWorkAsync(*group, iDataProduct.address(), std::move(iCallback));
   }
 
   void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const final {

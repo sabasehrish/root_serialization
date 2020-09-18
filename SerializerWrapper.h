@@ -12,15 +12,15 @@
 
 class SerializerWrapper {
 public:
- SerializerWrapper(std::string_view iName, void** iAddress, TClass* tClass):
-  name_{iName}, address_(iAddress), class_(tClass), serializer_{},
+ SerializerWrapper(std::string_view iName,  TClass* tClass):
+  name_{iName}, class_(tClass), serializer_{},
   accumulatedTime_{std::chrono::microseconds::zero()} {}
 
-  void doWorkAsync(tbb::task_group& iGroup, TaskHolder iCallback) {
-    iGroup.run([this, callback=std::move(iCallback)] () {
+  void doWorkAsync(tbb::task_group& iGroup, void** iAddress, TaskHolder iCallback) {
+    iGroup.run([this, iAddress, callback=std::move(iCallback)] () {
 	{
 	  auto start = std::chrono::high_resolution_clock::now();
-	  blob_ = serializer_.serialize(*address_, class_);
+	  blob_ = serializer_.serialize(*iAddress, class_);
 	  accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 	}
 	const_cast<TaskHolder&>(callback).doneWaiting();
@@ -34,7 +34,6 @@ public:
 private:
   std::vector<char> blob_;
   std::string_view name_;
-  void** address_;
   TClass* class_;
   Serializer serializer_;
   std::chrono::microseconds accumulatedTime_;

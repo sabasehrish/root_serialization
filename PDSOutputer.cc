@@ -9,14 +9,14 @@ void PDSOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   auto& s = serializers_[iLaneIndex];
   s.reserve(iDPs.size());
   for(auto const& dp: iDPs) {
-    s.emplace_back(dp.name(), dp.address(), dp.classType());
+    s.emplace_back(dp.name(), dp.classType());
   }
 }
 
 void PDSOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
   auto& laneSerializers = serializers_[iLaneIndex];
   auto group = iCallback.group();
-  laneSerializers[iDataProduct.index()].doWorkAsync(*group, std::move(iCallback));
+  laneSerializers[iDataProduct.index()].doWorkAsync(*group, iDataProduct.address(), std::move(iCallback));
 }
 
 void PDSOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {

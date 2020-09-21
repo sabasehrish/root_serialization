@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "tbb/task_group.h"
+#include "tbb/parallel_for.h"
 
 #include "SourceBase.h"
 #include "SerializerWrapper.h"
@@ -18,10 +19,11 @@
 class Lane {
 public:
  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
-    
-    waiters_.reserve(source_->dataProducts().size());
-    for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
-      waiters_.emplace_back(ib, iScaleFactor);
+    if(iScaleFactor >=0.) {
+      waiters_.reserve(source_->dataProducts().size());
+      for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
+	waiters_.emplace_back(ib, iScaleFactor);
+      }
     }
   }
 
@@ -36,29 +38,28 @@ public:
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
 
-  TaskHolder makeTaskForDataProduct(tbb::task_group& group, size_t index, DataProductRetriever& iDP, OutputerBase const& outputer, TaskHolder& holder) {
+  TaskHolder makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder holder) {
+    if(waiters_.empty()) {
+      return holder;
+    } else {  
+      return TaskHolder(group,
+		     make_functor_task([index,  holder, this]() {
+			 auto laneIndex = this->index_;
+			 auto& w = waiters_[index];
+			 w.waitAsync(source_->dataProducts(),std::move(holder));
+		       }) );
+    }
+  }
+
+  TaskHolder makeTaskForDataProduct(tbb::task_group& group, size_t index, DataProductRetriever& iDP, OutputerBase const& outputer, TaskHolder holder) {
       if(outputer.usesProductReadyAsync()) {
-	TaskHolder waitH(group,
-			 make_functor_task([&group, &outputer, index, &iDP, holder, this]() {
-			     auto laneIndex = this->index_;
-			     TaskHolder sH(group,
+	auto laneIndex = this->index_;
+	return makeWaiterTask(group, index,TaskHolder(group, 
 					   make_functor_task([holder, laneIndex, &iDP, &outputer]() {
 					       outputer.productReadyAsync(laneIndex, iDP, std::move(holder));
-					     }));
-			     auto& w = waiters_[index];
-			     w.waitAsync(source_->dataProducts(),std::move(sH));
-			   }) );
-	
-	return waitH;
+					     })));
       } else {
-	TaskHolder waitH(group,
-			 make_functor_task([index,  holder, this]() {
-			     auto laneIndex = this->index_;
-			     auto& w = waiters_[index];
-			     w.waitAsync(source_->dataProducts(),std::move(holder));
-			   }) );
-	
-	return waitH;
+	return makeWaiterTask(group, index, holder);
       }
   }
 
@@ -72,6 +73,8 @@ private:
 					       std::move(callback));
 			}));
     
+    //NOTE: I once replaced with with a tbb::parallel_for but that made the code slower and did not
+    // scale as well as the number of threads were increased.
     size_t index=0;
     for(auto& d: source_->dataProducts()) {
       d.getAsync(makeTaskForDataProduct(group, index,d, outputer, holder));

@@ -48,7 +48,7 @@ additional asynchronous work.
 ## Running tests
 The `threaded_io_test` takes up to 5 command line arguments
 ```
-cms_read_threaded <Source configuration> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<Outputer configuration>]
+threaded_io_test <Source configuration> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<Outputer configuration>]
 ```
 
 1. `<Source configuration>` : which `Source` to use and any additional information needed to configure it. Options are described below.

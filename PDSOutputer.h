@@ -22,6 +22,7 @@ class PDSOutputer :public OutputerBase {
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
 
   void productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const final;
+  bool usesProductReadyAsync() const final {return true;}
 
   void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const final;
   

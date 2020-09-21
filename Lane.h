@@ -36,6 +36,32 @@ public:
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
 
+  TaskHolder makeTaskForDataProduct(tbb::task_group& group, size_t index, DataProductRetriever& iDP, OutputerBase const& outputer, TaskHolder& holder) {
+      if(outputer.usesProductReadyAsync()) {
+	TaskHolder waitH(group,
+			 make_functor_task([&group, &outputer, index, &iDP, holder, this]() {
+			     auto laneIndex = this->index_;
+			     TaskHolder sH(group,
+					   make_functor_task([holder, laneIndex, &iDP, &outputer]() {
+					       outputer.productReadyAsync(laneIndex, iDP, std::move(holder));
+					     }));
+			     auto& w = waiters_[index];
+			     w.waitAsync(source_->dataProducts(),std::move(sH));
+			   }) );
+	
+	return waitH;
+      } else {
+	TaskHolder waitH(group,
+			 make_functor_task([index,  holder, this]() {
+			     auto laneIndex = this->index_;
+			     auto& w = waiters_[index];
+			     w.waitAsync(source_->dataProducts(),std::move(holder));
+			   }) );
+	
+	return waitH;
+      }
+  }
+
   void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer) { 
     //Process order: retrieve data product, do wait, serialize, do output, call iCallback 
 
@@ -48,18 +74,7 @@ private:
     
     size_t index=0;
     for(auto& d: source_->dataProducts()) {
-      TaskHolder waitH(group,
-		       make_functor_task([&group, &outputer, index, &d, holder, this]() {
-			  auto laneIndex = this->index_;
-			  TaskHolder sH(group,
-					make_functor_task([holder, laneIndex, &d, &outputer]() {
-					    outputer.productReadyAsync(laneIndex, d, std::move(holder));
-					  }));
-			  auto& w = waiters_[index];
-			  w.waitAsync(source_->dataProducts(),std::move(sH));
-			 }) );
-
-      d.getAsync(std::move(waitH));
+      d.getAsync(makeTaskForDataProduct(group, index,d, outputer, holder));
       ++index;
     }
   }

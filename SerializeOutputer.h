@@ -33,6 +33,8 @@ class SerializeOutputer :public OutputerBase {
     laneSerializers[iDataProduct.index()].doWorkAsync(*group, iDataProduct.address(), std::move(iCallback));
   }
 
+  bool usesProductReadyAsync() const final {return true; }
+
   void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const final {
     queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback)]() mutable {
 	output(iEventID, serializers_[iLaneIndex]);

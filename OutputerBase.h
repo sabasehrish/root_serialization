@@ -14,6 +14,8 @@ class OutputerBase {
   
   virtual void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const&) = 0;
   virtual void productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const&, TaskHolder iCallback) const = 0;
+  virtual bool usesProductReadyAsync() const = 0;
+
 
   virtual void outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const = 0;
 

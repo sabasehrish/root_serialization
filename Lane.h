@@ -17,7 +17,7 @@
 
 class Lane {
 public:
- Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
+ Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex}, productReadyCaches_(source_->dataProducts().size()) {
     
     waiters_.reserve(source_->dataProducts().size());
     for( int ib = 0; ib< source_->dataProducts().size(); ++ib) {
@@ -41,18 +41,22 @@ private:
 
     //std::cout <<"make process event task"<<std::endl;
     TaskHolder holder(group, 
-		      make_functor_task([&outputer, this, callback=std::move(iCallback)]() {
+		      make_functor_task(outputerTaskCache_,
+					[&outputer, this, callback=std::move(iCallback)]() {
 			  outputer.outputAsync(this->index_, source_->eventIdentifier(),
 					       std::move(callback));
 			}));
     
     size_t index=0;
     for(auto& d: source_->dataProducts()) {
+      auto& w = waiters_[index];
       TaskHolder waitH(group,
-		       make_functor_task([&group, &outputer, index, &d, holder, this]() {
+		       make_functor_task(w.callbackCache(),
+					 [&group, &outputer, index, &d, holder, this]() {
 			  auto laneIndex = this->index_;
 			  TaskHolder sH(group,
-					make_functor_task([holder, laneIndex, &d, &outputer]() {
+					make_functor_task(productReadyCaches_[index], 
+							  [holder, laneIndex, &d, &outputer]() {
 					    outputer.productReadyAsync(laneIndex, d, std::move(holder));
 					  }));
 			  auto& w = waiters_[index];
@@ -74,7 +78,8 @@ private:
       }
       
       //std::cout <<"make doNextEvent task"<<std::endl;
-      TaskHolder recursiveTask(group, make_functor_task([this, &index, &group, &outputer]() {
+      TaskHolder recursiveTask(group, make_functor_task(doNextEventCache_,
+							[this, &index, &group, &outputer]() {
 	    doNextEvent(index, group, outputer);
 	  }));
       processEventAsync(group, std::move(recursiveTask), outputer);
@@ -82,7 +87,9 @@ private:
   }
 
   std::unique_ptr<SourceBase> source_;
-  //std::vector<SerializerWrapper> serializers_;
+  std::unique_ptr<char[]> doNextEventCache_;
+  std::unique_ptr<char[]> outputerTaskCache_;
+  std::vector<std::unique_ptr<char[]>> productReadyCaches_;
   std::vector<Waiter> waiters_;
   unsigned int index_;
   bool verbose_ = false;

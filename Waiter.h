@@ -24,7 +24,10 @@ class Waiter {
 	});
     }
 
+    std::unique_ptr<char[]>& callbackCache() { return cache_; }
+
  private:
+  std::unique_ptr<char[]> cache_;
   double scale_;
   unsigned int index_;
 };

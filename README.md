@@ -94,10 +94,16 @@ Reads a _packed data streams_ format file. In addition to its name, one needs to
 ### Outputers
 
 #### DummyOutputer
-Does no work. If no outputer is given, this is the one used. Specify by just using its name
+Does no work. If no outputer is given, this is the one used. Specify by just using its name and optionally
+the option label 'useProductReady'
 ```
 > cms_read_threaded EmptySource 1 1 0 10 DummyOutputer
 ```
+or
+```
+> cms_read_threaded EmptySource 1 1 0 10 DummyOutputer=useProductReady
+```
+
 
 #### SerializeOutputer
 Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name and an optional 'verbose' parameter

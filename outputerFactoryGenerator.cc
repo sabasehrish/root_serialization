@@ -22,7 +22,15 @@ outputerFactoryGenerator(std::string_view iType, std::string_view iOptions) {
     }
     outFactory = [verbose](unsigned int nLanes) {return std::make_unique<SerializeOutputer>(nLanes,verbose);};
   } else if(iType == "DummyOutputer") {
-    outFactory = [](unsigned int) { return std::make_unique<DummyOutputer>();};
+    bool useProductReady = false;
+    if(not iOptions.empty()) {
+      if(iOptions != "useProductReady") {
+	std::cout <<"Unknown option for DummyOutputer: "<<iOptions<<std::endl;
+	return outFactory;
+      }
+      useProductReady = true;
+    }
+    outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
   }
 
   return outFactory;

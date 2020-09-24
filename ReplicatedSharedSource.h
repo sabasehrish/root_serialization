@@ -10,7 +10,7 @@ namespace cce::tf {
   public:
     template<typename... Args>
       ReplicatedSharedSource(unsigned iNLanes, unsigned long long iNEvents, Args&&... iArgs):
-    SharedSourceBase(iNLanes, iNEvents) {
+    SharedSourceBase(iNEvents) {
       sources_.reserve(iNLanes);
       for(int i=0; i< iNLanes; ++i) {
         sources_.emplace_back(std::forward<Args>(iArgs)...);

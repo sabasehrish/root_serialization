@@ -12,7 +12,7 @@ namespace cce::tf {
 class SharedSourceBase {
 
  public:
-  explicit SharedSourceBase(unsigned int iNLanes, unsigned long long iNEvents): 
+  explicit SharedSourceBase(unsigned long long iNEvents): 
   maxNEvents_{iNEvents} {}
   virtual ~SharedSourceBase() {}
 

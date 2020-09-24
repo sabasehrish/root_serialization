@@ -7,7 +7,7 @@
 
 #include "tbb/task_group.h"
 
-#include "SourceBase.h"
+#include "SharedSourceBase.h"
 #include "OutputerBase.h"
 #include "Waiter.h"
 
@@ -15,13 +15,13 @@
 namespace cce::tf {
 class Lane {
 public:
-  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor);
+  Lane(unsigned int iIndex, SharedSourceBase* iSource, double iScaleFactor);
 
   void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer);
 
   void setVerbose(bool iSet) { verbose_ = iSet; }
 
-  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(); }
+  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(index_); }
 
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
 private:
@@ -34,7 +34,7 @@ private:
 
   void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer);
 
-  std::unique_ptr<SourceBase> source_;
+  SharedSourceBase* source_;
   std::vector<Waiter> waiters_;
   unsigned int index_;
   bool verbose_ = false;

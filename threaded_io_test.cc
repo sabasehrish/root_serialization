@@ -95,7 +95,8 @@ int main(int argc, char* argv[]) {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
     auto out = outFactory(1);
-    Lane lane(0, sourceFactory(1), 0);
+    auto source =sourceFactory(1,1);
+    Lane lane(0, source.get(), 0);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
     arena.execute([&lane,pOut]() {
@@ -110,9 +111,10 @@ int main(int argc, char* argv[]) {
   std::cout <<"finished warmup"<<std::endl;
 
   auto out = outFactory(nLanes);
+  auto source = sourceFactory(nLanes, nEvents);
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, sourceFactory(nEvents), scale);
+    lanes.emplace_back(i, source.get(), scale);
     out->setupForLane(i, lanes.back().dataProducts());
   }
 

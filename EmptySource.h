@@ -6,8 +6,8 @@
 namespace cce::tf {
 class EmptySource : public SourceBase {
  public:
-  explicit EmptySource(unsigned long long iNEvents):
-  SourceBase(iNEvents) {}
+  explicit EmptySource():
+  SourceBase() {}
 
   std::vector<DataProductRetriever>& dataProducts() final { return empty_;}
   EventIdentifier eventIdentifier() final {

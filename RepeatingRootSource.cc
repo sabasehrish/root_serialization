@@ -7,8 +7,8 @@
 
 using namespace cce::tf;
 
-RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned long long iNEvents) :
-  SourceBase(iNEvents),
+RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents) :
+  SourceBase(),
   nUniqueEvents_(iNUniqueEvents),
   identifierPerEvent_(iNUniqueEvents),
   dataBuffersPerEvent_(iNUniqueEvents)

@@ -19,7 +19,7 @@ class PDSDelayedRetriever : public DelayedProductRetriever {
 
 class PDSSource : public SourceBase {
 public:
-  PDSSource(std::string const& iName, unsigned long long iNEvents);
+  PDSSource(std::string const& iName);
   PDSSource(PDSSource&&) = default;
   PDSSource(PDSSource const&) = default;
   ~PDSSource();

@@ -12,7 +12,7 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
   if( iType == "RootSource") {
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<RootSource>>(iNLanes, iNEvents, fileName, iNEvents);
+      return std::make_unique<ReplicatedSharedSource<RootSource>>(iNLanes, iNEvents, fileName);
     };
   } else if( iType == "RepeatingRootSource") {
     std::string fileName( iOptions );
@@ -23,16 +23,16 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
       fileName = fileName.substr(0,pos);
     }
     sourceFactory = [fileName, nUniqueEvents](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<RepeatingRootSource>>(iNLanes, iNEvents, fileName, nUniqueEvents, iNEvents);
+      return std::make_unique<ReplicatedSharedSource<RepeatingRootSource>>(iNLanes, iNEvents, fileName, nUniqueEvents);
     };
   } else if( iType == "PDSSource") {
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<PDSSource>>(iNLanes, iNEvents, fileName, iNEvents);
+      return std::make_unique<ReplicatedSharedSource<PDSSource>>(iNLanes, iNEvents, fileName);
     };
   } else if( iType == "EmptySource") {
     sourceFactory = [](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<EmptySource>>(iNLanes, iNEvents, iNEvents);
+      return std::make_unique<ReplicatedSharedSource<EmptySource>>(iNLanes, iNEvents);
       };
     } 
   return sourceFactory;

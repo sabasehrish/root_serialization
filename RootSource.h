@@ -23,7 +23,7 @@ class RootDelayedRetriever : public DelayedProductRetriever {
 
 class RootSource : public SourceBase {
 public:
-  RootSource(std::string const& iName, unsigned long long iNEvents);
+  RootSource(std::string const& iName);
   RootSource(RootSource&&) = default;
   RootSource(RootSource const&) = default;
 

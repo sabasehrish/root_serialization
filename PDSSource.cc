@@ -196,8 +196,8 @@ bool PDSSource::skipToNextEvent() {
 }
 
 
-PDSSource::PDSSource(std::string const& iName, unsigned long long iNEvents) :
-                 SourceBase(iNEvents),
+PDSSource::PDSSource(std::string const& iName) :
+                 SourceBase(),
   file_{iName, std::ios_base::binary}
 {
   auto bufferSize = readPreamble();

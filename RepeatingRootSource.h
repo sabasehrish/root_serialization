@@ -23,7 +23,7 @@ class RepeatingRootDelayedRetriever : public DelayedProductRetriever {
 
 class RepeatingRootSource : public SourceBase {
 public:
-  RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned long long iNEvents);
+  RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents);
   RepeatingRootSource(RepeatingRootSource&&) = default;
   RepeatingRootSource(RepeatingRootSource const&) = default;
   ~RepeatingRootSource() final;

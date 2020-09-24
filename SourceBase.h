@@ -15,6 +15,7 @@ class SourceBase {
   accumulatedTime_{std::chrono::microseconds::zero()} {}
   virtual ~SourceBase() {}
 
+  virtual size_t numberOfDataProducts() const = 0;
   virtual std::vector<DataProductRetriever>& dataProducts() = 0;
   virtual EventIdentifier eventIdentifier() = 0;
 

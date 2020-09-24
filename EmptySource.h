@@ -9,6 +9,7 @@ class EmptySource : public SourceBase {
   explicit EmptySource():
   SourceBase() {}
 
+  size_t numberOfDataProducts() const {return 0;}
   std::vector<DataProductRetriever>& dataProducts() final { return empty_;}
   EventIdentifier eventIdentifier() final {
     return {1, 1, index_};

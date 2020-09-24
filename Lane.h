@@ -21,9 +21,11 @@ public:
 
   void setVerbose(bool iSet) { verbose_ = iSet; }
 
-  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(index_); }
+  std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(index_, presentEventIndex_); }
 
   std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
+
+  long presentEventIndex() const { return presentEventIndex_;}
 private:
 
   TaskHolder makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder holder) ;
@@ -36,6 +38,7 @@ private:
 
   SharedSourceBase* source_;
   std::vector<Waiter> waiters_;
+  long presentEventIndex_ = -1;
   unsigned int index_;
   bool verbose_ = false;
 };

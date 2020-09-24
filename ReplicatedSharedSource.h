@@ -17,11 +17,13 @@ namespace cce::tf {
       }
     }
 
-    std::vector<DataProductRetriever>& dataProducts(unsigned int iNLanes) final {
-      return sources_[iNLanes].dataProducts();
+    size_t numberOfDataProducts() const {return sources_[0].numberOfDataProducts();}
+
+    std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex) final {
+      return sources_[iLane].dataProducts();
     }
-    EventIdentifier eventIdentifier(unsigned int iNLanes) final {
-      return sources_[iNLanes].eventIdentifier();
+    EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final {
+      return sources_[iLane].eventIdentifier();
     }
 
     std::chrono::microseconds accumulatedTime() const final {

@@ -27,6 +27,7 @@ public:
   RootSource(RootSource&&) = default;
   RootSource(RootSource const&) = default;
 
+  size_t numberOfDataProducts() const final {return dataProducts_.size();}
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
   EventIdentifier eventIdentifier() final { return eventAuxReader_->doWork();}
 

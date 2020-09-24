@@ -16,8 +16,9 @@ class SharedSourceBase {
   maxNEvents_{iNEvents} {}
   virtual ~SharedSourceBase() {}
 
-  virtual std::vector<DataProductRetriever>& dataProducts(unsigned int iNLanes) = 0;
-  virtual EventIdentifier eventIdentifier(unsigned int iNLanes) = 0;
+  virtual size_t numberOfDataProducts() const = 0;
+  virtual std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex) = 0;
+  virtual EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) = 0;
 
   bool mayBeAbleToGoToEvent(long int iEventIndex) const;
 

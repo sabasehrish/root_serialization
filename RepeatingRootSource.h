@@ -28,6 +28,7 @@ public:
   RepeatingRootSource(RepeatingRootSource const&) = default;
   ~RepeatingRootSource() final;
 
+  size_t numberOfDataProducts() const final {return dataProducts_.size();}
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
   EventIdentifier eventIdentifier() final { return identifierPerEvent_[presentEventIndex_];}
 

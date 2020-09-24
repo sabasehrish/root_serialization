@@ -1,24 +1,29 @@
 #if !defined(EmptySource_h)
 #define EmptySource_h
 
-#include "SourceBase.h"
+#include "SharedSourceBase.h"
 
 namespace cce::tf {
-class EmptySource : public SourceBase {
+class EmptySource : public SharedSourceBase {
  public:
-  explicit EmptySource():
-  SourceBase() {}
+  explicit EmptySource(unsigned long long iNEvents):
+  SharedSourceBase(iNEvents) {}
 
-  size_t numberOfDataProducts() const {return 0;}
-  std::vector<DataProductRetriever>& dataProducts() final { return empty_;}
-  EventIdentifier eventIdentifier() final {
-    return {1, 1, index_};
+  size_t numberOfDataProducts() const final {return 0;}
+  std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex) final { return empty_;}
+  EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final {
+    return {1, 1, static_cast<unsigned long long>(iEventIndex+1)};
   }
 
+  std::chrono::microseconds accumulatedTime() const final { return std::chrono::microseconds::zero();}
+
  private:
-  bool readEvent(long ) final {++index_; return true; }
-  unsigned long long index_ = 0;
+  void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder iHolder) final {
+    iHolder.runNow();
+  }
+
   std::vector<DataProductRetriever> empty_;
+
 };
 }
 #endif

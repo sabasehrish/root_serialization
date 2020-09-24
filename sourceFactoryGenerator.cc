@@ -32,7 +32,7 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
     };
   } else if( iType == "EmptySource") {
     sourceFactory = [](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<EmptySource>>(iNLanes, iNEvents);
+      return std::make_unique<EmptySource>(iNEvents);
       };
     } 
   return sourceFactory;

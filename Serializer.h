@@ -5,6 +5,7 @@
 #include "TBufferFile.h"
 #include "TClass.h"
 
+namespace cce::tf {
 class Serializer {
 public:
   Serializer() : bufferFile_{TBuffer::kWrite} {}
@@ -26,5 +27,5 @@ public:
 private:
   TBufferFile bufferFile_;
 };
-
+}
 #endif

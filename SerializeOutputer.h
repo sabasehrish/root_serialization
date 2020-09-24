@@ -14,6 +14,7 @@
 
 #include "SerialTaskQueue.h"
 
+namespace cce::tf {
 class SerializeOutputer :public OutputerBase {
  public:
  SerializeOutputer(unsigned int iLaneIndex, bool iVerbose): serializers_(iLaneIndex), verbose_(iVerbose) {}
@@ -63,5 +64,5 @@ private:
   mutable SerialTaskQueue queue_;
   bool verbose_;
 };
-
+}
 #endif

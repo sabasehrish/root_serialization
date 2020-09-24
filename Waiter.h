@@ -7,6 +7,7 @@
 #include "DataProductRetriever.h"
 #include "TaskHolder.h"
 
+namespace cce::tf {
 class Waiter {
  public:
 
@@ -28,4 +29,5 @@ class Waiter {
   double scale_;
   unsigned int index_;
 };
+}
 #endif

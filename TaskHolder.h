@@ -5,6 +5,7 @@
 #include "tbb/task_group.h"
 #include "TaskBase.h"
 
+namespace cce::tf {
 class TaskHolder {
 public:
   TaskHolder(): group_{nullptr}, task_{nullptr} {}
@@ -68,4 +69,5 @@ private:
   tbb::task_group* group_;
   TaskBase* task_;
 };
+}
 #endif

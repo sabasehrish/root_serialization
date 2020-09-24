@@ -3,6 +3,7 @@
 
 #include "OutputerBase.h"
 
+namespace cce::tf {
 class DummyOutputer : public OutputerBase {
  public:
  DummyOutputer(bool iUseProductReadyAsync=false): use_{iUseProductReadyAsync} {}
@@ -19,4 +20,5 @@ class DummyOutputer : public OutputerBase {
  private:
   bool use_;
 };
+}
 #endif

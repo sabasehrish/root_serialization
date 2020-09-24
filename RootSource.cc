@@ -5,6 +5,8 @@
 #include "TFile.h"
 #include "TClass.h"
 
+using namespace cce::tf;
+
 RootSource::RootSource(std::string const& iName, unsigned long long iNEvents) :
   SourceBase(iNEvents),
   file_{TFile::Open(iName.c_str())}

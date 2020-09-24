@@ -3,6 +3,7 @@
 
 #include <atomic>
 
+namespace cce::tf {
 class TaskBase {
 public:
   TaskBase() = default;
@@ -15,5 +16,5 @@ public:
 private:
   std::atomic<unsigned int> refCount_{0};
 };
-
+}
 #endif

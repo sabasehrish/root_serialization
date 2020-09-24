@@ -16,6 +16,7 @@
 #include "Waiter.h"
 #include "FunctorTask.h"
 
+namespace cce::tf {
 class Lane {
 public:
  Lane(unsigned int iIndex, std::unique_ptr<SourceBase> iSource, double iScaleFactor): source_(std::move(iSource)), index_{iIndex} {
@@ -105,5 +106,5 @@ private:
   unsigned int index_;
   bool verbose_ = false;
 };
-
+}
 #endif

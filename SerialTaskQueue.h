@@ -62,6 +62,7 @@
 // user include files
 
 // forward declarations
+namespace cce::tf {
 class SerialTaskQueue {
   public:
     SerialTaskQueue() : m_taskChosen(false), m_pauseCount{0} {}
@@ -169,6 +170,5 @@ void SerialTaskQueue::QueuedTask<T>::execute() {
   try { this->m_action(); } catch (...) {
   }
 }
-
-
+}
 #endif

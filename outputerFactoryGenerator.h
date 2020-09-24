@@ -6,7 +6,8 @@
 #include <string_view>
 #include "OutputerBase.h"
 
+namespace cce::tf {
 std::function<std::unique_ptr<OutputerBase>(unsigned int)>
 outputerFactoryGenerator(std::string_view iType, std::string_view iOptions);
-
+}
 #endif

@@ -3,6 +3,7 @@
 
 #include "SourceBase.h"
 
+namespace cce::tf {
 class EmptySource : public SourceBase {
  public:
   explicit EmptySource(unsigned long long iNEvents):
@@ -18,4 +19,5 @@ class EmptySource : public SourceBase {
   unsigned long long index_ = 0;
   std::vector<DataProductRetriever> empty_;
 };
+}
 #endif

@@ -10,6 +10,7 @@
 #include "TaskHolder.h"
 
 
+namespace cce::tf {
 class SerializerWrapper {
 public:
  SerializerWrapper(std::string_view iName,  TClass* tClass):
@@ -38,4 +39,5 @@ private:
   Serializer serializer_;
   std::chrono::microseconds accumulatedTime_;
 };
+}
 #endif

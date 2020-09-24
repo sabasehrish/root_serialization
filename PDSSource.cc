@@ -5,6 +5,7 @@
 #include "TClass.h"
 #include "TBufferFile.h"
 
+using namespace cce::tf;
 
 uint32_t PDSSource::readword() {
   int32_t word;

@@ -7,7 +7,8 @@
 
 #include "SourceBase.h"
 
+namespace cce::tf {
 std::function<std::unique_ptr<SourceBase>(unsigned long long)> 
 sourceFactoryGenerator(std::string_view iType, std::string_view iOptions);
-
+}
 #endif

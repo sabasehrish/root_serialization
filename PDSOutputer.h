@@ -13,6 +13,7 @@
 
 #include "SerialTaskQueue.h"
 
+namespace cce::tf {
 class PDSOutputer :public OutputerBase {
  public:
  PDSOutputer(std::string const& iFileName, unsigned int iNLanes): file_(iFileName, std::ios_base::out| std::ios_base::binary),
@@ -47,5 +48,5 @@ private:
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   bool firstTime_ = true;
 };
-
+}
 #endif

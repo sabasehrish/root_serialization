@@ -7,6 +7,7 @@
 #include <vector>
 #include <chrono>
 
+namespace cce::tf {
 class SourceBase {
 
  public:
@@ -37,5 +38,5 @@ inline bool SourceBase::gotoEvent(long iEventIndex) {
   }
   return false;
 }
-
+}
 #endif

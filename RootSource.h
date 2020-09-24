@@ -16,6 +16,7 @@
 class TBranch;
 class TTree;
 
+namespace cce::tf {
 class RootDelayedRetriever : public DelayedProductRetriever {
   void getAsync(int index, TaskHolder) override {}
 };
@@ -41,4 +42,5 @@ private:
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<TBranch*> branches_;
 };
+}
 #endif

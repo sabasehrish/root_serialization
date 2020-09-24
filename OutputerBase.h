@@ -6,6 +6,7 @@
 #include "SerializerWrapper.h"
 #include "TaskHolder.h"
 
+namespace cce::tf {
 class DataProductRetriever;
 
 class OutputerBase {
@@ -21,4 +22,5 @@ class OutputerBase {
 
   virtual void printSummary() const = 0;
 };
+}
 #endif

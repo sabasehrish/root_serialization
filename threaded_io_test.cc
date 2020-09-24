@@ -29,6 +29,7 @@ namespace {
 }
 
 int main(int argc, char* argv[]) {
+  using namespace cce::tf;
 
   if(not (argc > 1 and argc < 8) ) {
     std::cout <<"1 to 6 arguments required\n"

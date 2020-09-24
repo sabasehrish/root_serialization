@@ -19,6 +19,8 @@
 //
 // member functions
 //
+using namespace cce::tf;
+
 SerialTaskQueue::~SerialTaskQueue() {
   //be certain all tasks have completed
   bool isEmpty = m_tasks.empty();

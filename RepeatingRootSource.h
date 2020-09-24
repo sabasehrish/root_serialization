@@ -16,6 +16,7 @@
 class TBranch;
 class TTree;
 
+namespace cce::tf {
 class RepeatingRootDelayedRetriever : public DelayedProductRetriever {
   void getAsync(int index, TaskHolder) override {}
 };
@@ -48,4 +49,5 @@ private:
   std::vector<EventIdentifier> identifierPerEvent_;
   std::vector<std::vector<BufferInfo>> dataBuffersPerEvent_;
 };
+}
 #endif

@@ -5,6 +5,8 @@
 #include <cstring>
 #include <set>
 
+using namespace cce::tf;
+
 void PDSOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
   s.reserve(iDPs.size());

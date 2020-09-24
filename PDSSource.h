@@ -12,6 +12,7 @@
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
 
+namespace cce::tf {
 class PDSDelayedRetriever : public DelayedProductRetriever {
   void getAsync(int index, TaskHolder) override {}
 };
@@ -59,4 +60,5 @@ private:
   std::vector<void*> dataBuffers_;
   PDSDelayedRetriever delayedRetriever_;
 };
+}
 #endif

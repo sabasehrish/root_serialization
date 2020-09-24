@@ -5,8 +5,8 @@
 #include "PDSSource.h"
 #include "EmptySource.h"
 
-std::function<std::unique_ptr<SourceBase>(unsigned long long)> 
-sourceFactoryGenerator(std::string_view iType, std::string_view iOptions) {
+std::function<std::unique_ptr<cce::tf::SourceBase>(unsigned long long)> 
+cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOptions) {
   std::function<std::unique_ptr<SourceBase>(unsigned long long)> sourceFactory;
   if( iType == "RootSource") {
     std::string fileName( iOptions );

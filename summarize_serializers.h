@@ -7,6 +7,7 @@
 #include <iomanip>
 #include "SerializerWrapper.h"
 
+namespace cce::tf {
 inline void summarize_serializers(std::vector<std::vector<SerializerWrapper>> const& iSerializersPerLane) {
 
   std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
@@ -40,5 +41,5 @@ inline void summarize_serializers(std::vector<std::vector<SerializerWrapper>> co
     std::cout <<"time: "<<p.second.count()<<"us "<<std::setprecision(4)<<(100.*p.second.count()/serializerTime.count())<<"%\tname: "<<p.first<<"\n";
   }
 }
-
+}
 #endif

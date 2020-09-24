@@ -7,6 +7,7 @@
 
 class TClass;
 
+namespace cce::tf {
 class DataProductRetriever {
  public:
  DataProductRetriever(int iIndex, 
@@ -42,5 +43,5 @@ class DataProductRetriever {
   DelayedProductRetriever* delayedReader_;
   int index_;
 };
-
+}
 #endif

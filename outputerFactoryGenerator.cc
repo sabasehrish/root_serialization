@@ -3,8 +3,8 @@
 #include "SerializeOutputer.h"
 #include "DummyOutputer.h"
 
-std::function<std::unique_ptr<OutputerBase>(unsigned int)>
-outputerFactoryGenerator(std::string_view iType, std::string_view iOptions) {
+std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
+cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOptions) {
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
   
   if(iType == "PDSOutputer") {

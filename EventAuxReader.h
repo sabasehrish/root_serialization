@@ -4,6 +4,7 @@
 #include "EventIdentifier.h"
 #include "cms/EventAuxiliary.h"
 
+namespace cce::tf {
 class EventAuxReader {
 public:
   EventAuxReader(void** iAddress): address_(iAddress){}
@@ -19,5 +20,5 @@ public:
 private:
   void** address_;
 };
-
+}
 #endif

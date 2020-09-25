@@ -22,29 +22,37 @@ void PDSOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetrieve
 }
 
 void PDSOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
-  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback)]() mutable {
-      const_cast<PDSOutputer*>(this)->output(iEventID, serializers_[iLaneIndex]);
+  auto start = std::chrono::high_resolution_clock::now();
+  auto tempBuffer = writeDataProductsToOutputBuffer(serializers_[iLaneIndex]);
+  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer=std::move(tempBuffer)]() mutable {
+      auto start = std::chrono::high_resolution_clock::now();
+      const_cast<PDSOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],buffer);
+        serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });
+    auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+    parallelTime_ += time.count();
 }
 
 void PDSOutputer::printSummary() const  {
+  std::cout <<"PDSOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
+    "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
   summarize_serializers(serializers_);
 }
 
 
 
-void PDSOutputer::output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
+void PDSOutputer::output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, std::vector<uint32_t>const& iBuffer) {
   if(firstTime_) {
     writeFileHeader(iSerializers);
     firstTime_ = false;
   }
   using namespace std::string_literals;
   
-  std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
+  //std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
   
   writeEventHeader(iEventID);
-  writeDataProducts(iSerializers);
+  file_.write(reinterpret_cast<char const*>(iBuffer.data()), (iBuffer.size())*4);
   /*
     for(auto& s: iSerializers) {
     std::cout<<"   "s+s.name()+" size "+std::to_string(s.blob().size())+"\n" <<std::flush;
@@ -153,10 +161,10 @@ void PDSOutputer::writeEventHeader(EventIdentifier const& iEventID) {
   buffer[2] = iEventID.lumi;
   buffer[3] = (iEventID.event >> 32) & 0xFFFFFFFF;
   buffer[4] = iEventID.event & 0xFFFFFFFF;
-  file_.write(reinterpret_cast<char*>(buffer.data()), headerBufferSizeInWords*4);
+  file_.write(reinterpret_cast<char const*>(buffer.data()), headerBufferSizeInWords*4);
 }
 
-void PDSOutputer::writeDataProducts(std::vector<SerializerWrapper> const& iSerializers) {
+std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const{
   //Calculate buffer size needed
   uint32_t bufferSize = 0;
   for(auto const& s: iSerializers) {
@@ -191,6 +199,6 @@ void PDSOutputer::writeDataProducts(std::vector<SerializerWrapper> const& iSeria
   // 2 bits of the word
   cBuffer[1] = buffer.size()*4 + (cSize % 4);
   cBuffer[recordSize+1]=recordSize;
-  file_.write(reinterpret_cast<char*>(cBuffer.data()), (recordSize+2)*4);
+  return cBuffer;
 }
 

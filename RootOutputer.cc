@@ -9,13 +9,12 @@
 
 using namespace cce::tf;
 
-RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes): 
+RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, int iSplitLevel): 
   file_(iFileName.c_str(), "recreate", ""),
-  eventTree_(new TTree("Events","", 99 /*split level*/)),
+  eventTree_(new TTree("Events","", iSplitLevel, &file_)),
   retrievers_{std::size_t(iNLanes)},
   accumulatedTime_(std::chrono::microseconds::zero())
 {
-  eventTree_->SetDirectory(&file_);
   //Turn off auto save
   eventTree_->SetAutoSave(std::numeric_limits<Long64_t>::max());
 }

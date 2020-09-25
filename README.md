@@ -116,10 +116,15 @@ or
 ```
 
 #### RootOutputer
-Writes the _event_ data products into a ROOT file. Specify both the name of the Outputer and the file to write
+Writes the _event_ data products into a ROOT file. Specify both the name of the Outputer and the file to write as well as an optional splitLevel
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootOutputer=test.root
 ```
+or
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootOutputer=test.root:splitLevel=1
+```
+
 
 #### PDSOutputer
 Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write

@@ -12,8 +12,21 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     std::string outputInfo{iOptions};
     outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
   } else if(iType == "RootOutputer") {
-    std::string outputInfo{iOptions};
-    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<RootOutputer>(outputInfo, nLanes);};
+    std::string fileName{iOptions};
+    int splitLevel = 99;
+    auto pos = fileName.find(':');
+    if(pos != std::string::npos) {
+      auto remainingOptions = fileName.substr(pos+1);
+      fileName = fileName.substr(0,pos);
+
+      pos = remainingOptions.find('=');
+      if(pos == std::string::npos or remainingOptions.substr(0,pos) != "splitLevel") {
+        std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
+        return outFactory;
+      }
+      splitLevel = std::stoul(remainingOptions.substr(pos+1));
+    }
+    outFactory = [fileName,splitLevel](unsigned int nLanes) { return std::make_unique<RootOutputer>(fileName, nLanes, splitLevel);};
   } else if(iType == "SerializeOutputer") {
     bool verbose = false;
     if(not iOptions.empty()) {

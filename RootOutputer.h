@@ -19,7 +19,7 @@ class TTree;
 namespace cce::tf {
 class RootOutputer :public OutputerBase {
  public:
-  RootOutputer(std::string const& iFileName, unsigned int iNLanes);
+  RootOutputer(std::string const& iFileName, unsigned int iNLanes, int iSplitLevel);
   ~RootOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;

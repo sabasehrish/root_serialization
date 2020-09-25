@@ -60,13 +60,16 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
 }
 
 RepeatingRootSource::~RepeatingRootSource() {
+  for(auto& dataProducts: dataProductsPerLane_) {
+    for(auto& d: dataProducts) {
+      d.setAddress(nullptr);
+    }
+  }
   for(auto& buffers: dataBuffersPerEvent_) {
     auto it = buffers.begin();
-    for(auto& dataProducts: dataProductsPerLane_) {
-      for(auto& d: dataProducts) {
-        d.classType()->Destructor(it->address_);
-        ++it;
-      }
+    for(auto& d: dataProductsPerLane_[0]) {
+      d.classType()->Destructor(it->address_);
+      ++it;
     }
   }
 }

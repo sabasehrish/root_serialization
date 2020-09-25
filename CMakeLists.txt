@@ -50,3 +50,9 @@ target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_g
 
 target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
+
+enable_testing()
+add_test(NAME EmptySourceTest COMMAND threaded_io_test EmptySource 1 1 0 10)
+add_test(NAME DummyOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 DummyOutputer)
+add_test(NAME SerializeOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer)
+add_test(NAME SerializeOutputerVerboseTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer=verbose)

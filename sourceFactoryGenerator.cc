@@ -9,7 +9,7 @@
 std::function<std::unique_ptr<cce::tf::SharedSourceBase>(unsigned int, unsigned long long)> 
 cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOptions) {
   std::function<std::unique_ptr<SharedSourceBase>(unsigned int, unsigned long long)> sourceFactory;
-  if( iType == "RootSource") {
+  if( iType == "ReplicatedRootSource") {
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<ReplicatedSharedSource<RootSource>>(iNLanes, iNEvents, fileName);
@@ -25,7 +25,7 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
     sourceFactory = [fileName, nUniqueEvents](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNLanes, iNEvents);
     };
-  } else if( iType == "PDSSource") {
+  } else if( iType == "ReplicatedPDSSource") {
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<ReplicatedSharedSource<PDSSource>>(iNLanes, iNEvents, fileName);

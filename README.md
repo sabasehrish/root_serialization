@@ -65,30 +65,30 @@ described below.
 #### EmptySource
 Does not generate any _event_ data products. Specify by just using its name, e.g. 
 ```
-> cms_read_threaded EmptySource 1 1 0 10
+> threaded_io_test EmptySource 1 1 0 10
 ```
-#### RootSource
-Reads a standard ROOT file. In addition to its name, one needs to give the file to read, e.g.
+#### ReplicatedRootSource
+Reads a standard ROOT file. Each concurrent Event has its own replica of the Source to avoid the need for cross Event synchronization. In addition to its name, one needs to give the file to read, e.g.
 ```
-> cms_read_threaded RootSource=test.root 1 1 0 10
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10
 ```
 
 #### RepeatingRootSource
 Reads the first N events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read and, optionally, the number of events to read (default is 10) , e.g.
 
 ```
-> cms_read_threaded RepeatingRootSource=test.root 1 1 0 1000
+> threaded_io_test RepeatingRootSource=test.root 1 1 0 1000
 ```
 or
 ```
-> cms_read_threaded RepeatingRootSource=test.root:5 1 1 0 1000
+> threaded_io_test RepeatingRootSource=test.root:5 1 1 0 1000
 ```
 
 
-#### PDSSource
-Reads a _packed data streams_ format file. In addition to its name, one needs to give the file to read, e.g.
+#### ReplicatedPDSSource
+Reads a _packed data streams_ format file. Each concurrent Event has its own replica of the Source to avoid the need for cross Event synchronization. In addition to its name, one needs to give the file to read, e.g.
 ```
-> cms_read_threaded PDSSource=test.pds 1 1 0 10
+> threaded_io_test ReplicatedPDSSource=test.pds 1 1 0 10
 ```
 
 ### Outputers
@@ -97,28 +97,28 @@ Reads a _packed data streams_ format file. In addition to its name, one needs to
 Does no work. If no outputer is given, this is the one used. Specify by just using its name and optionally
 the option label 'useProductReady'
 ```
-> cms_read_threaded EmptySource 1 1 0 10 DummyOutputer
+> threaded_io_test EmptySource 1 1 0 10 DummyOutputer
 ```
 or
 ```
-> cms_read_threaded EmptySource 1 1 0 10 DummyOutputer=useProductReady
+> threaded_io_test EmptySource 1 1 0 10 DummyOutputer=useProductReady
 ```
 
 
 #### SerializeOutputer
 Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name and an optional 'verbose' parameter
 ```
-> cms_read_threaded RootSource=test.root 1 1 0 10 SerializeOutputer
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 SerializeOutputer
 ```
 or
 ```
-> cms_read_threaded RootSource=test.root 1 1 0 10 SerializeOutputer=verbose
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 SerializeOutputer=verbose
 ```
 
 #### PDSOutputer
 Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write
 ```
-> cms_read_threaded RootSource=test.root 1 1 0 10 PDSOutputer=test.pds
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 PDSOutputer=test.pds
 ```
 
 

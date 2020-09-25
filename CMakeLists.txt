@@ -37,7 +37,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 # add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc)
+add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc)
 
 target_include_directories(threaded_io_test PUBLIC
                            "${PROJECT_BINARY_DIR}"
@@ -58,3 +58,4 @@ add_test(NAME DummyOutputerUseProductReadyTest COMMAND threaded_io_test EmptySou
 add_test(NAME SerializeOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer)
 add_test(NAME SerializeOutputerVerboseTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer=verbose)
 add_test(NAME PDSOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 PDSOutputer=test_empty.pds)
+add_test(NAME RootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root)

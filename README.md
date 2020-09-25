@@ -115,6 +115,12 @@ or
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 SerializeOutputer=verbose
 ```
 
+#### RootOutputer
+Writes the _event_ data products into a ROOT file. Specify both the name of the Outputer and the file to write
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootOutputer=test.root
+```
+
 #### PDSOutputer
 Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write
 ```

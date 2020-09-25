@@ -1,5 +1,6 @@
 #include "outputerFactoryGenerator.h"
 #include "PDSOutputer.h"
+#include "RootOutputer.h"
 #include "SerializeOutputer.h"
 #include "DummyOutputer.h"
 
@@ -10,6 +11,9 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
   if(iType == "PDSOutputer") {
     std::string outputInfo{iOptions};
     outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
+  } else if(iType == "RootOutputer") {
+    std::string outputInfo{iOptions};
+    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<RootOutputer>(outputInfo, nLanes);};
   } else if(iType == "SerializeOutputer") {
     bool verbose = false;
     if(not iOptions.empty()) {

@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
   if(not (argc > 1 and argc < 8) ) {
     std::cout <<"1 to 6 arguments required\n"
-                "cms_read_threaded <filename> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<output file name>]\n";
+                "threaded_io_test <Source configuration> [# threads] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
     return 1;
   }
 

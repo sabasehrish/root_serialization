@@ -23,7 +23,7 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
       fileName = fileName.substr(0,pos);
     }
     sourceFactory = [fileName, nUniqueEvents](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<ReplicatedSharedSource<RepeatingRootSource>>(iNLanes, iNEvents, fileName, nUniqueEvents);
+      return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNLanes, iNEvents);
     };
   } else if( iType == "PDSSource") {
     std::string fileName( iOptions );

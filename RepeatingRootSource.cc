@@ -7,11 +7,13 @@
 
 using namespace cce::tf;
 
-RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents) :
-  SourceBase(),
+RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents) :
+  SharedSourceBase(iNEvents),
   nUniqueEvents_(iNUniqueEvents),
+  dataProductsPerLane_(iNLanes),
   identifierPerEvent_(iNUniqueEvents),
-  dataBuffersPerEvent_(iNUniqueEvents)
+  dataBuffersPerEvent_(iNUniqueEvents),
+  accumulatedTime_(0)
 {
   auto file_ = std::unique_ptr<TFile>(TFile::Open(iName.c_str()));
   auto events = file_->Get<TTree>("Events");
@@ -19,7 +21,9 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
 
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
   int eventAuxIndex = -1;
-  dataProducts_.reserve(l->GetEntriesFast());
+  for(auto& dataProducts: dataProductsPerLane_) {
+    dataProducts.reserve(l->GetEntriesFast());
+  }
   std::vector<TBranch*> branches;
   branches.reserve(l->GetEntriesFast());
   for( int i=0; i< l->GetEntriesFast(); ++i) {
@@ -31,13 +35,15 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     EDataType type;
     b->GetExpectedType(class_ptr,type);
     assert(class_ptr != nullptr);
-    dataProducts_.emplace_back(i,
-			       nullptr,
-                               b->GetName(),
-                               class_ptr,
-			       &delayedReader_);
+    for(auto& dataProducts: dataProductsPerLane_) {
+      dataProducts.emplace_back(i,
+                                nullptr,
+                                b->GetName(),
+                                class_ptr,
+                                &delayedReader_);
+    }
     branches.emplace_back(b);
-    if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
+    if(eventAuxiliaryBranchName == dataProductsPerLane_[0].back().name()) {
       eventAuxIndex = i;
     }
   }
@@ -56,30 +62,36 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
 RepeatingRootSource::~RepeatingRootSource() {
   for(auto& buffers: dataBuffersPerEvent_) {
     auto it = buffers.begin();
-    for(auto& d: dataProducts_) {
-      d.classType()->Destructor(it->address_);
-      ++it;
+    for(auto& dataProducts: dataProductsPerLane_) {
+      for(auto& d: dataProducts) {
+        d.classType()->Destructor(it->address_);
+        ++it;
+      }
     }
   }
 }
 
 
-bool RepeatingRootSource::readEvent(long iEventIndex) {
-  presentEventIndex_ = iEventIndex % nUniqueEvents_;
-  auto it = dataBuffersPerEvent_[presentEventIndex_].begin();
-  for(auto& d: dataProducts_) {
+void RepeatingRootSource::readEventAsync(unsigned int iLane, long iEventIndex, OptionalTaskHolder iTask) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto presentEventIndex = iEventIndex % nUniqueEvents_;
+  auto it = dataBuffersPerEvent_[presentEventIndex].begin();
+  auto& dataProducts = dataProductsPerLane_[iLane];
+  for(auto& d: dataProducts) {
     d.setAddress(&it->address_);
     d.setSize(it->size_);
     ++it;
   }
-  return true;
+  auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+  accumulatedTime_ += time.count();
+  iTask.runNow();
 }
 
 void RepeatingRootSource::fillBuffer(int iEntry, std::vector<BufferInfo>& bi, std::vector<TBranch*>& branches) {
   bi.reserve(branches.size());
 
   for(int i=0; i< branches.size(); ++i) {
-    void* object = dataProducts_[i].classType()->New();
+    void* object = dataProductsPerLane_[0][i].classType()->New();
     auto branch = branches[i];
     branch->SetAddress(&object);
     auto s = branch->GetEntry(iEntry);

@@ -112,7 +112,7 @@ class SerialTaskQueue {
        * \param[in] iAction Must be a functor that takes no arguments and return no values.
        */
     template <typename T>
-    void push(tbb::task_group& iGroup, const T& iAction);
+    void push(tbb::task_group& iGroup, T&& iAction);
 
   private:
     SerialTaskQueue(const SerialTaskQueue&) = delete;
@@ -134,9 +134,9 @@ class SerialTaskQueue {
     template <typename T>
     class QueuedTask : public TaskBase {
     public:
-    QueuedTask(tbb::task_group& iGroup, const T& iAction) : 
+    QueuedTask(tbb::task_group& iGroup, T iAction) : 
       TaskBase(&iGroup),
-      m_action(iAction) {}
+      m_action(std::move(iAction)) {}
 
     private:
       void execute() final;
@@ -159,8 +159,8 @@ class SerialTaskQueue {
 };
 
 template <typename T>
-void SerialTaskQueue::push(tbb::task_group& iGroup, const T& iAction) {
-  QueuedTask<T>* pTask{new QueuedTask<T>{iGroup, iAction}};
+void SerialTaskQueue::push(tbb::task_group& iGroup, T&& iAction) {
+  QueuedTask<T>* pTask{new QueuedTask<T>{iGroup, std::forward<T>(iAction)}};
   pushTask(pTask);
 }
 

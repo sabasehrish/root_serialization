@@ -23,10 +23,11 @@ void PDSOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetrieve
 
 void PDSOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto start = std::chrono::high_resolution_clock::now();
-  auto tempBuffer = writeDataProductsToOutputBuffer(serializers_[iLaneIndex]);
+  auto tempBuffer = std::make_unique<std::vector<uint32_t>>(writeDataProductsToOutputBuffer(serializers_[iLaneIndex]));
   queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer=std::move(tempBuffer)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      const_cast<PDSOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],buffer);
+      const_cast<PDSOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],*buffer);
+      buffer.reset();
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });

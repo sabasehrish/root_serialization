@@ -3,6 +3,7 @@
 #include "RootOutputer.h"
 #include "SerializeOutputer.h"
 #include "DummyOutputer.h"
+#include "configKeyValuePairs.h"
 
 std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
 cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOptions) {
@@ -13,20 +14,48 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
   } else if(iType == "RootOutputer") {
     std::string fileName{iOptions};
-    int splitLevel = 99;
+    RootOutputer::Config config;
     auto pos = fileName.find(':');
     if(pos != std::string::npos) {
       auto remainingOptions = fileName.substr(pos+1);
       fileName = fileName.substr(0,pos);
 
-      pos = remainingOptions.find('=');
-      if(pos == std::string::npos or remainingOptions.substr(0,pos) != "splitLevel") {
-        std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
-        return outFactory;
+      auto keyValues = configKeyValuePairs(remainingOptions);
+      int foundOptions = 0;
+      auto itFound = keyValues.find("splitLevel");
+      if(itFound != keyValues.end()) {
+	config.splitLevel_ = std::stoul(itFound->second);
+	++foundOptions;
       }
-      splitLevel = std::stoul(remainingOptions.substr(pos+1));
+      itFound = keyValues.find("compressionLevel");
+      if(itFound != keyValues.end()) {
+	config.compressionLevel_ = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      itFound = keyValues.find("compressionAlgorithm");
+      if(itFound != keyValues.end()) {
+	config.compressionAlgorithm_ = itFound->second;
+	++foundOptions;
+      }
+      itFound = keyValues.find("basketSize");
+      if(itFound != keyValues.end()) {
+	config.basketSize_ = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      itFound = keyValues.find("treeMaxVirtualSize");
+      if(itFound != keyValues.end()) {
+	config.treeMaxVirtualSize_ = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      if(foundOptions != keyValues.size()) {
+	std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
+	for(auto const& kv: keyValues) {
+	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
+	}
+	return outFactory;
+      }
     }
-    outFactory = [fileName,splitLevel](unsigned int nLanes) { return std::make_unique<RootOutputer>(fileName, nLanes, splitLevel);};
+    outFactory = [fileName,config](unsigned int nLanes) { return std::make_unique<RootOutputer>(fileName, nLanes, config);};
   } else if(iType == "SerializeOutputer") {
     bool verbose = false;
     if(not iOptions.empty()) {

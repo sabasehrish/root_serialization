@@ -19,7 +19,15 @@ class TTree;
 namespace cce::tf {
 class RootOutputer :public OutputerBase {
  public:
-  RootOutputer(std::string const& iFileName, unsigned int iNLanes, int iSplitLevel);
+  struct Config {
+    int splitLevel_=99;
+    int compressionLevel_=9;
+    std::string compressionAlgorithm_="";
+    int basketSize_=16384;
+    int treeMaxVirtualSize_=-1;
+  };
+
+  RootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);
   ~RootOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
@@ -41,6 +49,7 @@ private:
   mutable SerialTaskQueue queue_;
   std::vector<std::vector<DataProductRetriever> const*> retrievers_;
   std::chrono::microseconds accumulatedTime_;
+  int basketSize_;
 };
 }
 #endif

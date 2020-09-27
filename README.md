@@ -116,7 +116,12 @@ or
 ```
 
 #### RootOutputer
-Writes the _event_ data products into a ROOT file. Specify both the name of the Outputer and the file to write as well as an optional splitLevel
+Writes the _event_ data products into a ROOT file. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+- splitLevel: split level for the branches, default 99
+- compressionLevel: compression level 0-9, default 9
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "ZLIB", "LZMA", "LZ4"
+- basketSize: default size of all baskets, default size 16384
+- treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootOutputer=test.root
 ```

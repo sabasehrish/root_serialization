@@ -47,6 +47,11 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
 	config.treeMaxVirtualSize_ = std::stoul(itFound->second);
 	++foundOptions;
       }
+      itFound = keyValues.find("useIMT");
+      if(itFound != keyValues.end()) {
+	config.useIMT_ = true;
+	++foundOptions;
+      }
       if(foundOptions != keyValues.size()) {
 	std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
 	for(auto const& kv: keyValues) {

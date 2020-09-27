@@ -122,6 +122,7 @@ Writes the _event_ data products into a ROOT file. Specify both the name of the 
 - compressionAlgorithm: name of compression algorithm. Allowed valued "", "ZLIB", "LZMA", "LZ4"
 - basketSize: default size of all baskets, default size 16384
 - treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
+- useIMT : if specified, uses ROOT's Implicit Multi-threading ability
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootOutputer=test.root
 ```

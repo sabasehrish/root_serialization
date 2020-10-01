@@ -18,9 +18,6 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   accumulatedTime_(std::chrono::microseconds::zero()),
   basketSize_{iConfig.basketSize_}
 {
-  if(iConfig.useIMT_ and not ROOT::IsImplicitMTEnabled()) {
-    ROOT::EnableImplicitMT();
-  }
   if(not iConfig.compressionAlgorithm_.empty()) {
     if(iConfig.compressionAlgorithm_ == "ZLIB") {
       file_.SetCompressionAlgorithm(ROOT::kZLIB);

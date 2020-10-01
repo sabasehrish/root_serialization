@@ -48,11 +48,11 @@ additional asynchronous work.
 ## Running tests
 The `threaded_io_test` takes up to 5 command line arguments
 ```
-threaded_io_test <Source configuration> [# threads] [# conconcurrent events] [time scale factor] [max # events] [<Outputer configuration>]
+threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [time scale factor] [max # events] [<Outputer configuration>]
 ```
 
 1. `<Source configuration>` : which `Source` to use and any additional information needed to configure it. Options are described below.
-1. `[# threads]` : number of threads to use in the job.
+1. `[# threads[/useIMT]]` : number of threads to use in the job. Optionally can add '/useIMT' directly after the number of threads to turn on ROOT's implicit multithreaded (IMT). 
 1. `[# concurrent events]` : number of _events_ (that is `Lane`s) to use. Best if number of events is less than  or equal to number of threads.
 1. `[time scale factor]` : used to convert the property of the _event_ data products into microseconds used for the sleep call. A value of 0 means no sleeping. A value less than 0 prohibits the creation of the objects which do the sleep.
 1. `[<Outputer configuration>]` : optional, used to specify which `Outputer` to use and any additional information needed to configure it. The exact options are

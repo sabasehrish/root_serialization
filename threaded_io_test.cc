@@ -6,6 +6,7 @@
 #include <string>
 #include <atomic>
 #include <iomanip>
+#include <cmath>
 
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
@@ -26,6 +27,19 @@ namespace {
     }
     return std::pair(sArg, std::string());
   }
+
+  bool checkForIMT(const char* iArg) {
+    std::string sArg(iArg);
+    auto found = sArg.find('/');
+    if(found != std::string::npos) {
+      if(sArg.substr(found+1) != "useIMT") {
+	std::cout <<"unknown option for threads "<<sArg.substr(found+1)<<std::endl;
+	abort();
+      }
+      return true;
+    }
+    return false;
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -33,24 +47,30 @@ int main(int argc, char* argv[]) {
 
   if(not (argc > 1 and argc < 8) ) {
     std::cout <<"1 to 6 arguments required\n"
-                "threaded_io_test <Source configuration> [# threads] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
+                "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
     return 1;
   }
 
+  int parallelism = tbb::this_task_arena::max_concurrency();
+  bool useIMT=false;
+  if(argc > 2) {
+    useIMT = checkForIMT(argv[2]);
+    parallelism = atoi(argv[2]);
+  }
+
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, parallelism);
+
   //Tell Root we want to be multi-threaded
-  ROOT::EnableThreadSafety();
-  
+  if(useIMT) {
+    ROOT::EnableImplicitMT(parallelism);
+  } else {
+    ROOT::EnableThreadSafety();
+  }
   //When threading, also have to keep ROOT from logging all TObjects into a list
   TObject::SetObjectStat(false);
   
   //Have to avoid having Streamers modify themselves after they have been used
   TVirtualStreamerInfo::Optimize(false);
-
-  size_t parallelism = tbb::this_task_arena::max_concurrency();
-  if(argc > 2) {
-    parallelism = atoi(argv[2]);
-  }
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, parallelism);
 
   std::vector<Lane> lanes;
   unsigned int nLanes = 4;
@@ -144,7 +164,8 @@ int main(int argc, char* argv[]) {
             <<"Outputer "<<outputerName<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
-	    <<"time scale "<<scale<<"\n";
+	    <<"time scale "<<scale<<"\n"
+	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
   std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;

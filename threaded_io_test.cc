@@ -170,10 +170,7 @@ int main(int argc, char* argv[]) {
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
 
-  std::chrono::microseconds sourceTime = std::chrono::microseconds::zero();
-  for(auto const& lane: lanes) {
-    sourceTime += lane.sourceAccumulatedTime();
-  }
+  std::chrono::microseconds sourceTime = source->accumulatedTime();
 
   std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 

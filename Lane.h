@@ -23,8 +23,6 @@ public:
 
   std::vector<DataProductRetriever> const& dataProducts() const { return source_->dataProducts(index_, presentEventIndex_); }
 
-  std::chrono::microseconds sourceAccumulatedTime() const { return source_->accumulatedTime(); }
-
   long presentEventIndex() const { return presentEventIndex_;}
 private:
 

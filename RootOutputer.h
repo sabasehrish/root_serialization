@@ -25,6 +25,7 @@ class RootOutputer :public OutputerBase {
     std::string compressionAlgorithm_="";
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
+    int autoFlush_=-1;
   };
 
   RootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);

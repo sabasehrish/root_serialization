@@ -33,6 +33,9 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
 
   //Turn off auto save
   eventTree_->SetAutoSave(std::numeric_limits<Long64_t>::max());
+  if(-1 != iConfig.autoFlush_) {
+    eventTree_->SetAutoFlush(iConfig.autoFlush_);
+  }
 
   if (iConfig.treeMaxVirtualSize_ >= 0) {
     eventTree_->SetMaxVirtualSize(static_cast<Long64_t>(iConfig.treeMaxVirtualSize_));

@@ -18,6 +18,9 @@ namespace cce::tf {
       if(pos != std::string::npos) {
 	++start;
       }
+      if(keyValue.empty()) {
+	break;
+      }
       if( (pos = keyValue.find('=')) != std::string::npos ) {
 	keyValues.emplace(keyValue.substr(0,pos), keyValue.substr(pos+1));
       } else {

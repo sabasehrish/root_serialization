@@ -36,8 +36,11 @@ list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/external/lz4/1.
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+#make the library for testing
+add_library(configKeys configKeyValuePairs.cc)
+
 # add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs)
+add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc)
 
 target_include_directories(threaded_io_test PUBLIC
                            "${PROJECT_BINARY_DIR}"
@@ -52,6 +55,7 @@ target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
 
 enable_testing()
+add_subdirectory(tests)
 add_test(NAME EmptySourceTest COMMAND threaded_io_test EmptySource 1 1 0 10)
 add_test(NAME DummyOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 DummyOutputer)
 add_test(NAME DummyOutputerUseProductReadyTest COMMAND threaded_io_test EmptySource 1 1 0 10 DummyOutputer=useProductReady)

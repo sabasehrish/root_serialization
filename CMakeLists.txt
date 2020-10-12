@@ -40,19 +40,23 @@ find_package(Threads REQUIRED)
 add_library(configKeys configKeyValuePairs.cc)
 
 # add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc)
+add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc
+SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc HDFOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs)
 
 target_include_directories(threaded_io_test PUBLIC
                            "${PROJECT_BINARY_DIR}"
                            ${EXTRA_INCLUDES}
+                           $ENV{HIGHFIVE_INC}
+                           $ENV{HDF5_INC}
+                           $ENV{MPICH_INC}
                            )
 
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/lcg/root/6.20.06-ghbfee5/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/external/tbb/2020_U2-ghbfee/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/external/lz4/1.9.2/lib")
 
-target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
-target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
+target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS} $ENV{HDF5_LIB}/libhdf5.so )
+target_link_libraries(threaded_io_test PRIVATE Threads::Threads $ENV{HDF5_LIB}/libhdf5.so)
 
 enable_testing()
 add_subdirectory(tests)
@@ -69,3 +73,4 @@ add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptyS
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
 add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
+add_test(NAME HDFOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)

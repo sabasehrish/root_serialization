@@ -20,6 +20,7 @@
 #include "SerialTaskQueue.h"
 
 using namespace HighFive;
+using product_t = std::vector<char>;
 namespace cce::tf {
   class HDFOutputer : public OutputerBase {
     public:
@@ -48,8 +49,8 @@ namespace cce::tf {
     return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
   }
 
-  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, std::vector<std::vector<char>> const& iBuffer);
-  void writeFileHeader(std::vector<SerializerWrapper> const& iSerializers);
+  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);
+  void writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);
 
   //void writeEventHeader(EventIdentifier const& iEventID);
   std::vector<std::vector<char>> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
@@ -61,8 +62,10 @@ private:
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   bool firstTime_ = true;
-  std::vector<std::vector<char>> products_; 
+  std::vector<product_t> products_; 
   int count_ = 0;
+  int batch_ = 1;
+  std::vector<int> events_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
   };    

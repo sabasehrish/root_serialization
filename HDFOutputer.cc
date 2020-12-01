@@ -16,6 +16,7 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
     s.emplace_back(dp.name(), dp.classType());
   }
   products_.reserve(100);
+  events_.reserve(100);
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -26,11 +27,9 @@ void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetrieve
 
 void HDFOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto start = std::chrono::high_resolution_clock::now();
-  auto tempBuffer = std::make_unique<std::vector<std::vector<char>>>(writeDataProductsToOutputBuffer(serializers_[iLaneIndex]));
-  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer=std::move(tempBuffer)]() mutable {
+  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      const_cast<HDFOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],*buffer);
-      buffer.reset();
+      const_cast<HDFOutputer*>(this)->output(iEventID, serializers_[iLaneIndex]);
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });
@@ -44,84 +43,87 @@ void HDFOutputer::printSummary() const  {
   summarize_serializers(serializers_);
 }
 
-
-using product_t = std::vector<char>;
-std::vector<product_t> 
-get_prods(std::vector<product_t> const & input, 
+std::pair<product_t, std::vector<size_t>> 
+get_prods_and_sizes(std::vector<product_t> & input, 
          int prod_index, 
          int stride) {
-  std::vector<product_t> tmp; 
+  product_t products; 
+  std::vector<size_t> sizes; 
   for(int j = prod_index; j< input.size(); j+=stride) {
-    tmp.push_back(input[j]);
+    sizes.push_back(input[j].size());
+    products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
   }
-  return tmp;
+  return {products, sizes};
 }
 
-product_t
-flatten(std::vector<product_t> const& tmp) {
-  std::vector<char> tmp1 = tmp[0];
-  for (int i = 1; i<tmp.size(); ++i)
-     tmp1.insert(end(tmp1), begin(tmp[i]), end(tmp[i]));
-  return tmp1;
+template < typename T>
+void write_ds(Group g, std::string name, std::vector<T> data) {
+    DataSet ds = g.getDataSet(name);
+    auto old_dim = ds.getDimensions()[0];
+    auto new_dim = old_dim + data.size();
+    ds.resize({new_dim});
+    ds.select({old_dim}, {data.size()}).write(data);
 }
 
-std::vector<size_t>
-get_sizes(std::vector<product_t> const & prods) {
-  std::vector<size_t> sizes;
-  for(auto p: prods) 
-    sizes.push_back(p.size());
-  return sizes;
-}
-
-void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, std::vector<std::vector<char>>const& iBuffer) {
-  //std::cout << iEventID.event << ", " << iBuffer.size() << '\n';
+void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
   if(firstTime_) {
-    writeFileHeader(iSerializers);
+    writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
-  } 
-    std::cout << "Writing data products " << iEventID.event << '\n';
-    for(auto & s: dataProductIndices_) {
-      DataSet dataset = file_.getDataSet(s.first);
-      auto prods = get_prods(iBuffer, s.second, dataProductIndices_.size());
-      std::vector<char> tmp = flatten(prods);
-      dataset.resize({dataset.getDimensions()[0]+tmp.size()});
-      dataset.write(tmp); 
-      auto sizes = get_sizes(prods);
-      auto s1 = s.first+"_sz";
-      DataSet dataset2 = file_.getDataSet(s1);
-      dataset2.resize({dataset2.getDimensions()[0]+sizes.size()});
-      dataset2.write(sizes);
+  }
+  // accumulate events before writing, go through all the data products in the curret event
+  else 
+  {
+    for(auto& s: iSerializers) 
+       products_.push_back(s.blob());
+    events_.push_back(iEventID.event);
+    ++batch_;
+  }
+  if (batch_ == 10) { //max_batch_size){
+    auto g = file_.getGroup("Lumi");
+    write_ds<int>(g, "Event_IDs", events_);
+    auto const dpi_size = dataProductIndices_.size();
+    for(auto & [name, index]: dataProductIndices_) {
+      auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
+      write_ds<char>(g, name, prods);
+      write_ds<size_t>(g, name+"_sz", sizes);
     }
+    batch_ = 1;
+    products_.clear();
+  }
 }
-
-void HDFOutputer::writeFileHeader(std::vector<SerializerWrapper> const& iSerializers) {
-  int i = 0;
-  for(auto const& w: iSerializers) {
-    std::string s{w.name()};
-   // products_.push_back(w.blob());
-    dataProductIndices_.push_back({s, i});
+void HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
+  DataSetCreateProps props;
+  props.add(Chunking(std::vector<hsize_t>{128}));
+  //props.add(Shuffle());
+  //props.add(Deflate(9));
+  DataSpace dataspace = DataSpace({0}, {DataSpace::UNLIMITED});
+  if(!file_.exist("Lumi")) {
+    file_.createGroup("Lumi");
+  } 
+  auto g = file_.getGroup("Lumi");
+  if(!g.exist("Event_IDs"))
+    g.createDataSet<int>("Event_IDs", dataspace, props);
+  if (!g.hasAttribute("run") && !g.hasAttribute("lumisec")) {
+    auto r = g.createAttribute<int>("run", DataSpace::From(iEventID.run));
+    auto l = g.createAttribute<int>("lumisec", DataSpace::From(iEventID.lumi));
+    r.write(iEventID.run);
+    l.write(iEventID.lumi);
+  } 
+  
+  int i = 0; //for data product indices
+  for(auto const& s: iSerializers) {
+    std::string dp_name{s.name()};
+    dataProductIndices_.push_back({dp_name, i});
     ++i;
-    std::string s_sz = s+"_sz";
-    if(!file_.exist(s) && !file_.exist(s_sz)) {
-      DataSetCreateProps props;
-      props.add(Chunking(std::vector<hsize_t>{10}));
-      DataSpace dataspace = DataSpace({0}, {DataSpace::UNLIMITED});
-      DataSet dataset = file_.createDataSet<char>(s, dataspace, props);
-      DataSet dataset_sz = file_.createDataSet<int>(s_sz, dataspace, props); 
+    std::string dp_sz = dp_name+"_sz";
+    if(!g.exist(dp_name) && !g.exist(dp_sz)) {
+      auto d = g.createDataSet<char>(dp_name, dataspace, props);
+      std::string classname(w.className());
+      auto a = d.createAttribute<std::string>("classname", DataSpace::From(classname));
+      a.write(classname);
+      g.createDataSet<size_t>(dp_sz, dataspace, props); 
     } 
   }
 }
 
 
-std::vector<std::vector<char>> HDFOutputer::writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const{
-  std::vector<std::vector<char>> cBuffer;
-  std::vector<std::string> prod_names;
-  for(auto& s: iSerializers) {
-    //   std::cout<<"   " << s.name() << " size " << std::to_string(s.blob().size()) << "\n";
-       auto prod_sizes = s.blob().size();
-       std::string prod_name{s.name()};
-       prod_names.push_back(prod_name);
-       cBuffer.push_back(s.blob());
-    }
-  return cBuffer;
-}

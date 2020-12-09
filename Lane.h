@@ -17,7 +17,7 @@ class Lane {
 public:
   Lane(unsigned int iIndex, SharedSourceBase* iSource, double iScaleFactor);
 
-  void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer);
+  void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer, std::atomic<unsigned int>& counter);
 
   void setVerbose(bool iSet) { verbose_ = iSet; }
 
@@ -32,7 +32,8 @@ private:
 
   void processEventAsync(tbb::task_group& group, TaskHolder iCallback, const OutputerBase& outputer);
 
-  void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer);
+  void doNextEvent(std::atomic<long>& index, tbb::task_group& group,  const OutputerBase& outputer, 
+		   std::atomic<unsigned int>& counter);
 
   SharedSourceBase* source_;
   std::vector<Waiter> waiters_;

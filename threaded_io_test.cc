@@ -122,8 +122,9 @@ int main(int argc, char* argv[]) {
     arena.execute([&lane,pOut]() {
         tbb::task_group group;
         std::atomic<long> ievt{0};
+	std::atomic<unsigned int> count{1};
         group.run([&]() {
-            lane.processEventsAsync(ievt, group, *pOut);
+            lane.processEventsAsync(ievt, group, *pOut, count);
           });
         group.wait();
       });
@@ -145,15 +146,21 @@ int main(int argc, char* argv[]) {
   decltype(std::chrono::high_resolution_clock::now()) start;
   auto pOut = out.get();
   arena.execute([&lanes, &ievt, pOut, &start]() {
-    tbb::task_group group;
+    std::atomic<unsigned int> nLanesWaiting{ static_cast<unsigned int>(lanes.size())};
+    std::vector<tbb::task_group> groups(lanes.size());
     start = std::chrono::high_resolution_clock::now();
-    group.run([&]() {
-        for(auto& lane : lanes) {
-          lane.processEventsAsync(ievt, group, *pOut);
-        }
-      });
-    
-    group.wait();
+    auto itGroup = groups.begin();
+    for(auto& lane: lanes) {
+      auto& group = *itGroup;
+      group.run([&]() {lane.processEventsAsync(ievt,group, *pOut,nLanesWaiting);});
+      ++itGroup;
+    }
+    do {
+      for(auto& group: groups) {
+	group.wait();
+      }
+    } while(nLanesWaiting != 0);
+
   });
 
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);

@@ -100,9 +100,29 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
 }
   
 void TBufferMergerRootOutputer::printSummary() const {
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  for(auto& lane: lanes_) {
+    lane.file_->Write();
+  }
+  auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+
+  start = std::chrono::high_resolution_clock::now();
+  for(auto& lane: lanes_) {
+    lane.file_->Close();
+  }
+  auto closeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+
   decltype(lanes_[0].accumulatedTime_.count()) sum = 0;
   for(auto& l: lanes_) {
     sum += l.accumulatedTime_.count();
   }
-  std::cout <<"TBufferMergerRootOutputer total time: "<<sum<<"us\n";
+  
+
+  std::cout <<"TBufferMergerRootOutputer loop time: "<<sum<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer end write time: "<<writeTime.count()<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer end close time: "<<closeTime.count()<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer total time: "<<sum+writeTime.count()<<"us\n";
+
 }

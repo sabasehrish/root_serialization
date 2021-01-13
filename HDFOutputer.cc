@@ -15,7 +15,7 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-  products_.reserve(100);
+  products_.reserve(10000);
   events_.reserve(100);
 }
 
@@ -71,7 +71,7 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
     firstTime_ = false;
   }
   // accumulate events before writing, go through all the data products in the curret event
-  else 
+//  else 
   {
     for(auto& s: iSerializers) 
        products_.push_back(s.blob());
@@ -87,8 +87,9 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
       write_ds<char>(g, name, prods);
       write_ds<size_t>(g, name+"_sz", sizes);
     }
-    batch_ = 1;
+    batch_ = 0;
     products_.clear();
+    events_.clear();
   }
 }
 void HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
@@ -118,7 +119,7 @@ void HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, std::vector<S
     std::string dp_sz = dp_name+"_sz";
     if(!g.exist(dp_name) && !g.exist(dp_sz)) {
       auto d = g.createDataSet<char>(dp_name, dataspace, props);
-      std::string classname(w.className());
+      std::string classname(s.className());
       auto a = d.createAttribute<std::string>("classname", DataSpace::From(classname));
       a.write(classname);
       g.createDataSet<size_t>(dp_sz, dataspace, props); 

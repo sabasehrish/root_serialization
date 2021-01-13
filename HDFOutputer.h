@@ -62,10 +62,12 @@ private:
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   bool firstTime_ = true;
+  
   std::vector<product_t> products_; 
   int count_ = 0;
-  int batch_ = 1;
+  mutable std::atomic<int> batch_ = 0;
   std::vector<int> events_;
+  
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
   };    

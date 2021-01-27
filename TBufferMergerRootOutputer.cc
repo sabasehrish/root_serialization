@@ -48,9 +48,6 @@ void TBufferMergerRootOutputer::setupForLane(unsigned int iLaneIndex, std::vecto
   lane.eventTree_ = new TTree("Events","", splitLevel_, lane.file_.get());
   //Turn off auto save
   lane.eventTree_->SetAutoSave(std::numeric_limits<Long64_t>::max());
-  if(-1 != autoFlush_) {
-    lane.eventTree_->SetAutoFlush(autoFlush_);
-  }
 
   if (treeMaxVirtualSize_ >= 0) {
     lane.eventTree_->SetMaxVirtualSize(static_cast<Long64_t>(treeMaxVirtualSize_));
@@ -94,7 +91,30 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
   // that could lead to stalling
   tbb::this_task_arena::isolate([&] { 
       assert(lane.eventTree_); 
-      lane.eventTree_->Fill(); });
+      lane.nBytesWrittenSinceLastWrite_ +=lane.eventTree_->Fill();
+      if(autoFlush_ <0) {
+	//Flush based on number of bytes written to this buffer
+	if(lane.nBytesWrittenSinceLastWrite_ > -1*autoFlush_) {
+	  lane.nBytesWrittenSinceLastWrite_ = 0;
+	  lane.file_->Write();
+	}
+      } else {
+	//Flush based on total number of events filled across all  buffers
+	auto v = ++numberEventsSinceLastWrite_;
+	if(v == autoFlush_) {
+	  //NOTE: we do not care if this number was incremented
+	  // after the check on another thread since we will write regardless.
+	  numberEventsSinceLastWrite_ = 0;
+	  for(auto& lane: lanes_){
+	    lane.shouldWrite_ = true;
+	  }
+	}
+	if(lane.shouldWrite_) {
+	  lane.shouldWrite_=false;
+	  lane.file_->Write();
+	}
+      }
+    });
 
   lane.accumulatedTime_ += std::chrono::duration_cast<decltype(lane.accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 }

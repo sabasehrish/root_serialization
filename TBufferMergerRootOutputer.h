@@ -26,7 +26,7 @@ class TBufferMergerRootOutputer :public OutputerBase {
     std::string compressionAlgorithm_="";
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
-    int autoFlush_=-1;
+    int autoFlush_=-30000000; //This is ROOT's default value
   };
 
   TBufferMergerRootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);
@@ -49,6 +49,8 @@ private:
     std::vector<TBranch*> branches_;
     std::vector<DataProductRetriever> const* retrievers_;
     std::chrono::microseconds accumulatedTime_;
+    int nBytesWrittenSinceLastWrite_ = 0;
+    std::atomic<bool> shouldWrite_ = false;
   };
   
   void write(unsigned int iLaneIndex);
@@ -58,6 +60,7 @@ private:
   const int splitLevel_;
   const int treeMaxVirtualSize_;
   const int autoFlush_;
+  std::atomic<int> numberEventsSinceLastWrite_;
 };
 }
 #endif

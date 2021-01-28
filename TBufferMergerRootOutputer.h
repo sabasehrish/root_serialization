@@ -21,12 +21,13 @@ namespace cce::tf {
 class TBufferMergerRootOutputer :public OutputerBase {
  public:
   struct Config {
+    constexpr static int kDefaultAutoFlush = -30000000;
     int splitLevel_=99;
     int compressionLevel_=9;
     std::string compressionAlgorithm_="";
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
-    int autoFlush_=-30000000; //This is ROOT's default value
+    int autoFlush_=kDefaultAutoFlush; //This is ROOT's default value
   };
 
   TBufferMergerRootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);
@@ -50,6 +51,7 @@ private:
     std::vector<DataProductRetriever> const* retrievers_;
     std::chrono::microseconds accumulatedTime_;
     int nBytesWrittenSinceLastWrite_ = 0;
+    int nEventsSinceWrite_ = 0;
     std::atomic<bool> shouldWrite_ = false;
   };
   

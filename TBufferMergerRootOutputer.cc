@@ -35,8 +35,9 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     basketSize_{iConfig.basketSize_},
                     splitLevel_{iConfig.splitLevel_},
                     treeMaxVirtualSize_{iConfig.treeMaxVirtualSize_},
-                    autoFlush_{iConfig.autoFlush_}
+                    autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush }
 {
+
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
@@ -92,10 +93,13 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
   tbb::this_task_arena::isolate([&] { 
       assert(lane.eventTree_); 
       lane.nBytesWrittenSinceLastWrite_ +=lane.eventTree_->Fill();
+      ++lane.nEventsSinceWrite_;
       if(autoFlush_ <0) {
 	//Flush based on number of bytes written to this buffer
 	if(lane.nBytesWrittenSinceLastWrite_ > -1*autoFlush_) {
+	  std::cout <<"lane "<< iLaneIndex<<" events since write "<<lane.nEventsSinceWrite_<<" "<<lane.nBytesWrittenSinceLastWrite_ << std::endl;
 	  lane.nBytesWrittenSinceLastWrite_ = 0;
+	  lane.nEventsSinceWrite_ = 0;
 	  lane.file_->Write();
 	}
       } else {
@@ -121,15 +125,18 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
   
 void TBufferMergerRootOutputer::printSummary() const {
 
+  std::cout <<"end write"<<std::endl;
   auto start = std::chrono::high_resolution_clock::now();
-
   for(auto& lane: lanes_) {
+    std::cout <<" start next lane"<<std::endl;
     lane.file_->Write();
   }
   auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 
+  std::cout <<"file close"<<std::endl;
   start = std::chrono::high_resolution_clock::now();
   for(auto& lane: lanes_) {
+    std::cout <<" start next lane"<<std::endl;
     lane.file_->Close();
   }
   auto closeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);

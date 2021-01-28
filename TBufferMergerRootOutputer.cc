@@ -8,6 +8,7 @@
 #include "TROOT.h"
 
 #include "tbb/task_arena.h"
+#include "tbb/task_group.h"
 
 using namespace cce::tf;
 
@@ -127,10 +128,16 @@ void TBufferMergerRootOutputer::printSummary() const {
 
   std::cout <<"end write"<<std::endl;
   auto start = std::chrono::high_resolution_clock::now();
+
+  tbb::task_group group;
   for(auto& lane: lanes_) {
-    std::cout <<" start next lane"<<std::endl;
-    lane.file_->Write();
+    group.run([&lane]() {
+	std::cout <<" start lane"<<std::endl;
+	lane.file_->Write();
+	std::cout <<" finish lane"<<std::endl;
+      });
   }
+  group.wait();
   auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 
   std::cout <<"file close"<<std::endl;

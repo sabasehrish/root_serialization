@@ -44,13 +44,14 @@ void HDFOutputer::printSummary() const  {
 }
 
 std::pair<product_t, std::vector<size_t>> 
+HDFOutputer::
 get_prods_and_sizes(std::vector<product_t> & input, 
          int prod_index, 
          int stride) {
   product_t products; 
   std::vector<size_t> sizes; 
   for(int j = prod_index; j< input.size(); j+=stride) {
-    sizes.push_back(input[j].size());
+    sizes.push_back(offsets_+=input[j].size());
     products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
   }
   return {products, sizes};

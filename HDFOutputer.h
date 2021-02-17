@@ -54,7 +54,7 @@ namespace cce::tf {
 
   //void writeEventHeader(EventIdentifier const& iEventID);
   std::vector<std::vector<char>> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
-
+std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<product_t> & input,int prod_index,int stride);
 private:
   HighFive::File file_;
 
@@ -64,7 +64,7 @@ private:
   bool firstTime_ = true;
   
   std::vector<product_t> products_; 
-  int count_ = 0;
+  mutable std::atomic<int> offsets_ = 0;
   mutable std::atomic<int> batch_ = 0;
   std::vector<int> events_;
   

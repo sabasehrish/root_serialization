@@ -190,15 +190,8 @@ std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<S
     }
     assert(buffer.size() == bufferIndex);
   }
-  /*
-  auto const bound = LZ4_compressBound(buffer.size()*4);
-  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+3, 0);
-  auto const cSize = LZ4_compress_default(reinterpret_cast<char*>(&(*buffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+2))), buffer.size()*4, bound);
-  */
   int cSize;
-  std::vector<uint32_t> cBuffer = lz4CompressBuffer(2,1, buffer, cSize);
-  //std::vector<uint32_t> cBuffer = noCompressBuffer(2,1, buffer, cSize);
-  //std::vector<uint32_t> cBuffer = zstdCompressBuffer(2,1, buffer, cSize);
+  std::vector<uint32_t> cBuffer = compressBuffer(2, 1, buffer, cSize);
 
   //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
   //std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
@@ -214,6 +207,23 @@ std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<S
   cBuffer[recordSize+1]=recordSize;
   return cBuffer;
 }
+
+std::vector<uint32_t> PDSOutputer::compressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const {
+  switch(compression_) {
+  case Compression::kLZ4 : {
+      return lz4CompressBuffer(iLeadPadding,iTrailingPadding, iBuffer, oCompressedSize);
+    }    
+  case Compression::kNone : {
+      return noCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
+    } 
+  case Compression::kZSTD : {
+      return zstdCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
+    }
+  default:
+    return noCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
+  };
+}
+
 
 std::vector<uint32_t> PDSOutputer::lz4CompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
   auto const bound = LZ4_compressBound(iBuffer.size()*4);
@@ -234,7 +244,7 @@ std::vector<uint32_t> PDSOutputer::noCompressBuffer(unsigned int iLeadPadding, u
 std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
   auto const bound = ZSTD_compressBound(iBuffer.size()*4);
   std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
-  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), iBuffer.size()*4,&(*iBuffer.begin()),  bound, 18);
+  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), iBuffer.size()*4,&(*iBuffer.begin()),  bound, compressionLevel_);
   if(ZSTD_isError(cSize)) {
     std::cout <<"ERROR in comparession "<<ZSTD_getErrorName(cSize)<<std::endl;
   }

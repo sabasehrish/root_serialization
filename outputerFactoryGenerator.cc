@@ -86,7 +86,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
   
   if(iType == "PDSOutputer") {
     std::string outputInfo{iOptions};
-    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
+    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes, PDSOutputer::Compression::kLZ4, 4);};
   } else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
     if(not result) {

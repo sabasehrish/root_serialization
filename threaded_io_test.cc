@@ -160,7 +160,10 @@ int main(int argc, char* argv[]) {
 	group.wait();
       }
     } while(nLanesWaiting != 0);
-
+    //be sure all groups have fully finished
+    for(auto& group: groups) {
+      group.wait();
+    }
   });
 
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);

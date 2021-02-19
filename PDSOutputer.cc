@@ -197,15 +197,20 @@ std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<S
   */
   int cSize;
   std::vector<uint32_t> cBuffer = lz4CompressBuffer(2,1, buffer, cSize);
+  //std::vector<uint32_t> cBuffer = noCompressBuffer(2,1, buffer, cSize);
   //std::vector<uint32_t> cBuffer = zstdCompressBuffer(2,1, buffer, cSize);
 
-  std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
-  std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
+  //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
+  //std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
   uint32_t const recordSize = bytesToWords(cSize)+1;
   cBuffer[0] = recordSize;
   //Record the actual number of bytes used in the last word of the compression buffer in the lowest
   // 2 bits of the word
   cBuffer[1] = buffer.size()*4 + (cSize % 4);
+  if(cBuffer.size() != recordSize+2) {
+    std::cout <<"BAD BUFFER SIZE: want: "<<recordSize+2<<" got "<<cBuffer.size()<<std::endl;
+  }
+  assert(cBuffer.size() == recordSize+2);
   cBuffer[recordSize+1]=recordSize;
   return cBuffer;
 }
@@ -214,6 +219,15 @@ std::vector<uint32_t> PDSOutputer::lz4CompressBuffer(unsigned int iLeadPadding, 
   auto const bound = LZ4_compressBound(iBuffer.size()*4);
   std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
   cSize = LZ4_compress_default(reinterpret_cast<char const*>(&(*iBuffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+iLeadPadding))), iBuffer.size()*4, bound);
+  cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
+  return cBuffer;
+}
+
+std::vector<uint32_t> PDSOutputer::noCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
+  auto const bound = iBuffer.size()*4;
+  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
+  cSize = bound;
+  std::copy(iBuffer.begin(), iBuffer.end(), cBuffer.begin()+iLeadPadding);
   return cBuffer;
 }
 
@@ -224,5 +238,6 @@ std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding,
   if(ZSTD_isError(cSize)) {
     std::cout <<"ERROR in comparession "<<ZSTD_getErrorName(cSize)<<std::endl;
   }
+  cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
   return cBuffer;
 }

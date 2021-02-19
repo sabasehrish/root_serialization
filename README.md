@@ -133,7 +133,10 @@ or
 
 
 #### PDSOutputer
-Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write
+Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write as well as compression options:
+- compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values
+  - 0 - 19 (negative values and values 20-22 are possible but not considered good choices by the zstandard authors)
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "None", "ZSTD", "LZ4"
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 PDSOutputer=test.pds
 ```

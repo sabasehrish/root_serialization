@@ -1,6 +1,7 @@
 #include "PDSOutputer.h"
 #include "summarize_serializers.h"
 #include "lz4.h"
+#include "zstd.h"
 #include <iostream>
 #include <cstring>
 #include <set>
@@ -189,11 +190,17 @@ std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<S
     }
     assert(buffer.size() == bufferIndex);
   }
+  /*
   auto const bound = LZ4_compressBound(buffer.size()*4);
   std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+3, 0);
   auto const cSize = LZ4_compress_default(reinterpret_cast<char*>(&(*buffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+2))), buffer.size()*4, bound);
-  //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
-  //std::cout <<"compressed "<<float(cSize)/(buffer.size()*4)<<std::endl;
+  */
+  int cSize;
+  std::vector<uint32_t> cBuffer = lz4CompressBuffer(2,1, buffer, cSize);
+  //std::vector<uint32_t> cBuffer = zstdCompressBuffer(2,1, buffer, cSize);
+
+  std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
+  std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
   uint32_t const recordSize = bytesToWords(cSize)+1;
   cBuffer[0] = recordSize;
   //Record the actual number of bytes used in the last word of the compression buffer in the lowest
@@ -203,3 +210,19 @@ std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<S
   return cBuffer;
 }
 
+std::vector<uint32_t> PDSOutputer::lz4CompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
+  auto const bound = LZ4_compressBound(iBuffer.size()*4);
+  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
+  cSize = LZ4_compress_default(reinterpret_cast<char const*>(&(*iBuffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+iLeadPadding))), iBuffer.size()*4, bound);
+  return cBuffer;
+}
+
+std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
+  auto const bound = ZSTD_compressBound(iBuffer.size()*4);
+  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
+  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), iBuffer.size()*4,&(*iBuffer.begin()),  bound, 18);
+  if(ZSTD_isError(cSize)) {
+    std::cout <<"ERROR in comparession "<<ZSTD_getErrorName(cSize)<<std::endl;
+  }
+  return cBuffer;
+}

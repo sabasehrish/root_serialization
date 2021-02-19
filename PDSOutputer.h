@@ -43,6 +43,9 @@ class PDSOutputer :public OutputerBase {
   void writeEventHeader(EventIdentifier const& iEventID);
   std::vector<uint32_t> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
 
+  std::vector<uint32_t> lz4CompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+  std::vector<uint32_t> zstdCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+
 private:
   std::ofstream file_;
 

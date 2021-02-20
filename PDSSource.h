@@ -40,8 +40,10 @@ public:
 
   using buffer_iterator = std::vector<std::uint32_t>::const_iterator;
 private:
+  enum class Compression {kNone, kLZ4, kZSTD};
+  Compression whichCompression(const char*) const;
   static constexpr size_t kEventHeaderSizeInWords = 5;
-  uint32_t readPreamble(); //returns header buffer size in words
+  std::pair<uint32_t,Compression> readPreamble(); //returns header buffer size in words
   std::vector<std::string> readStringsArray(buffer_iterator&, buffer_iterator);
   std::vector<std::string> readRecordNames(buffer_iterator&, buffer_iterator);
   std::vector<std::string> readTypes(buffer_iterator&, buffer_iterator);
@@ -54,6 +56,7 @@ private:
   bool readEventContent();
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
 
+  Compression compression_;
   std::ifstream file_;
   long presentEventIndex_ = 0;
   EventIdentifier eventID_;

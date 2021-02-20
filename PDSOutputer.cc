@@ -141,6 +141,27 @@ void PDSOutputer::writeFileHeader(std::vector<SerializerWrapper> const& iSeriali
     const uint32_t fileID = 0;
     file_.write(reinterpret_cast<char const*>(&fileID), 4);     
   }
+  {
+    //Compression type used
+    // note want exactly 4 bytes so sometimes skip trailing \0
+    switch(compression_) {
+    case Compression::kNone:
+      {
+	file_.write("None",4);
+	break;
+      }
+    case Compression::kLZ4:
+      {
+	file_.write("LZ4",4);
+	break;
+      }
+    case Compression::kZSTD:
+      {
+	file_.write("ZSTD",4);
+	break;
+      }
+    }
+  }
   
   //The size of the header buffer in words (excluding first 3 words)
   const uint32_t bufferSize = buffer.size();

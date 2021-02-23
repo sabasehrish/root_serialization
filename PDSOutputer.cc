@@ -265,7 +265,7 @@ std::vector<uint32_t> PDSOutputer::noCompressBuffer(unsigned int iLeadPadding, u
 std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
   auto const bound = ZSTD_compressBound(iBuffer.size()*4);
   std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
-  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), iBuffer.size()*4,&(*iBuffer.begin()),  bound, compressionLevel_);
+  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), bound, &(*iBuffer.begin()),  iBuffer.size()*4, compressionLevel_);
   if(ZSTD_isError(cSize)) {
     std::cout <<"ERROR in comparession "<<ZSTD_getErrorName(cSize)<<std::endl;
   }

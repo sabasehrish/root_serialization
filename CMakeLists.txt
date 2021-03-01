@@ -41,7 +41,7 @@ add_library(configKeys configKeyValuePairs.cc)
 
 # add the executable
 add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc
-	SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc HDFOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc)
+	SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc HDFSource.cc HDFOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc)
 
 target_include_directories(threaded_io_test PUBLIC
                            "${PROJECT_BINARY_DIR}"

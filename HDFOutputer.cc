@@ -51,7 +51,8 @@ get_prods_and_sizes(std::vector<product_t> & input,
   product_t products; 
   std::vector<size_t> sizes; 
   for(int j = prod_index; j< input.size(); j+=stride) {
-    sizes.push_back(offsets_+=input[j].size());
+    //sizes.push_back(offsets_+=input[j].size());
+    sizes.push_back(input[j].size());
     products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
   }
   return {products, sizes};
@@ -79,7 +80,7 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
     events_.push_back(iEventID.event);
     ++batch_;
   }
-  if (batch_ == 10) { //max_batch_size){
+  if (batch_ == 2) { //max_batch_size){
     auto g = file_.getGroup("Lumi");
     write_ds<int>(g, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();

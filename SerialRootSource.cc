@@ -3,6 +3,8 @@
 #include "TTree.h"
 #include "TBranch.h"
 
+#include <iostream>
+
 using namespace cce::tf;
 
 SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName):
@@ -12,6 +14,7 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
  {
   delayedReaders_.reserve(iNLanes);
   dataProductsPerLane_.reserve(iNLanes);
+  identifiers_.resize(iNLanes);
 
   events_ = file_->Get<TTree>("Events");
   nEvents_ = events_->GetEntries();
@@ -61,14 +64,16 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
 void SerialRootSource::readEventAsync(unsigned int iLane, long iEventIndex, OptionalTaskHolder iTask) {
   if(nEvents_ > iEventIndex) {
     delayedReaders_[iLane].setEntry(iEventIndex);
-    auto task = iTask.releaseToTaskHolder();
-    queue_.push(*task.group(), [task, this, iLane, iEventIndex]() {
+    auto temptask = iTask.releaseToTaskHolder();
+    auto group = temptask.group();
+    queue_.push(*group, [task=std::move(temptask), this, iLane, iEventIndex]() mutable {
         auto start = std::chrono::high_resolution_clock::now();
         if(eventAuxBranch_) {
           eventAuxBranch_->GetEntry(iEventIndex);
           identifiers_[iLane] = eventAuxReader_->doWork();
         }
         accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+        task.doneWaiting();
       });
   }
 }
@@ -82,9 +87,11 @@ std::chrono::microseconds SerialRootSource::accumulatedTime() const {
 }
 
 void SerialRootDelayedRetriever::getAsync(int index, TaskHolder iTask) {
-  queue_->push(*iTask.group(), [index,this, iTask]() { 
+  auto group = iTask.group();
+  queue_->push(*group, [index,this, task = std::move(iTask)]() mutable { 
       auto start = std::chrono::high_resolution_clock::now();
       (*dataProducts_)[index].setSize( (*branches_)[index]->GetEntry(entry_) );
       accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+      task.doneWaiting();
     });
 };

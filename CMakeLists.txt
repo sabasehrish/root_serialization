@@ -22,7 +22,7 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 list(APPEND EXTRA_LIBS Core)
 list(APPEND EXTRA_LIBS RIO)
 list(APPEND EXTRA_LIBS Tree)
-list(APPEND EXTRA_INCLUDES "/home/cdj/new_root/install/include")
+list(APPEND EXTRA_INCLUDES "/uscms_data/d1/cdj/cce_measurements/new_root//install/include")
 
 
 #TBB
@@ -35,7 +35,7 @@ list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.
 
 #ZSTD
 list(APPEND EXTRA_LIBS zstd)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms-ib.cern.ch/nweek-02668/slc7_amd64_gcc900/external/zstd/1.4.5/include")
+list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/include")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -44,16 +44,18 @@ find_package(Threads REQUIRED)
 add_library(configKeys configKeyValuePairs.cc)
 
 # add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc)
+add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc SerialRootSource.cc)
 
 target_include_directories(threaded_io_test PUBLIC
                            "${PROJECT_BINARY_DIR}"
                            ${EXTRA_INCLUDES}
                            )
 
-target_link_directories(threaded_io_test PUBLIC "/home/cdj/new_root/install/lib")
+target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/install/lib")
+target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/externals/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
+target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
 
 target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)

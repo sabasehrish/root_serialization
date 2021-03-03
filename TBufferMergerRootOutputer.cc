@@ -8,6 +8,7 @@
 #include "TROOT.h"
 
 #include "tbb/task_arena.h"
+#include "tbb/task_group.h"
 
 using namespace cce::tf;
 
@@ -35,8 +36,9 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     basketSize_{iConfig.basketSize_},
                     splitLevel_{iConfig.splitLevel_},
                     treeMaxVirtualSize_{iConfig.treeMaxVirtualSize_},
-                    autoFlush_{iConfig.autoFlush_}
+                    autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush }
 {
+
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
@@ -48,9 +50,6 @@ void TBufferMergerRootOutputer::setupForLane(unsigned int iLaneIndex, std::vecto
   lane.eventTree_ = new TTree("Events","", splitLevel_, lane.file_.get());
   //Turn off auto save
   lane.eventTree_->SetAutoSave(std::numeric_limits<Long64_t>::max());
-  if(-1 != autoFlush_) {
-    lane.eventTree_->SetAutoFlush(autoFlush_);
-  }
 
   if (treeMaxVirtualSize_ >= 0) {
     lane.eventTree_->SetMaxVirtualSize(static_cast<Long64_t>(treeMaxVirtualSize_));
@@ -94,22 +93,57 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
   // that could lead to stalling
   tbb::this_task_arena::isolate([&] { 
       assert(lane.eventTree_); 
-      lane.eventTree_->Fill(); });
+      lane.nBytesWrittenSinceLastWrite_ +=lane.eventTree_->Fill();
+      ++lane.nEventsSinceWrite_;
+      if(autoFlush_ <0) {
+	//Flush based on number of bytes written to this buffer
+	if(lane.nBytesWrittenSinceLastWrite_ > -1*autoFlush_) {
+	  std::cout <<"lane "<< iLaneIndex<<" events since write "<<lane.nEventsSinceWrite_<<" "<<lane.nBytesWrittenSinceLastWrite_ << std::endl;
+	  lane.nBytesWrittenSinceLastWrite_ = 0;
+	  lane.nEventsSinceWrite_ = 0;
+	  lane.file_->Write();
+	}
+      } else {
+	//Flush based on total number of events filled across all  buffers
+	auto v = ++numberEventsSinceLastWrite_;
+	if(v == autoFlush_) {
+	  //NOTE: we do not care if this number was incremented
+	  // after the check on another thread since we will write regardless.
+	  numberEventsSinceLastWrite_ = 0;
+	  for(auto& lane: lanes_){
+	    lane.shouldWrite_ = true;
+	  }
+	}
+	if(lane.shouldWrite_) {
+	  lane.shouldWrite_=false;
+	  lane.file_->Write();
+	}
+      }
+    });
 
   lane.accumulatedTime_ += std::chrono::duration_cast<decltype(lane.accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 }
   
 void TBufferMergerRootOutputer::printSummary() const {
 
+  std::cout <<"end write"<<std::endl;
   auto start = std::chrono::high_resolution_clock::now();
 
+  tbb::task_group group;
   for(auto& lane: lanes_) {
-    lane.file_->Write();
+    group.run([&lane]() {
+	std::cout <<" start lane"<<std::endl;
+	lane.file_->Write();
+	std::cout <<" finish lane"<<std::endl;
+      });
   }
+  group.wait();
   auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
 
+  std::cout <<"file close"<<std::endl;
   start = std::chrono::high_resolution_clock::now();
   for(auto& lane: lanes_) {
+    std::cout <<" start next lane"<<std::endl;
     lane.file_->Close();
   }
   auto closeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);

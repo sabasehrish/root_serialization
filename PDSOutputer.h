@@ -16,9 +16,12 @@
 namespace cce::tf {
 class PDSOutputer :public OutputerBase {
  public:
- PDSOutputer(std::string const& iFileName, unsigned int iNLanes): 
+  enum class Compression {kNone, kLZ4, kZSTD};
+ PDSOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel ): 
   file_(iFileName, std::ios_base::out| std::ios_base::binary),
   serializers_{std::size_t(iNLanes)},
+  compression_{iCompression},
+  compressionLevel_{iCompressionLevel},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
   {}
@@ -43,12 +46,20 @@ class PDSOutputer :public OutputerBase {
   void writeEventHeader(EventIdentifier const& iEventID);
   std::vector<uint32_t> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
 
+  std::vector<uint32_t> compressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+
+  std::vector<uint32_t> lz4CompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+  std::vector<uint32_t> zstdCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+  std::vector<uint32_t> noCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+
 private:
   std::ofstream file_;
 
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
+  Compression compression_;
+  int compressionLevel_;
   bool firstTime_ = true;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

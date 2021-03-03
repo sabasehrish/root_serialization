@@ -1,6 +1,7 @@
 #include "PDSSource.h"
 
 #include "lz4.h"
+#include "zstd.h"
 
 #include "TClass.h"
 #include "TBufferFile.h"
@@ -28,13 +29,27 @@ std::vector<uint32_t> PDSSource::readWords(uint32_t bufferSize) {
 }
 
 
-uint32_t PDSSource::readPreamble() {
-  std::array<uint32_t, 3> header;
-  file_.read(reinterpret_cast<char*>(header.data()),3*4);
+std::pair<uint32_t, PDSSource::Compression> PDSSource::readPreamble() {
+  std::array<uint32_t, 4> header;
+  file_.read(reinterpret_cast<char*>(header.data()),4*4);
   assert(file_.rdstate() == std::ios_base::goodbit);
 
   assert(3141592*256+1 == header[0]);
-  return header[2];
+  return std::make_pair(header[3], whichCompression(reinterpret_cast<const char*>(&header[2])));
+}
+
+PDSSource::Compression PDSSource::whichCompression(const char* iName) const {
+  if(iName[0] == 'N') {
+    return Compression::kNone;
+  }
+  if(iName[0] == 'L') {
+    return Compression::kLZ4;
+  }
+  if(iName[0] == 'Z') {
+    return Compression::kZSTD;
+  }
+  assert(false);
+  return Compression::kNone;
 }
 
 std::vector<std::string> PDSSource::readStringsArray(buffer_iterator& itBuffer, buffer_iterator itEnd) {
@@ -145,9 +160,16 @@ bool PDSSource::readEventContent() {
   int32_t compressedBufferSizeInBytes = (bufferSize-1)*4 + (bytesInLastWord == 0? 0 : (-4+bytesInLastWord));
   //std::cout <<"compressed "<<compressedBufferSizeInBytes <<" uncompressed "<<uncompressedBufferSize*4<<" extra bytes "<<bytesInLastWord<<std::endl;
   std::vector<uint32_t> uBuffer(size_t(uncompressedBufferSize), 0);
-  LZ4_decompress_safe(reinterpret_cast<char*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
-                      compressedBufferSizeInBytes,
-                      uncompressedBufferSize*4);
+  if(Compression::kLZ4 == compression_) {
+    LZ4_decompress_safe(reinterpret_cast<char*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
+			compressedBufferSizeInBytes,
+			uncompressedBufferSize*4);
+  } else if(Compression::kZSTD == compression_) {
+    ZSTD_decompress(uBuffer.data(), uncompressedBufferSize*4, &(*(buffer.begin()+1)), compressedBufferSizeInBytes);
+  } else if(Compression::kNone == compression_) {
+    assert(buffer.size() == uBuffer.size()+2);
+    std::copy(buffer.begin()+1, buffer.begin()+buffer.size()-2, uBuffer.begin());
+  }
 
   deserializeDataProducts(uBuffer.begin(), uBuffer.end());
 
@@ -200,8 +222,10 @@ PDSSource::PDSSource(std::string const& iName) :
                  SourceBase(),
   file_{iName, std::ios_base::binary}
 {
-  auto bufferSize = readPreamble();
-  
+  auto preamble = readPreamble();
+  auto bufferSize = preamble.first;
+  compression_ = preamble.second;
+
   //1 word beyond the buffer is the crosscheck value
   std::vector<uint32_t> buffer = readWords(bufferSize+1);
   auto itBuffer = buffer.cbegin();

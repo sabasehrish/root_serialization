@@ -2,6 +2,7 @@
 
 #include "RootSource.h"
 #include "RepeatingRootSource.h"
+#include "SerialRootSource.h"
 #include "PDSSource.h"
 #include "HDFSource.h"
 #include "EmptySource.h"
@@ -26,6 +27,11 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
     sourceFactory = [fileName, nUniqueEvents](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNLanes, iNEvents);
     };
+  } else if( iType == "SerialRootSource") {
+    std::string fileName( iOptions );
+    sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
+      return std::make_unique<SerialRootSource>(iNLanes, iNEvents, fileName);
+    };    
   } else if( iType == "ReplicatedPDSSource") {
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {

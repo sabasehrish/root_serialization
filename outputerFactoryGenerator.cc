@@ -79,6 +79,44 @@ namespace {
     }
     return std::make_pair(fileName,config);
   }
+
+
+  struct PDSConfig {
+    int compressionLevel_=18;
+    std::string compressionAlgorithm_="ZSTD";
+  };
+
+  std::optional<std::pair<std::string, PDSConfig>> parsePDSConfig(std::string_view iOptions) {
+    std::string fileName{iOptions};
+    PDSConfig config;
+    auto pos = fileName.find(':');
+    if(pos != std::string::npos) {
+      auto remainingOptions = fileName.substr(pos+1);
+      fileName = fileName.substr(0,pos);
+
+      auto keyValues = cce::tf::configKeyValuePairs(remainingOptions);
+      int foundOptions = 0;
+      auto itFound = keyValues.find("compressionLevel");
+      if(itFound != keyValues.end()) {
+	config.compressionLevel_ = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      itFound = keyValues.find("compressionAlgorithm");
+      if(itFound != keyValues.end()) {
+	config.compressionAlgorithm_ = itFound->second;
+	++foundOptions;
+      }
+      if(foundOptions != keyValues.size()) {
+	std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
+	for(auto const& kv: keyValues) {
+	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
+	}
+	return std::nullopt;
+      }
+    }
+    return std::make_pair(fileName,config);
+  }
+
 }
 
 std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
@@ -86,10 +124,26 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
   
   if(iType == "PDSOutputer") {
-    std::string outputInfo{iOptions};
-    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
-  } 
-  else if(iType == "RootOutputer") {
+    auto result = parsePDSConfig(iOptions);
+    if(not result) {
+      return outFactory;
+    }
+    auto fileName = result->first;
+    PDSOutputer::Compression compression = PDSOutputer::Compression::kZSTD;
+    auto const& compressionName = result->second.compressionAlgorithm_;
+    if(compressionName == "" or compressionName =="None") {
+      compression = PDSOutputer::Compression::kNone;
+    } else if (compressionName == "LZ4") {
+      compression = PDSOutputer::Compression::kLZ4;
+    } else if (compressionName == "ZSTD") {
+      compression = PDSOutputer::Compression::kZSTD;
+    } else {
+      std::cout <<"unknown compression "<<compressionName<<std::endl;
+      return outFactory;
+    }
+    auto compressionLevel = result->second.compressionLevel_;
+    outFactory = [fileName, compression, compressionLevel](unsigned int nLanes) { return std::make_unique<PDSOutputer>(fileName, nLanes, compression, compressionLevel);};
+  } else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
     if(not result) {
       return outFactory;

@@ -88,9 +88,6 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
   if(iType == "PDSOutputer") {
     std::string outputInfo{iOptions};
     outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<PDSOutputer>(outputInfo, nLanes);};
-  }  else if(iType == "HDFOutputer") {
-    std::string outputInfo{iOptions};
-    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<HDFOutputer>(outputInfo, nLanes);};
   } 
   else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
@@ -131,7 +128,9 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       useProductReady = true;
     }
     outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
+  } else if(iType == "HDFOutputer") {
+    std::string outputInfo{iOptions};
+    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<HDFOutputer>(outputInfo, nLanes);};
   }
-
   return outFactory;
 }

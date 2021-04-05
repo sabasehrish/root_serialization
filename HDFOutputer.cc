@@ -17,6 +17,7 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   }
   products_.reserve(10000);
   events_.reserve(100);
+  offsets_.reserve(10000);
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -51,8 +52,9 @@ get_prods_and_sizes(std::vector<product_t> & input,
   product_t products; 
   std::vector<size_t> sizes; 
   for(int j = prod_index; j< input.size(); j+=stride) {
-    //sizes.push_back(offsets_+=input[j].size());
-    sizes.push_back(input[j].size());
+    std::cout << prod_index << ", " << offsets_[prod_index] << "\n";
+    sizes.push_back(offsets_[prod_index]+=input[j].size());
+    //sizes.push_back(input[j].size());
     products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
   }
   return {products, sizes};

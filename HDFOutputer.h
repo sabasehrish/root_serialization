@@ -64,7 +64,7 @@ private:
   bool firstTime_ = true;
   
   std::vector<product_t> products_; 
-  mutable std::atomic<int> offsets_ = 0;
+  std::vector<size_t> offsets_ = decltype(offsets_)(1000, 0);
   mutable std::atomic<int> batch_ = 0;
   std::vector<int> events_;
   

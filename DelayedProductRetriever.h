@@ -5,11 +5,13 @@
 
 
 namespace cce::tf {
+class DataProductRetriever;
+
 class DelayedProductRetriever {
  public:
   virtual ~DelayedProductRetriever() {}
 
-  virtual void getAsync(int index, TaskHolder iCallback) = 0;
+  virtual void getAsync(DataProductRetriever&, int index, TaskHolder iCallback) = 0;
 };
 }
 #endif

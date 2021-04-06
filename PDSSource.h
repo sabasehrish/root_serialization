@@ -14,7 +14,7 @@
 
 namespace cce::tf {
 class PDSDelayedRetriever : public DelayedProductRetriever {
-  void getAsync(int index, TaskHolder) override {}
+  void getAsync(DataProductRetriever&, int index, TaskHolder) override {}
 };
 
 class PDSSource : public SourceBase {

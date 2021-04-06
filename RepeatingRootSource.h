@@ -18,7 +18,7 @@ class TTree;
 
 namespace cce::tf {
 class RepeatingRootDelayedRetriever : public DelayedProductRetriever {
-  void getAsync(int index, TaskHolder) override {}
+  void getAsync(DataProductRetriever&, int index, TaskHolder) override {}
 };
 
 class RepeatingRootSource : public SharedSourceBase {

@@ -30,7 +30,7 @@ class DataProductRetriever {
   void setSize(size_t iSize) { size_ = iSize;}
 
   void getAsync(TaskHolder iCallback) {
-    delayedReader_->getAsync(index_, std::move(iCallback));
+    delayedReader_->getAsync(*this, index_, std::move(iCallback));
   }
 
   int index() const { return index_;}

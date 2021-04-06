@@ -21,18 +21,16 @@ namespace cce::tf {
   class SerialRootDelayedRetriever : public DelayedProductRetriever {
   public:
     SerialRootDelayedRetriever(SerialTaskQueue* iQueue,
-                               std::vector<TBranch*>* iBranches,
-                               std::vector<DataProductRetriever>* iRetrievers):
-    queue_(iQueue), branches_(iBranches), dataProducts_(iRetrievers),
+                               std::vector<TBranch*>* iBranches):
+    queue_(iQueue), branches_(iBranches),
       accumulatedTime_{std::chrono::microseconds::zero()}{}
-    void getAsync(int index, TaskHolder) final;
+    void getAsync(DataProductRetriever&, int index, TaskHolder) final;
     void setEntry(long iEntry) { entry_ = iEntry; }
     std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 
   private:
     SerialTaskQueue* queue_;
     std::vector<TBranch*>* branches_;
-    std::vector<DataProductRetriever>* dataProducts_;
     std::chrono::microseconds accumulatedTime_;
     long entry_ = -1;
   };

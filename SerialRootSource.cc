@@ -42,7 +42,7 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     dataProductsPerLane_.emplace_back();
     auto& dataProducts = dataProductsPerLane_.back();
     dataProducts.reserve(branches_.size());
-    delayedReaders_.emplace_back(&queue_, &branches_, &dataProducts);
+    delayedReaders_.emplace_back(&queue_, &branches_);
     auto& delayedReader = delayedReaders_.back();
 
     for(int i=0; i< branches_.size(); ++i) {
@@ -86,11 +86,11 @@ std::chrono::microseconds SerialRootSource::accumulatedTime() const {
   return fullTime;
 }
 
-void SerialRootDelayedRetriever::getAsync(int index, TaskHolder iTask) {
+void SerialRootDelayedRetriever::getAsync(DataProductRetriever& dataProduct, int index, TaskHolder iTask) {
   auto group = iTask.group();
-  queue_->push(*group, [index,this, task = std::move(iTask)]() mutable { 
+  queue_->push(*group, [&dataProduct, index,this, task = std::move(iTask)]() mutable { 
       auto start = std::chrono::high_resolution_clock::now();
-      (*dataProducts_)[index].setSize( (*branches_)[index]->GetEntry(entry_) );
+      dataProduct.setSize( (*branches_)[index]->GetEntry(entry_) );
       accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
       task.doneWaiting();
     });

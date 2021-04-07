@@ -3,6 +3,7 @@
 #include "RootOutputer.h"
 #include "SerializeOutputer.h"
 #include "DummyOutputer.h"
+#include "TextDumpOutputer.h"
 #include "TBufferMergerRootOutputer.h"
 #include "configKeyValuePairs.h"
 
@@ -180,7 +181,13 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       }
       useProductReady = true;
     }
-    outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
+  } else if(iType == "TextDumpOutputer") {
+    bool useProductReady = false;
+    if(not iOptions.empty()) {
+      std::cout <<"Unknown option for DummyOutputer: "<<iOptions<<std::endl;
+      return outFactory;
+    }
+    outFactory = [](unsigned int) { return std::make_unique<TextDumpOutputer>();};
   }
 
   return outFactory;

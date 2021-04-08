@@ -85,15 +85,6 @@ HDFSource::readEvent(long iEventIndex) {
       std::cout << pname << ", " << classnames_[i] << ": Size of dp: " << (end-begin) << " , " << product.size() << "\n";
       ++i; 
       products.push_back(product);
-     //auto dr = DataProductRetriever(i, &products, pname, TClass::GetClass(classnames_[i].c_str()), delayedRetriever_);
- //     dataProducts_.emplace_back(i, reinterpret_cast<void**>(&dataBuffers_[i]), pname, TClass::GetClass(classnames_[i].c_str()), &delayedRetriever_);
-      //make DataRetreiver here
-      //TBufferFile readBufferFile{TBuffer::kRead};
-      //readBufferFile.SetBuffer(&products.front(), products.size(), kFALSE);
-      //TClass* cls = TClass::GetClass(classnames_[i].c_str());
-      //cls->ReadBuffer(readBufferFile, dataBuffers_);
-      //readBufferFile.Reset();
-      //++i;
   }
   deserializeDataProducts(products.begin(), products.end());    
   return true;
@@ -106,11 +97,11 @@ void HDFSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEn
     auto product = *(it++);
     auto storedSize = product.size();
    
-    //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
+    std::cout << "storedSize "<< storedSize << std::endl;
     bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize, kFALSE);
     dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, reinterpret_cast<void**>(&dataBuffers_[productIndex]));
     dataProducts_[productIndex].setSize(bufferFile.Length());
-  //std::cout <<" size "<<bufferFile.Length()<<"\n";
+    std::cout <<" size "<<bufferFile.Length()<<"\n";
     bufferFile.Reset();
     ++productIndex; 
   }

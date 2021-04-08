@@ -181,6 +181,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       }
       useProductReady = true;
     }
+    outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
   } else if(iType == "TextDumpOutputer") {
     bool useProductReady = false;
     if(not iOptions.empty()) {

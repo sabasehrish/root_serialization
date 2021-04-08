@@ -4,6 +4,7 @@
 #include "RepeatingRootSource.h"
 #include "SerialRootSource.h"
 #include "PDSSource.h"
+#include "SharedPDSSource.h"
 #include "EmptySource.h"
 #include "ReplicatedSharedSource.h"
 
@@ -35,6 +36,11 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
     std::string fileName( iOptions );
     sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<ReplicatedSharedSource<PDSSource>>(iNLanes, iNEvents, fileName);
+    };
+  } else if( iType == "SharedPDSSource") {
+    std::string fileName( iOptions );
+    sourceFactory = [fileName](unsigned int iNLanes, unsigned long long iNEvents) {
+      return std::make_unique<SharedPDSSource>(iNLanes, iNEvents, fileName);
     };
   } else if( iType == "EmptySource") {
     sourceFactory = [](unsigned int iNLanes, unsigned long long iNEvents) {

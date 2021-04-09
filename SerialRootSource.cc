@@ -86,6 +86,11 @@ std::chrono::microseconds SerialRootSource::accumulatedTime() const {
   return fullTime;
 }
 
+void SerialRootSource::printSummary() const {
+  std::chrono::microseconds sourceTime = accumulatedTime();
+  std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
+}
+
 void SerialRootDelayedRetriever::getAsync(DataProductRetriever& dataProduct, int index, TaskHolder iTask) {
   auto group = iTask.group();
   queue_->push(*group, [&dataProduct, index,this, task = std::move(iTask)]() mutable { 

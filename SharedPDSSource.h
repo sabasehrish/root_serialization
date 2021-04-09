@@ -30,10 +30,14 @@ namespace cce::tf {
   std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex) final;
   EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final;
 
-  std::chrono::microseconds accumulatedTime() const final;
+  void printSummary() const final;
   private:
   
   void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder) final;
+
+  std::chrono::microseconds readTime() const;
+  std::chrono::microseconds decompressTime() const;
+  std::chrono::microseconds deserializeTime() const;
 
   pds::Compression compression_;
   std::ifstream file_;
@@ -46,10 +50,13 @@ namespace cce::tf {
     std::vector<DataProductRetriever> dataProducts_;
     std::vector<void*> dataBuffers_;
     SharedPDSDelayedRetriever delayedRetriever_;
+    std::chrono::microseconds decompressTime_;
+    std::chrono::microseconds deserializeTime_;
     ~LaneInfo();
   };
 
   std::vector<LaneInfo> laneInfos_;
+  std::chrono::microseconds readTime_;
   };
 }
 

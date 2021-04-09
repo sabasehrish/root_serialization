@@ -47,7 +47,8 @@ namespace cce::tf {
       return identifiers_[iLane];
     }
     
-    std::chrono::microseconds accumulatedTime() const final;
+    void printSummary() const final;
+    std::chrono::microseconds accumulatedTime() const;
   private:
     void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder) final;
 

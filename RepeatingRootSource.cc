@@ -102,3 +102,8 @@ void RepeatingRootSource::fillBuffer(int iEntry, std::vector<BufferInfo>& bi, st
     bi.emplace_back( object, static_cast<size_t>(s));
   }
 }
+
+void RepeatingRootSource::printSummary() const {
+      std::chrono::microseconds sourceTime = accumulatedTime();
+      std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
+}

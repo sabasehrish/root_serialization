@@ -8,39 +8,50 @@ using namespace cce::tf;
 HDFSource::HDFSource(std::string const& iName):
 file_(iName, File::ReadOnly),
 lumi_(file_.getGroup("/Lumi/")), 
-//events_(lumi_.getDataSet("EventIDs")),
-productnames_(readProductNames()), 
+productInfo_(readProductInfo()), 
 classnames_(readClassNames())
 {
-  dataBuffers_.reserve(numberOfDataProducts());
+  dataProducts_.reserve(productInfo_.size());
+  dataBuffers_.resize(productInfo_.size(), nullptr);
   size_t index = 0;
-  for (auto p: productnames_) {
-    TClass* cls = TClass::GetClass(classnames_[index].c_str());
-    //dataBuffers_[index] = cls->New();
+  for (auto p: productInfo_) {
+    TClass* cls = TClass::GetClass(classnames_[p.classIndex()].c_str());
+    std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
+    dataBuffers_[index] = cls->New();
     assert(cls);
-    dataProducts_.emplace_back(index, reinterpret_cast<void**>(&dataBuffers_[index]), p, cls, &delayedRetriever_);
+    dataProducts_.emplace_back(index, &dataBuffers_[index], p.name(), cls, &delayedRetriever_);
     ++index;
   }
 }
 
+
+HDFSource::~HDFSource() {
+  auto it = dataProducts_.begin();
+  for( void * b: dataBuffers_) {
+    it->classType()->Destructor(b);
+    ++it;
+  }
+}
 //
-std::vector<std::string>
-HDFSource::readProductNames() {
-  std::vector<std::string> productnames;
-  for (auto i : lumi_.listObjectNames()) {
+std::vector<HDFSource::ProductInfo>
+HDFSource::readProductInfo() {
+  std::vector<HDFSource::ProductInfo> productinfo;
+  uint32_t i = 0;
+  for (auto p : lumi_.listObjectNames()) {
     //Event_IDs dataset is a special one
-    if (i.compare(i.size()-3,3,"_sz") != 0 && i != "Event_IDs") {
-      productnames.push_back(i);
+    if (p.compare(p.size()-3,3,"_sz") != 0 && p != "Event_IDs") {
+      productinfo.push_back({p,i});
+      ++i;
     }
   }
-  return productnames; 
+  return productinfo; 
 }
 
 std::vector<std::string>
 HDFSource::readClassNames() {
   std::vector<std::string> classnames;
-  for (auto i : productnames_) {
-    auto d = lumi_.getDataSet(i);
+  for (auto pi : productInfo_) {
+    auto d = lumi_.getDataSet(pi.name());
     std::vector<std::string> all_attribute_keys = d.listAttributeNames();
   //  std::cout << i << ", " << all_attribute_keys.size() << "\n";
     auto a = d.getAttribute(all_attribute_keys[0]);
@@ -60,7 +71,7 @@ HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
     st_end.insert(st_end.begin(), 0);
   }
   else  
-    d.select({static_cast<int>(iEventIndex)-1}, {2}).read(st_end); 
+    d.select({static_cast<unsigned long int>(iEventIndex-1)}, {2}).read(st_end); 
   return {st_end[0], st_end[1]};
 }
 
@@ -70,19 +81,22 @@ HDFSource::readEvent(long iEventIndex) {
   int lumi_num;
   lumi_.getAttribute("run").read(run_num);
   lumi_.getAttribute("lumisec").read(lumi_num);
-  //std::vector<long unsigned int> st_end;
   std::vector<char> product;
   std::vector<product_t> products;
-  products.reserve(productnames_.size());
+  products.reserve(productInfo_.size());
   long unsigned int begin; 
   long unsigned int end;
-  int i = 0; 
-  for (auto pname : productnames_) { 
-      std::tie(begin, end) = getEventOffsets(iEventIndex, pname);
-      auto dset = lumi_.getDataSet(pname);
+  int i = 0;
+  auto evtds = lumi_.getDataSet("Event_IDs");
+  int eventID;
+  evtds.select({iEventIndex}, {1}).read(eventID);
+  eventID_ = {run_num, lumi_num, eventID}; 
+  for (auto pi : productInfo_) { 
+      std::tie(begin, end) = getEventOffsets(iEventIndex, pi.name());
+      auto dset = lumi_.getDataSet(pi.name());
       auto ds = dset.getSpace();
       dset.select({begin}, {end-begin}).read(product); 
-      std::cout << pname << ", " << classnames_[i] << ": Size of dp: " << (end-begin) << " , " << product.size() << "\n";
+   //   std::cout << pname << ", " << classnames_[i] << "Begin at: " << begin << ", and size of dp: " << (end-begin) << " , " << product.size() << "\n";
       ++i; 
       products.push_back(product);
   }
@@ -94,16 +108,16 @@ void HDFSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEn
   TBufferFile bufferFile{TBuffer::kRead};
   int productIndex = 0;
   while(it < itEnd) {
-    auto product = *(it++);
+    auto product = *(it);
     auto storedSize = product.size();
-   
-    std::cout << "storedSize "<< storedSize << std::endl;
-    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize, kFALSE);
-    dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, reinterpret_cast<void**>(&dataBuffers_[productIndex]));
+    bufferFile.SetBuffer(&product, storedSize, kFALSE); 
+    dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, dataBuffers_[productIndex]);
     dataProducts_[productIndex].setSize(bufferFile.Length());
-    std::cout <<" size "<<bufferFile.Length()<<"\n";
+    std::cout <<"Product Name: " << dataProducts_[productIndex].name() << ", " <<dataProducts_[productIndex].classType() << ", storedSize " << storedSize  <<" Buffer size "<<bufferFile.Length() << ", and Buffer data: " << dataBuffers_[productIndex]<< std::endl;
+    //if (bufferFile.Length() != storedSize) return;
     bufferFile.Reset();
     ++productIndex; 
+    ++it;
   }
   assert(it==itEnd);
 }

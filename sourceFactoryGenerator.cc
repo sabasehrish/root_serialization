@@ -7,6 +7,7 @@
 #include "SharedPDSSource.h"
 #include "EmptySource.h"
 #include "ReplicatedSharedSource.h"
+#include "TestProductsSource.h"
 
 std::function<std::unique_ptr<cce::tf::SharedSourceBase>(unsigned int, unsigned long long)> 
 cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOptions) {
@@ -45,7 +46,11 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
   } else if( iType == "EmptySource") {
     sourceFactory = [](unsigned int iNLanes, unsigned long long iNEvents) {
       return std::make_unique<EmptySource>(iNEvents);
-      };
-    } 
+    };
+  } else if(iType == "TestProductsSource") {
+    sourceFactory = [](unsigned int iNLanes, unsigned long long iNEvents) {
+      return std::make_unique<TestProductsSource>(iNLanes, iNEvents);
+    };
+  }
   return sourceFactory;
 }

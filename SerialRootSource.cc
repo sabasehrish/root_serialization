@@ -28,14 +28,15 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
+    if(eventIDBranchName == b->GetName()) {
+      eventIDBranch_ = b;
+      continue;
+    }
     b->SetupAddresses();
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
       eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
-    }
-    if(eventIDBranchName == b->GetName()) {
-      eventIDBranch_ = b;
     }
   }
 

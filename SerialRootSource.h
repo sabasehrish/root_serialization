@@ -59,6 +59,7 @@ namespace cce::tf {
     std::vector<TBranch*> branches_;
     long nEvents_;
     TBranch* eventAuxBranch_=nullptr;
+    TBranch* eventIDBranch_=nullptr;
     std::optional<EventAuxReader> eventAuxReader_;
     std::chrono::microseconds accumulatedTime_;
 

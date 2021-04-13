@@ -14,6 +14,7 @@ RootSource::RootSource(std::string const& iName) :
   auto l = events_->GetListOfBranches();
 
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
+  const std::string eventIDBranchName{"EventID"}; 
 
   dataProducts_.reserve(l->GetEntriesFast());
   branches_.reserve(l->GetEntriesFast());
@@ -21,6 +22,10 @@ RootSource::RootSource(std::string const& iName) :
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
+    if(eventIDBranchName == b->GetName()) {
+      eventIDBranch_ = b;
+      continue;
+    }
     b->SetupAddresses();
     TClass* class_ptr=nullptr;
     EDataType type;
@@ -41,12 +46,24 @@ RootSource::RootSource(std::string const& iName) :
   }
 }
 
+EventIdentifier RootSource::eventIdentifier() {
+  if(eventIDBranch_) {
+    return id_;
+  }
+  return eventAuxReader_->doWork();
+}
+
 long RootSource::numberOfEvents() { 
   return events_->GetEntriesFast();
 }
 
 bool RootSource::readEvent(long iEventIndex) {
   if(iEventIndex<numberOfEvents()) {
+    if(eventIDBranch_) {
+      eventIDBranch_->SetAddress(&id_);
+      eventIDBranch_->GetEntry(iEventIndex);
+    }
+
     auto it = dataProducts_.begin();
     for(auto b: branches_) {
       (it++)->setSize( b->GetEntry(iEventIndex) );

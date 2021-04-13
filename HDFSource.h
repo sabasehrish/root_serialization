@@ -56,12 +56,11 @@ private:
   std::pair<long unsigned int, long unsigned int> getEventOffsets(long eventindex, std::string pname);
   bool readEvent(long iEventIndex) final; //returns true if an event was read
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
-  
   HighFive::File file_;
   HighFive::Group lumi_;
   EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_; 
-  std::vector<void*> dataBuffers_; //data read directly from HDF dataset 
+  std::vector<void*> dataBuffers_;  
   std::vector<ProductInfo> productInfo_;
   std::vector<std::string> classnames_;
   HDFDelayedRetriever delayedRetriever_;

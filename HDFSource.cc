@@ -16,7 +16,7 @@ classnames_(readClassNames())
   size_t index = 0;
   for (auto p: productInfo_) {
     TClass* cls = TClass::GetClass(classnames_[p.classIndex()].c_str());
-    std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
+    //std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
     dataBuffers_[index] = cls->New();
     assert(cls);
     dataProducts_.emplace_back(index, &dataBuffers_[index], p.name(), cls, &delayedRetriever_);
@@ -32,6 +32,7 @@ HDFSource::~HDFSource() {
     ++it;
   }
 }
+
 //
 std::vector<HDFSource::ProductInfo>
 HDFSource::readProductInfo() {
@@ -96,7 +97,7 @@ HDFSource::readEvent(long iEventIndex) {
       auto dset = lumi_.getDataSet(pi.name());
       auto ds = dset.getSpace();
       dset.select({begin}, {end-begin}).read(product); 
-   //   std::cout << pname << ", " << classnames_[i] << "Begin at: " << begin << ", and size of dp: " << (end-begin) << " , " << product.size() << "\n";
+    //  std::cout << pi.name() << ", " << classnames_[i] << "Begin at: " << begin << ", and size of dp: " << (end-begin) << " , " << product.size() << "\n";
       ++i; 
       products.push_back(product);
   }
@@ -105,15 +106,15 @@ HDFSource::readEvent(long iEventIndex) {
 }
 
 void HDFSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) { 
-  TBufferFile bufferFile{TBuffer::kRead};
   int productIndex = 0;
+  TBufferFile bufferFile{TBuffer::kRead};
   while(it < itEnd) {
-    auto product = *(it);
+    auto const & product = *(it);
     auto storedSize = product.size();
-    bufferFile.SetBuffer(&product, storedSize, kFALSE); 
+    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&product[0])), storedSize, kFALSE); 
     dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, dataBuffers_[productIndex]);
     dataProducts_[productIndex].setSize(bufferFile.Length());
-    std::cout <<"Product Name: " << dataProducts_[productIndex].name() << ", " <<dataProducts_[productIndex].classType() << ", storedSize " << storedSize  <<" Buffer size "<<bufferFile.Length() << ", and Buffer data: " << dataBuffers_[productIndex]<< std::endl;
+    //std::cout <<"Product Name: " << dataProducts_[productIndex].name()  << "Product Index "<< productIndex << ", " << dataProducts_[productIndex].classType() << ", storedSize " << storedSize  <<" Buffer size "<<bufferFile.Length() << ", and Buffer data: " << dataBuffers_[productIndex]<< std::endl;
     //if (bufferFile.Length() != storedSize) return;
     bufferFile.Reset();
     ++productIndex; 

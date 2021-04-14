@@ -25,7 +25,9 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
       file_.SetCompressionAlgorithm(ROOT::kLZMA);
     } else if(iConfig.compressionAlgorithm_ == "LZ4") {
       file_.SetCompressionAlgorithm(ROOT::kLZ4);
-    } else {
+    } else if(iConfig.compressionAlgorithm_ == "ZSTD") {
+      file_.SetCompressionAlgorithm(ROOT::kZSTD);
+    }else {
       std::cout <<"unknown compression algorithm "<<iConfig.compressionAlgorithm_<<std::endl;
       abort();
     }

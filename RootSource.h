@@ -29,7 +29,7 @@ public:
 
   size_t numberOfDataProducts() const final {return dataProducts_.size();}
   std::vector<DataProductRetriever>& dataProducts() final { return dataProducts_; }
-  EventIdentifier eventIdentifier() final { return eventAuxReader_->doWork();}
+  EventIdentifier eventIdentifier() final;
 
   bool readEvent(long iEventIndex) final;
 
@@ -40,6 +40,8 @@ private:
   TTree* events_;
   RootDelayedRetriever delayedReader_;
   std::optional<EventAuxReader> eventAuxReader_;
+  TBranch* eventIDBranch_ = nullptr;
+  EventIdentifier id_;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<TBranch*> branches_;
 };

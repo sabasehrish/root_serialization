@@ -25,7 +25,7 @@ class SharedSourceBase {
   //returns false if can immediately tell that can not continue processing
   void gotoEventAsync(unsigned int iLane, long iEventIndex, OptionalTaskHolder);
 
-  virtual std::chrono::microseconds accumulatedTime() const = 0;
+  virtual void printSummary() const = 0;
 
  private:
   //NOTE: fully reentrant sources can do their work during this call without needing to create a new Task. 

@@ -2,6 +2,7 @@
 #define EmptySource_h
 
 #include "SharedSourceBase.h"
+#include <iostream>
 
 namespace cce::tf {
 class EmptySource : public SharedSourceBase {
@@ -15,7 +16,7 @@ class EmptySource : public SharedSourceBase {
     return {1, 1, static_cast<unsigned long long>(iEventIndex+1)};
   }
 
-  std::chrono::microseconds accumulatedTime() const final { return std::chrono::microseconds::zero();}
+  void printSummary() const final {std::cout <<"\nSource time: N/A"<<std::endl;}
 
  private:
   void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder iHolder) final {

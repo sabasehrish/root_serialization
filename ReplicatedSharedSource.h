@@ -2,6 +2,7 @@
 #define ReplicatedSharedSource_h
 
 #include <vector>
+#include <iostream>
 #include "SharedSourceBase.h"
 
 namespace cce::tf {
@@ -26,7 +27,12 @@ namespace cce::tf {
       return sources_[iLane].eventIdentifier();
     }
 
-    std::chrono::microseconds accumulatedTime() const final {
+    void printSummary() const {
+      std::chrono::microseconds sourceTime = accumulatedTime();
+      std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
+    }
+
+    std::chrono::microseconds accumulatedTime() const {
       std::chrono::microseconds totalTime = std::chrono::microseconds::zero();
       for(auto const& s: sources_) {
         totalTime += s.accumulatedTime();

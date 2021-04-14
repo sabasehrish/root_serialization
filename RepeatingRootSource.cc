@@ -20,6 +20,8 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
   auto l = events->GetListOfBranches();
 
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
+  const std::string eventIDBranchName{"EventID"}; 
+  TBranch* eventIDBranch = nullptr;
   int eventAuxIndex = -1;
   for(auto& dataProducts: dataProductsPerLane_) {
     dataProducts.reserve(l->GetEntriesFast());
@@ -30,6 +32,10 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
+    if(eventIDBranchName == b->GetName()) {
+      eventIDBranch = b;
+      continue;
+    }
     b->SetupAddresses();
     TClass* class_ptr=nullptr;
     EDataType type;
@@ -53,6 +59,9 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     if(eventAuxIndex != -1) {
       identifierPerEvent_[i] = EventAuxReader(&dataBuffersPerEvent_[i][eventAuxIndex].address_).doWork();
       //std::cout <<"id "<<identifierPerEvent_[i].event<<std::endl;
+    } else if(eventIDBranch) {
+      eventIDBranch->SetAddress(&identifierPerEvent_[i]);
+      eventIDBranch->GetEntry(i);
     } else {
       identifierPerEvent_[i] = {1,1,static_cast<unsigned long long>(i)};
     }
@@ -101,4 +110,9 @@ void RepeatingRootSource::fillBuffer(int iEntry, std::vector<BufferInfo>& bi, st
     branch->SetAddress(nullptr);
     bi.emplace_back( object, static_cast<size_t>(s));
   }
+}
+
+void RepeatingRootSource::printSummary() const {
+      std::chrono::microseconds sourceTime = accumulatedTime();
+      std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 }

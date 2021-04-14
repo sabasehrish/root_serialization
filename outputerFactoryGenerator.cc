@@ -6,6 +6,7 @@
 #include "DummyOutputer.h"
 #include "TextDumpOutputer.h"
 #include "TBufferMergerRootOutputer.h"
+#include "TestProductsOutputer.h"
 #include "configKeyValuePairs.h"
 
 namespace {
@@ -193,6 +194,8 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       return outFactory;
     }
     outFactory = [](unsigned int) { return std::make_unique<TextDumpOutputer>();};
+  } else if(iType == "TestProductsOutputer") {
+    outFactory = [](unsigned int iNLanes) { return std::make_unique<TestProductsOutputer>(iNLanes);};
   }
   return outFactory;
 }

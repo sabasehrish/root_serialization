@@ -42,10 +42,12 @@ class RootOutputer :public OutputerBase {
 
 
 private:
-  void write(unsigned int iLaneIndex);
+  void write(unsigned int iLaneIndex, EventIdentifier const&);
   TFile file_;
   TTree* eventTree_;
   std::vector<TBranch*> branches_;
+  TBranch* eventIDBranch_;
+  EventIdentifier id_;
 
   mutable SerialTaskQueue queue_;
   std::vector<std::vector<DataProductRetriever> const*> retrievers_;

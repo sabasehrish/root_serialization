@@ -21,21 +21,23 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
   auto l = events_->GetListOfBranches();
 
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
+  const std::string eventIDBranchName{"EventID"}; 
 
   branches_.reserve(l->GetEntriesFast());
   for(int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
+    if(eventIDBranchName == b->GetName()) {
+      eventIDBranch_ = b;
+      continue;
+    }
     b->SetupAddresses();
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
       eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
     }
-  }
-  if(not eventAuxReader_) {
-    eventAuxReader_ = EventAuxReader(nullptr);
   }
 
   for(int laneId=0; laneId < iNLanes; ++laneId) {
@@ -71,6 +73,9 @@ void SerialRootSource::readEventAsync(unsigned int iLane, long iEventIndex, Opti
         if(eventAuxBranch_) {
           eventAuxBranch_->GetEntry(iEventIndex);
           identifiers_[iLane] = eventAuxReader_->doWork();
+        } else if(eventIDBranch_) {
+          eventIDBranch_->SetAddress(&identifiers_[iLane]);
+          eventIDBranch_->GetEntry(iEventIndex);
         }
         accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
         task.doneWaiting();
@@ -84,6 +89,11 @@ std::chrono::microseconds SerialRootSource::accumulatedTime() const {
     fullTime += delayedReader.accumulatedTime();
   }
   return fullTime;
+}
+
+void SerialRootSource::printSummary() const {
+  std::chrono::microseconds sourceTime = accumulatedTime();
+  std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 }
 
 void SerialRootDelayedRetriever::getAsync(DataProductRetriever& dataProduct, int index, TaskHolder iTask) {

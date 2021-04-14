@@ -32,7 +32,8 @@ public:
   std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex ) final { return dataProductsPerLane_[iLane]; }
   EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final { return identifierPerEvent_[iEventIndex % nUniqueEvents_];}
 
-  std::chrono::microseconds accumulatedTime() const final { return std::chrono::microseconds(accumulatedTime_.load());}
+  void printSummary() const final;
+  std::chrono::microseconds accumulatedTime() const { return std::chrono::microseconds(accumulatedTime_.load());}
 
   void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder) final;
 

@@ -67,11 +67,25 @@ Does not generate any _event_ data products. Specify by just using its name, e.g
 ```
 > threaded_io_test EmptySource 1 1 0 10
 ```
+
+#### TestProductsSource
+Generates a fixed set of data products for C++ types known by ROOT. Specify by just using its name, e.g.
+```
+> threaded_io_test TestProductsSource 1 1 0 10
+```
+
 #### ReplicatedRootSource
 Reads a standard ROOT file. Each concurrent Event has its own replica of the Source to avoid the need for cross Event synchronization. In addition to its name, one needs to give the file to read, e.g.
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10
 ```
+
+#### SerialRootSource
+Reads a standard ROOT file. All concurrent Events share the same Source. Access to the Source is serialized for thread-safety. In addition to its name, one needs to give the file to read, e.g.
+```
+> threaded_io_test SerialRootSource=test.root 1 1 0 1000
+```
+
 
 #### RepeatingRootSource
 Reads the first N events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read and, optionally, the number of events to read (default is 10) , e.g.
@@ -89,6 +103,12 @@ or
 Reads a _packed data streams_ format file. Each concurrent Event has its own replica of the Source to avoid the need for cross Event synchronization. In addition to its name, one needs to give the file to read, e.g.
 ```
 > threaded_io_test ReplicatedPDSSource=test.pds 1 1 0 10
+```
+
+#### SharedPDSSource
+Reads a _packed data streams_ format file. The Source is shared between the concurrent Events. Reads from the file are serialized for thread-safety while decompressing the Event and the object deserialization can proceed concurrently. In addition to its name, one needs to give the file to read, e.g.
+```
+> threaded_io_test SharedPDSSource=test.pds 1 1 0 10
 ```
 
 ### Outputers
@@ -113,6 +133,12 @@ Uses ROOT to serialize the _event_ data products but does not store them. It pri
 or
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 SerializeOutputer=verbose
+```
+
+#### TestProductsOutputer
+Checks that the data products match what is expected from TestProductsSource or files containing those same data products. If the results are unexpected, the program will abort. Specify by just using its name.
+```
+> threaded_io_test TestProductsSource 1 1 0 10 TestProductsOutputer
 ```
 
 #### RootOutputer

@@ -40,7 +40,6 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   if (iConfig.treeMaxVirtualSize_ >= 0) {
     eventTree_->SetMaxVirtualSize(static_cast<Long64_t>(iConfig.treeMaxVirtualSize_));
   }
-
 }
 
 RootOutputer::~RootOutputer() {
@@ -49,12 +48,21 @@ RootOutputer::~RootOutputer() {
 }
 
 void RootOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
+  const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
+  bool hasEventAuxiliaryBranch = false;
   retrievers_[iLaneIndex] = &iDPs;
   if(iLaneIndex == 0) {
     branches_.reserve(iDPs.size());
     for(auto& dp : iDPs) {
       branches_.push_back( eventTree_->Branch(dp.name().c_str(), dp.classType()->GetName(), dp.address(), basketSize_) );
+      if(dp.name() == eventAuxiliaryBranchName) {
+        hasEventAuxiliaryBranch = true;
+      }
     }
+  }
+
+  if(not hasEventAuxiliaryBranch) {
+    eventIDBranch_ = eventTree_->Branch("EventID", &id_, "run/i:lumi/i:event/l");
   }
 }
 
@@ -63,13 +71,13 @@ void RootOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriev
 
 void RootOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto group = iCallback.group();
-  queue_.push(*group, [this, iLaneIndex, callback=std::move(iCallback)]() mutable {
-      const_cast<RootOutputer*>(this)->write(iLaneIndex);
+  queue_.push(*group, [this, iLaneIndex, callback=std::move(iCallback), iEventID]() mutable {
+      const_cast<RootOutputer*>(this)->write(iLaneIndex, iEventID);
       callback.doneWaiting();
     });
 }
 
-void RootOutputer::write(unsigned int iLaneIndex) {
+void RootOutputer::write(unsigned int iLaneIndex, EventIdentifier const& iEventID) {
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -80,6 +88,7 @@ void RootOutputer::write(unsigned int iLaneIndex) {
     (*it)->SetAddress(retriever.address());
     ++it;
   }
+  id_ = iEventID;
 
   // Isolate the fill operation so that IMT doesn't grab other large tasks
   // that could lead to stalling

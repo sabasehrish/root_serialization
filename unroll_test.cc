@@ -1,10 +1,12 @@
 #include "UnrolledSerializer.h"
 #include "UnrolledDeserializer.h"
+#include "Serializer.h"
 
 #include "TClass.h"
 
 #include <iostream>
 #include <string>
+#include <memory>
 
 #include "cms/EventAuxiliary.h"
 
@@ -13,31 +15,45 @@ namespace edm::detail {
   std::string const& InvalidHash() { return invalidHash;}
 }
 
-int main() {
+
+namespace {
+  template<typename T>
+  std::unique_ptr<T> runTest(T const& iObject) {
   using namespace cce::tf;
 
-
-  auto cls =TClass::GetClass(typeid(edm::EventAuxiliary));
+  auto cls =TClass::GetClass(typeid(T));
 
   if(nullptr == cls) {
     std::cout <<"FAILED TO GET CLASS"<<std::endl;
-    return -1;
+    abort();
   }
 
   UnrolledSerializer us(cls);
 
-  edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true);
-  auto buffer = us.serialize(&ev);
+  auto buffer = us.serialize(&iObject);
 
-  std::cout <<"size "<<buffer.size()<<std::endl;
+  std::cout <<"unrolled size "<<buffer.size()<<std::endl;
+
+  {
+    Serializer s;
+    auto b = s.serialize(&iObject, cls);
+    std::cout <<"standard size "<<b.size()<<std::endl;
+  }
 
   UnrolledDeserializer ud(cls);
   
   auto pV = ud.deserialize(buffer);
-  auto pE = reinterpret_cast<edm::EventAuxiliary*>(pV);
+  auto pE = reinterpret_cast<T*>(pV);
 
-  std::cout <<"eventID "<<pE->event()<<std::endl;
-  delete pE;
+  return std::unique_ptr<T>(pE);
+  }
+}
+
+int main() {
+
+  edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true);
+  auto pEv = runTest(ev);
+  std::cout <<"eventID "<<pEv->event()<<std::endl;
 
   return 0;
 }

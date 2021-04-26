@@ -14,10 +14,10 @@ public:
   //  UnrolledSerializer(Serializer&& ):
   //  bufferFile_{TBuffer::kWrite} {}
 
-  std::vector<char> serialize(void* address) {
+  std::vector<char> serialize(void const* address) {
     bufferFile_.Reset();
 
-    bufferFile_.ApplySequence(*sequence_, address);
+    bufferFile_.ApplySequence(*sequence_, const_cast<void*>(address));
     //The blob contains the serialized data product
     std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
     return blob;

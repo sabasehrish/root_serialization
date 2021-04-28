@@ -28,13 +28,8 @@ public:
   }
 
 private:
-
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> createUnrolled(TClass&, TStreamerInfo&) const;
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> createRolled(TClass&, TStreamerInfo&) const;
   TBufferFile bufferFile_;
-  
   std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> sequences_;
-  
 };
 }
 #endif

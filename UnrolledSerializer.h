@@ -17,7 +17,11 @@ public:
   std::vector<char> serialize(void const* address) {
     bufferFile_.Reset();
 
-    bufferFile_.ApplySequence(*sequence_, const_cast<void*>(address));
+    for(auto& seq: sequences_) {
+      //seq->Print();
+
+      bufferFile_.ApplySequence(*seq, const_cast<void*>(address));
+    }
     //The blob contains the serialized data product
     std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
     return blob;
@@ -25,11 +29,11 @@ public:
 
 private:
 
-  std::unique_ptr<TStreamerInfoActions::TActionSequence> createForContainer(TVirtualCollectionProxy&) const;
-  std::unique_ptr<TStreamerInfoActions::TActionSequence> createForObject(TClass&, TStreamerInfo&) const;
+  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> createUnrolled(TClass&, TStreamerInfo&) const;
+  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> createRolled(TClass&, TStreamerInfo&) const;
   TBufferFile bufferFile_;
   
-  std::unique_ptr<TStreamerInfoActions::TActionSequence> sequence_;
+  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> sequences_;
   
 };
 }

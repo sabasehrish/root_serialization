@@ -61,7 +61,7 @@ target_link_libraries(threaded_io_test
                               configKeys
                               zstd::libzstd_shared)
 
-add_executable(unroll_test unroll_test.cc UnrolledSerializer.cc UnrolledDeserializer.cc)
+add_executable(unroll_test unroll_test.cc UnrolledSerializer.cc UnrolledDeserializer.cc common_unrolling.cc)
 target_include_directories(unroll_test PUBLIC "${PROJECT_BINARY_DIR}" ${EXTRA_INCLUDES})
 target_link_directories(unroll_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/lib")
 target_link_directories(unroll_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")

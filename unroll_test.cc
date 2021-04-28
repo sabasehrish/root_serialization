@@ -63,9 +63,9 @@ int main() {
     std::cout <<"size "<<pV->size()<<std::endl;
   }
   {
-    edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true);
+    edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true, edm::EventAuxiliary::PhysicsTrigger,12);
     auto pEv = runTest(ev);
-    std::cout <<"eventID "<<pEv->event()<<std::endl;
+    std::cout <<"eventID "<<pEv->event()<<" "<<pEv->processGUID()<<" bx "<<ev.bunchCrossing()<<std::endl;
   }
 
   return 0;

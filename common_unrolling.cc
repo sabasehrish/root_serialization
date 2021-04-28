@@ -49,10 +49,10 @@ namespace {
 
   void checkIfCanHandle(TClass* iClass) {
     //Cribbed from TTree::BronchExec
-    /*if(iClass == TClonesArray::Class()) { commented out since was getting false positives!
+    if(iClass == TClonesArray::Class()) {
     //Do not handle clones arrays
     abort();
-    } */
+    } 
     
     if (iClass->GetCollectionProxy()) {
       TVirtualCollectionProxy* collProxy = iClass->GetCollectionProxy();
@@ -209,6 +209,33 @@ namespace {
 // Now with split level. id=-2 for the 'top level' after top level BranchElement is made, will call Unroll on it
 // ftype is still 0 for the sub items (since we are effectively splitlevel == 1)
 
+  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>>& oSeq) {
+    if(not elementNeedsOwnSequence(element, &iClass)) {
+      return;
+    }
+    auto ptr = element->GetClassPointer();
+    if(ptr) {
+      TStreamerInfo* sinfo = buildStreamerInfo(ptr);
+      if(canUnroll(ptr,sinfo)) {
+        auto offset = element->GetOffset();
+        
+        oSeq.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, true, -2, baseOffset+offset));
+        
+        TIter next(sinfo->GetElements());
+        TStreamerElement* element = 0;
+        for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
+          if(not elementNeedsOwnSequence(element, ptr)) {
+            return;
+          }
+          addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,oSeq);
+        }
+        return;
+      }
+    }
+    //std::cout <<" offset "<<element->GetOffset()<<" "<< (ptr? ptr->GetName(): "?")<<std::endl;
+    oSeq.emplace_back(setActionSequence(nullptr, parentInfo, nullptr, create, false, idInParent, baseOffset));
+  }
+
   std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
     std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> vec;
     vec.reserve(1);
@@ -216,30 +243,7 @@ namespace {
     TIter next(iInfo.GetElements());
     TStreamerElement* element = 0;
     for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
-      if(not elementNeedsOwnSequence(element, &iClass)) {
-        continue;
-      }
-      auto ptr = element->GetClassPointer();
-      if(ptr) {
-        TStreamerInfo* sinfo = buildStreamerInfo(ptr);
-        if(canUnroll(ptr,sinfo)) {
-          auto offset = element->GetOffset();
-          
-          vec.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, true, -2, offset));
-          
-          TIter next(sinfo->GetElements());
-          TStreamerElement* element = 0;
-          for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
-            if(not elementNeedsOwnSequence(element, &iClass)) {
-              continue;
-            }
-            vec.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, false, id,offset));
-          }
-          continue;
-        }
-      }
-      //std::cout <<" offset "<<element->GetOffset()<<" "<< (ptr? ptr->GetName(): "?")<<std::endl;
-      vec.emplace_back(setActionSequence(nullptr, &iInfo, nullptr, create, false, id,0));
+      addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, vec);
     }
     return vec; 
   }

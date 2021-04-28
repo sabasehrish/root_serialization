@@ -3,10 +3,12 @@
 #include "Serializer.h"
 
 #include "TClass.h"
+#include "TClonesArray.h"
 
 #include <iostream>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "cms/EventAuxiliary.h"
 
@@ -22,6 +24,8 @@ namespace {
   using namespace cce::tf;
 
   auto cls =TClass::GetClass(typeid(T));
+  std::cout <<cls<<" TClonesArray::Class "<<TClonesArray::Class()<<std::endl;
+
 
   if(nullptr == cls) {
     std::cout <<"FAILED TO GET CLASS"<<std::endl;
@@ -50,10 +54,19 @@ namespace {
 }
 
 int main() {
+  //gDebug = 10;
 
-  edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true);
-  auto pEv = runTest(ev);
-  std::cout <<"eventID "<<pEv->event()<<std::endl;
+  {
+    std::vector<int> iv = {1,2,3};
+
+    auto pV = runTest(iv);
+    std::cout <<"size "<<pV->size()<<std::endl;
+  }
+  {
+    edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true);
+    auto pEv = runTest(ev);
+    std::cout <<"eventID "<<pEv->event()<<std::endl;
+  }
 
   return 0;
 }

@@ -28,6 +28,13 @@ namespace cce::tf::unrolling {
     return sinfo;
   }
 
+  TStreamerInfo* buildStreamerInfo(TClass* iClass) {
+    auto destr = [iClass](void * iPtr) { iClass->Destructor(iPtr); };
+    std::unique_ptr<void, decltype(destr)> pObj( iClass->New(), destr);
+
+    return buildStreamerInfo(iClass, pObj.get());
+  }
+
   void checkIfCanHandle(TClass* iClass) {
     //Cribbed from TTree::BronchExec
     /*if(iClass == TClonesArray::Class()) { commented out since was getting false positives!

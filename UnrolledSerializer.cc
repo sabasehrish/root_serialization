@@ -2,6 +2,8 @@
 
 #include "common_unrolling.h"
 
+#include "TStreamerElement.h"
+
 #include <iostream>
 
 using namespace cce::tf;
@@ -11,10 +13,7 @@ UnrolledSerializer::UnrolledSerializer(TClass* iClass):bufferFile_{TBuffer::kWri
 
   checkIfCanHandle(iClass);
 
-  auto destr = [iClass](void * iPtr) { iClass->Destructor(iPtr); };
-  std::unique_ptr<void, decltype(destr)> pObj( iClass->New(), destr);
-
-  TStreamerInfo* sinfo = buildStreamerInfo(iClass, pObj.get());
+  TStreamerInfo* sinfo = buildStreamerInfo(iClass);
   if (!sinfo) {
     //failed to build StreamerInfo
     abort();
@@ -75,7 +74,7 @@ std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> UnrolledSeri
   std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> vec;
   vec.reserve(1);
   auto create = TStreamerInfoActions::TActionSequence::WriteMemberWiseActionsGetter;
-  vec.emplace_back(setActionSequence(nullptr, &iInfo, nullptr, create, true, -1, 0));
+  vec.emplace_back(setActionSequence(nullptr, &iInfo, nullptr, create, true, -2, 0));
   TIter next(iInfo.GetElements());
   TStreamerElement* element = 0;
   for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
@@ -83,6 +82,25 @@ std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> UnrolledSeri
       continue;
     }
     //std::cout <<"  "<<id<<std::endl;
+    auto ptr = element->GetClassPointer();
+    if(ptr) {
+      TStreamerInfo* sinfo = buildStreamerInfo(ptr);
+      if(canUnroll(ptr,sinfo)) {
+        auto offset = element->GetOffset();
+
+        vec.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, true, -2, offset));
+
+        TIter next(sinfo->GetElements());
+        TStreamerElement* element = 0;
+        for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
+          if(not elementNeedsOwnSequence(element, &iClass)) {
+            continue;
+          }
+          vec.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, false, id,offset));
+        }
+        continue;
+      }
+    }
     vec.emplace_back(setActionSequence(nullptr, &iInfo, nullptr, create, false, id,0));
   }
   return vec;

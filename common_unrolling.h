@@ -7,6 +7,7 @@
 #include <memory>
 
 namespace cce::tf::unrolling {
+  TStreamerInfo* buildStreamerInfo(TClass* cl);
   TStreamerInfo* buildStreamerInfo(TClass* cl, void* pointer);
   void checkIfCanHandle(TClass* iClass);
   bool elementNeedsOwnSequence(TStreamerElement* element, TClass* cl);

@@ -7,8 +7,10 @@
 #include <vector>
 
 namespace cce::tf::unrolling {
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildReadActionSequence(TClass& iClass);
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildWriteActionSequence(TClass& iClass);
+  using Sequence = std::unique_ptr<TStreamerInfoActions::TActionSequence>;  
+  using OffsetAndSequences = std::vector<std::pair<int, Sequence>>;
+  OffsetAndSequences buildReadActionSequence(TClass& iClass);
+  OffsetAndSequences buildWriteActionSequence(TClass& iClass);
 
 
 }

@@ -5,6 +5,7 @@
 #include "TBufferFile.h"
 #include "TClass.h"
 #include "TStreamerInfoActions.h"
+#include "common_unrolling.h"
 
 namespace cce::tf {
 class UnrolledDeserializer {
@@ -20,9 +21,9 @@ public:
     bufferFile_.SetBuffer( const_cast<char*>(&iBuffer.front()), iBuffer.size(), kFALSE);
 
     void* address = cls_->New();
-    for(auto& seq: sequences_) {
+    for(auto& offNSeq: offsetAndSequences_) {
       //seq->Print();
-      bufferFile_.ApplySequence(*seq, address);
+      bufferFile_.ApplySequence(*(offNSeq.second), static_cast<char*>(address)+offNSeq.first);
     }
     return address;
   }
@@ -31,7 +32,7 @@ private:
 
   TBufferFile bufferFile_;
   TClass* cls_;
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> sequences_;
+  unrolling::OffsetAndSequences offsetAndSequences_;
 };
 }
 #endif

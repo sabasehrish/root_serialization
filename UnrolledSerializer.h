@@ -5,22 +5,25 @@
 #include "TBufferFile.h"
 #include "TClass.h"
 #include "TStreamerInfoActions.h"
+#include "common_unrolling.h"
 
 namespace cce::tf {
 class UnrolledSerializer {
 public:
   UnrolledSerializer(TClass*);
 
-  //  UnrolledSerializer(Serializer&& ):
-  //  bufferFile_{TBuffer::kWrite} {}
+  UnrolledSerializer(UnrolledSerializer&& iOther):
+  bufferFile_{TBuffer::kWrite}, offsetAndSequences_(std::move(iOther.offsetAndSequences_))  {}
+  
+  UnrolledSerializer(UnrolledSerializer const& ) = delete;
 
   std::vector<char> serialize(void const* address) {
     bufferFile_.Reset();
 
-    for(auto& seq: sequences_) {
+    for(auto& offAndSeq: offsetAndSequences_) {
       //seq->Print();
 
-      bufferFile_.ApplySequence(*seq, const_cast<void*>(address));
+      bufferFile_.ApplySequence(*(offAndSeq.second), const_cast<char*>(static_cast<char const*>(address)+offAndSeq.first));
     }
     //The blob contains the serialized data product
     std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
@@ -29,7 +32,7 @@ public:
 
 private:
   TBufferFile bufferFile_;
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> sequences_;
+  unrolling::OffsetAndSequences offsetAndSequences_;
 };
 }
 #endif

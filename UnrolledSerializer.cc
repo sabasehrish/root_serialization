@@ -10,5 +10,5 @@ using namespace cce::tf;
 using namespace cce::tf::unrolling;
 
 UnrolledSerializer::UnrolledSerializer(TClass* iClass):bufferFile_{TBuffer::kWrite}{
-  sequences_ = buildWriteActionSequence(*iClass);
+  offsetAndSequences_ = buildWriteActionSequence(*iClass);
 }

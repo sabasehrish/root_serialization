@@ -6,6 +6,9 @@
 #include "TStreamerElement.h"
 #include "TStreamerInfo.h"
 
+#include <iostream>
+
+using namespace cce::tf;
 namespace {
   TStreamerInfo* buildStreamerInfo(TClass* cl);
   TStreamerInfo* buildStreamerInfo(TClass* cl, void* pointer);
@@ -13,9 +16,9 @@ namespace {
   bool elementNeedsOwnSequence(TStreamerElement* element, TClass* cl);
   bool canUnroll(TClass* iClass, TStreamerInfo* sinfo);
 
-  std::unique_ptr<TStreamerInfoActions::TActionSequence> setActionSequence(TClass *originalClass, TStreamerInfo *localInfo, TVirtualCollectionProxy* collectionProxy, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, bool isSplitNode, int iID, size_t iOffset );
+  unrolling::Sequence setActionSequence(TClass *originalClass, TStreamerInfo *localInfo, TVirtualCollectionProxy* collectionProxy, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, bool isSplitNode, int iID, size_t iOffset );
 
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create);
+  unrolling::OffsetAndSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create);
 
 
 
@@ -185,7 +188,7 @@ namespace {
 
 //  NOTE: fNewIDs are filled in via InitInfo which is called by GetInfoImp (which returns the TStreamerInfo). It only does
 //   work if dealing with a container rather than an object.
-  std::unique_ptr<TStreamerInfoActions::TActionSequence> setActionSequence(TClass *originalClass, TStreamerInfo *localInfo, TVirtualCollectionProxy* collectionProxy, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, bool isSplitNode, int iID, size_t iOffset )
+  unrolling::Sequence setActionSequence(TClass *originalClass, TStreamerInfo *localInfo, TVirtualCollectionProxy* collectionProxy, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, bool isSplitNode, int iID, size_t iOffset )
   {
     TStreamerInfoActions::TIDs newIDs;
     if (!isSplitNode) {
@@ -194,8 +197,8 @@ namespace {
     
     auto original = create(localInfo, collectionProxy, originalClass);  
 
-    std::unique_ptr<TStreamerInfoActions::TActionSequence> actionSequence( original->CreateSubSequence(newIDs, iOffset, create) );
-    
+    unrolling::Sequence actionSequence( original->CreateSubSequence(newIDs, iOffset, create) );
+
     return actionSequence;
   }
 
@@ -209,7 +212,7 @@ namespace {
 // Now with split level. id=-2 for the 'top level' after top level BranchElement is made, will call Unroll on it
 // ftype is still 0 for the sub items (since we are effectively splitlevel == 1)
 
-  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>>& oSeq) {
+  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, unrolling::OffsetAndSequences& oSeq) {
     if(not elementNeedsOwnSequence(element, &iClass)) {
       return;
     }
@@ -217,9 +220,10 @@ namespace {
     if(ptr) {
       TStreamerInfo* sinfo = buildStreamerInfo(ptr);
       if(canUnroll(ptr,sinfo)) {
+        //std::cout <<"unrolling "<<ptr->GetName()<<std::endl;
         auto offset = element->GetOffset();
         
-        oSeq.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, true, -2, baseOffset+offset));
+        oSeq.emplace_back(baseOffset, setActionSequence(nullptr, sinfo, nullptr, create, true, -2, 0));
         
         TIter next(sinfo->GetElements());
         TStreamerElement* element = 0;
@@ -231,24 +235,26 @@ namespace {
         }
         return;
       }
+      //std::cout <<"rolled "<<ptr->GetName()<<std::endl;
     }
-    //std::cout <<" offset "<<element->GetOffset()<<" "<< (ptr? ptr->GetName(): "?")<<std::endl;
-    oSeq.emplace_back(setActionSequence(nullptr, parentInfo, nullptr, create, false, idInParent, baseOffset));
+   
+    //std::cout <<" baseOffset "<<baseOffset<<" offset "<<element->GetOffset()<<" "<< element->GetName()<<" "<< (ptr? ptr->GetName(): "?")<<std::endl;
+    oSeq.emplace_back(baseOffset, setActionSequence(nullptr, parentInfo, nullptr, create, false, idInParent, 0));
   }
 
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
-    std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> vec;
+  unrolling::OffsetAndSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
+    unrolling::OffsetAndSequences vec;
     vec.reserve(1);
-    vec.emplace_back(setActionSequence(nullptr, &iInfo, nullptr, create, true, -2, 0));
+    vec.emplace_back(0, setActionSequence(nullptr, &iInfo, nullptr, create, true, -2, 0));
     TIter next(iInfo.GetElements());
     TStreamerElement* element = 0;
     for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
       addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, vec);
     }
-    return vec; 
+    return vec;
   }
 
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildActionSequence(TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
+  unrolling::OffsetAndSequences buildActionSequence(TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
   checkIfCanHandle(&iClass);
 
   TStreamerInfo* sinfo = buildStreamerInfo(&iClass);
@@ -261,19 +267,19 @@ namespace {
     return buildUnrolledActionSequence(iClass, *sinfo, create);
   }
 
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> vec;
+  unrolling::OffsetAndSequences vec;
   vec.reserve(1);
-  vec.emplace_back(setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
+  vec.emplace_back(0,setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
   return vec; 
  }
 }
 
 namespace cce::tf::unrolling {
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildReadActionSequence(TClass& iClass) {
+  unrolling::OffsetAndSequences buildReadActionSequence(TClass& iClass) {
     return buildActionSequence(iClass, TStreamerInfoActions::TActionSequence::ReadMemberWiseActionsGetter);
   }
 
-  std::vector<std::unique_ptr<TStreamerInfoActions::TActionSequence>> buildWriteActionSequence(TClass& iClass) {
+  unrolling::OffsetAndSequences buildWriteActionSequence(TClass& iClass) {
     return buildActionSequence(iClass, TStreamerInfoActions::TActionSequence::WriteMemberWiseActionsGetter);
   }
 

@@ -24,7 +24,7 @@ namespace {
   using namespace cce::tf;
 
   auto cls =TClass::GetClass(typeid(T));
-  std::cout <<cls<<" TClonesArray::Class "<<TClonesArray::Class()<<std::endl;
+  //std::cout <<cls<<" TClonesArray::Class "<<TClonesArray::Class()<<std::endl;
 
 
   if(nullptr == cls) {
@@ -51,10 +51,42 @@ namespace {
 
   return std::unique_ptr<T>(pE);
   }
+
+  void testNamedClass(const char* iName) {
+    TClass* cls = TClass::GetClass(iName);
+
+    if(nullptr == cls) {
+      std::cout <<"FAILED TO GET CLASS "<<iName<<std::endl;
+      abort();
+    }
+
+    
+    auto obj = cls->New();
+    
+    cce::tf::UnrolledSerializer us(cls);
+    auto b = us.serialize(obj);
+    std::cout <<"unrolled size "<<b.size()<<std::endl;
+    
+    {
+      cce::tf::Serializer s;
+      auto b = s.serialize(obj, cls);
+      std::cout <<"standard size "<<b.size()<<std::endl;
+    }
+
+  }
 }
 
-int main() {
-  //gDebug = 10;
+
+int main(int argc, char** argv) {
+  int start=1;
+
+  const std::string debugFlag("-g");
+  if(argc > 1) {
+    if (debugFlag == argv[1] ) {
+      gDebug = 3;
+      start +=1;
+    }
+  }
 
   {
     std::vector<int> iv = {1,2,3};
@@ -68,5 +100,10 @@ int main() {
     std::cout <<"eventID "<<pEv->event()<<" "<<pEv->processGUID()<<" bx "<<ev.bunchCrossing()<<std::endl;
   }
 
+  //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
+  for(int i=start; i<argc;++i) {
+    std::cout <<"class: "<<argv[i]<<std::endl;
+    testNamedClass(argv[i]);
+  }
   return 0;
 }

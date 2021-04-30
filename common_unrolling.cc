@@ -156,10 +156,6 @@ namespace {
       if(not elementNeedsOwnSequence(element, iClass)) {
         continue;
       }
-      if(element->GetClass() && element->GetClass()->GetCollectionProxy() ) {
-        //Do not want to handle collections yet
-        return false;
-      }
 
       auto streamerType = element->GetType();
       auto branchClass = sinfo->GetClass();

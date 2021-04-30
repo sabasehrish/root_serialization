@@ -20,7 +20,7 @@ namespace edm::detail {
 
 namespace {
   template<typename T>
-  std::unique_ptr<T> runTest(T const& iObject) {
+  T runTest(T const& iObject) {
   using namespace cce::tf;
 
   auto cls =TClass::GetClass(typeid(T));
@@ -46,10 +46,10 @@ namespace {
 
   UnrolledDeserializer ud(cls);
   
-  auto pV = ud.deserialize(buffer);
-  auto pE = reinterpret_cast<T*>(pV);
+  T newObj;
+  ud.deserialize(buffer, &newObj);
 
-  return std::unique_ptr<T>(pE);
+  return newObj;
   }
 
   void testNamedClass(const char* iName) {
@@ -92,12 +92,12 @@ int main(int argc, char** argv) {
     std::vector<int> iv = {1,2,3};
 
     auto pV = runTest(iv);
-    std::cout <<"size "<<pV->size()<<std::endl;
+    std::cout <<"size "<<pV.size()<<std::endl;
   }
   {
     edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true, edm::EventAuxiliary::PhysicsTrigger,12);
     auto pEv = runTest(ev);
-    std::cout <<"eventID "<<pEv->event()<<" "<<pEv->processGUID()<<" bx "<<ev.bunchCrossing()<<std::endl;
+    std::cout <<"eventID "<<pEv.event()<<" "<<pEv.processGUID()<<" bx "<<pEv.bunchCrossing()<<std::endl;
   }
 
   //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");

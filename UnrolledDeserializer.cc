@@ -8,6 +8,5 @@
 using namespace cce::tf;
 using namespace cce::tf::unrolling;
 
-UnrolledDeserializer::UnrolledDeserializer(TClass* iClass):bufferFile_{TBuffer::kRead}, cls_(iClass){
-  offsetAndSequences_ = buildReadActionSequence(*iClass);
-}
+UnrolledDeserializer::UnrolledDeserializer(TClass* iClass): offsetAndSequences_{buildReadActionSequence(*iClass)}{}
+

@@ -12,26 +12,20 @@ class UnrolledDeserializer {
 public:
   UnrolledDeserializer(TClass*);
 
-  //  UnrolledDeserializer(Deserializer&& ):
-  //  bufferFile_{TBuffer::kWrite} {}
+  int deserialize(std::vector<char> const& iBuffer, void* iWriteTo) {
+    TBufferFile bufferFile{TBuffer::kRead};
 
-  void* deserialize(std::vector<char> const& iBuffer) {
-    bufferFile_.Reset();
+    bufferFile.SetBuffer( const_cast<char*>(&iBuffer.front()), iBuffer.size(), kFALSE);
 
-    bufferFile_.SetBuffer( const_cast<char*>(&iBuffer.front()), iBuffer.size(), kFALSE);
-
-    void* address = cls_->New();
+    void* address = iWriteTo;
     for(auto& offNSeq: offsetAndSequences_) {
       //seq->Print();
-      bufferFile_.ApplySequence(*(offNSeq.second), static_cast<char*>(address)+offNSeq.first);
+      bufferFile.ApplySequence(*(offNSeq.second), static_cast<char*>(address)+offNSeq.first);
     }
-    return address;
+    return bufferFile.Length();
   }
 
 private:
-
-  TBufferFile bufferFile_;
-  TClass* cls_;
   unrolling::OffsetAndSequences offsetAndSequences_;
 };
 }

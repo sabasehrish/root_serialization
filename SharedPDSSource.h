@@ -11,6 +11,7 @@
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
 #include "SerialTaskQueue.h"
+#include "UnrolledDeserializer.h"
 #include "pds_reading.h"
 
 
@@ -46,9 +47,13 @@ namespace cce::tf {
   struct LaneInfo {
     LaneInfo(std::vector<pds::ProductInfo> const&);
 
+    LaneInfo(LaneInfo&&) = default;
+    LaneInfo(LaneInfo const&) = delete;
+
     EventIdentifier eventID_;
     std::vector<DataProductRetriever> dataProducts_;
     std::vector<void*> dataBuffers_;
+    std::vector<UnrolledDeserializer> deserializers_; //NOTE: could be shared between lanes?
     SharedPDSDelayedRetriever delayedRetriever_;
     std::chrono::microseconds decompressTime_;
     std::chrono::microseconds deserializeTime_;

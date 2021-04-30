@@ -22,6 +22,7 @@ SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& product
 {
   dataProducts_.reserve(productInfo.size());
   dataBuffers_.resize(productInfo.size(), nullptr);
+  deserializers_.reserve(productInfo.size());
   size_t index =0;
   for(auto const& pi : productInfo) {
     
@@ -33,6 +34,7 @@ SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& product
                                pi.name(),
                                cls,
 			       &delayedRetriever_);
+    deserializers_.emplace_back(cls);
     ++index;
   }
 }
@@ -73,7 +75,7 @@ void SharedPDSSource::readEventAsync(unsigned int iLane, long iEventIndex,  Opti
               std::chrono::duration_cast<decltype(laneInfo.decompressTime_)>(std::chrono::high_resolution_clock::now() - start);
             
             start = std::chrono::high_resolution_clock::now();
-            pds::deserializeDataProducts(uBuffer.begin(), uBuffer.end(), laneInfo.dataProducts_);
+            pds::deserializeDataProducts(uBuffer.begin(), uBuffer.end(), laneInfo.dataProducts_, laneInfo.deserializers_);
             laneInfo.deserializeTime_ += 
               std::chrono::duration_cast<decltype(laneInfo.deserializeTime_)>(std::chrono::high_resolution_clock::now() - start);
           });

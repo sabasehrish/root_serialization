@@ -4,8 +4,9 @@
 #include <istream>
 #include <vector>
 
-#include "DataProductRetriever.h"
+#include "UnrolledDeserializer.h"
 #include "EventIdentifier.h"
+#include "DataProductRetriever.h"
 
 namespace cce::tf::pds {
 
@@ -35,7 +36,7 @@ namespace cce::tf::pds {
   bool skipToNextEvent(std::istream&); //returns true if an event was skipped
   bool readCompressedEventBuffer(std::istream&, EventIdentifier&, std::vector<uint32_t>& buffer);
   std::vector<uint32_t> uncompressEventBuffer(pds::Compression, std::vector<uint32_t> const& buffer);
-  void deserializeDataProducts(std::vector<uint32_t>::const_iterator, std::vector<uint32_t>::const_iterator, std::vector<DataProductRetriever>&);
+  void deserializeDataProducts(std::vector<uint32_t>::const_iterator, std::vector<uint32_t>::const_iterator, std::vector<DataProductRetriever>&, std::vector<UnrolledDeserializer> const&);
 
 }
 

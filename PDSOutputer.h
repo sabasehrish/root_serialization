@@ -8,7 +8,7 @@
 
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
-#include "SerializerWrapper.h"
+#include "UnrolledSerializerWrapper.h"
 #include "DataProductRetriever.h"
 
 #include "SerialTaskQueue.h"
@@ -40,11 +40,11 @@ class PDSOutputer :public OutputerBase {
     return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
   }
 
-  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, std::vector<uint32_t> const& iBuffer);
-  void writeFileHeader(std::vector<SerializerWrapper> const& iSerializers);
+  void output(EventIdentifier const& iEventID, std::vector<UnrolledSerializerWrapper> const& iSerializers, std::vector<uint32_t> const& iBuffer);
+  void writeFileHeader(std::vector<UnrolledSerializerWrapper> const& iSerializers);
 
   void writeEventHeader(EventIdentifier const& iEventID);
-  std::vector<uint32_t> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
+  std::vector<uint32_t> writeDataProductsToOutputBuffer(std::vector<UnrolledSerializerWrapper> const& iSerializers) const;
 
   std::vector<uint32_t> compressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
 
@@ -57,7 +57,7 @@ private:
 
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
-  mutable std::vector<std::vector<SerializerWrapper>> serializers_;
+  mutable std::vector<std::vector<UnrolledSerializerWrapper>> serializers_;
   Compression compression_;
   int compressionLevel_;
   bool firstTime_ = true;

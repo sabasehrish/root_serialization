@@ -24,7 +24,7 @@ bool PDSSource::readEventContent() {
     return false;
   }
   std::vector<uint32_t> uBuffer = uncompressEventBuffer(compression_, buffer);
-  deserializeDataProducts(uBuffer.begin(), uBuffer.end(), dataProducts_);
+  deserializeDataProducts(uBuffer.begin(), uBuffer.end(), dataProducts_, deserializers_);
 
   return true;
 }
@@ -37,6 +37,7 @@ PDSSource::PDSSource(std::string const& iName) :
 
   dataProducts_.reserve(productInfo.size());
   dataBuffers_.resize(productInfo.size(), nullptr);
+  deserializers_.reserve(productInfo.size());
   size_t index =0;
   for(auto const& pi : productInfo) {
     
@@ -48,6 +49,7 @@ PDSSource::PDSSource(std::string const& iName) :
                                pi.name(),
                                cls,
 			       &delayedRetriever_);
+    deserializers_.emplace_back(cls);
     ++index;
   }
 }

@@ -203,20 +203,19 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
   return uBuffer;
 }
 
-
-void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts) {
-  TBufferFile bufferFile{TBuffer::kRead};
+#include <iostream>
+void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts, std::vector<UnrolledDeserializer> const& deserializers) {
 
   while(it < itEnd) {
     auto productIndex = *(it++);
     auto storedSize = *(it++);
 
+    //std::cout <<dataProducts[productIndex].name()<<" "<<dataProducts[productIndex].classType()->GetName()<<std::endl;
     //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
-    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize*4, kFALSE);
-    dataProducts[productIndex].classType()->ReadBuffer(bufferFile, *dataProducts[productIndex].address());
-    dataProducts[productIndex].setSize(bufferFile.Length());
+    auto readSize = deserializers[productIndex].deserialize(reinterpret_cast<char const*>(&*it), storedSize*4, *dataProducts[productIndex].address());
+    dataProducts[productIndex].setSize(readSize);
   //std::cout <<" size "<<bufferFile.Length()<<"\n";
-    bufferFile.Reset();
+
     it = it+storedSize;
   }
   assert(it==itEnd);

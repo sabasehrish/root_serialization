@@ -159,6 +159,12 @@ namespace {
 
       auto streamerType = element->GetType();
       auto branchClass = sinfo->GetClass();
+
+      //CDJ how to properly handle pointers?
+      if(element->IsA() == TStreamerObjectAnyPointer::Class()) {
+        return false;
+      }
+
       if ((streamerType == TVirtualStreamerInfo::kObject) || (streamerType == TVirtualStreamerInfo::kBase) || (streamerType == TVirtualStreamerInfo::kTNamed) || (streamerType == TVirtualStreamerInfo::kTObject) || (streamerType == TVirtualStreamerInfo::kObjectp) || (streamerType == TVirtualStreamerInfo::kObjectP)) {
         if (canSelfReference(branchClass)) {
           if (branchClass->IsTObject()) {
@@ -225,7 +231,7 @@ namespace {
         TStreamerElement* element = 0;
         for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
           if(not elementNeedsOwnSequence(element, ptr)) {
-            return;
+            continue;
           }
           addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,oSeq);
         }

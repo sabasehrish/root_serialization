@@ -8,7 +8,8 @@
 #include "SerializerWrapper.h"
 
 namespace cce::tf {
-inline void summarize_serializers(std::vector<std::vector<SerializerWrapper>> const& iSerializersPerLane) {
+template <typename S>
+inline void summarize_serializers(std::vector<std::vector<S>> const& iSerializersPerLane) {
 
   std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
   

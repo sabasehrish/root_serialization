@@ -10,7 +10,7 @@ project(threaded_io_test VERSION 0.1 LANGUAGES CXX)
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 # want debug symbols
-set(CMAKE_CXX_FLAGS "-g")
+set(CMAKE_CXX_FLAGS "-g3")
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -61,6 +61,8 @@ target_link_libraries(threaded_io_test
                               configKeys
                               zstd::libzstd_shared)
 
+add_subdirectory(cms)
+
 add_executable(unroll_test 
   UnrolledDeserializer.cc 
   UnrolledSerializer.cc
@@ -71,7 +73,8 @@ target_link_libraries(unroll_test
                       PRIVATE ROOT::Core
                               ROOT::RIO
                               ROOT::Tree
-                              TBB::tbb)
+                              TBB::tbb
+                              cms_dict)
 
 enable_testing()
 add_subdirectory(tests)

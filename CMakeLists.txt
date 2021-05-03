@@ -19,11 +19,7 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 
 #ROOT
-list(APPEND EXTRA_LIBS Core)
-list(APPEND EXTRA_LIBS RIO)
-list(APPEND EXTRA_LIBS Tree)
-list(APPEND EXTRA_INCLUDES "/uscms_data/d1/cdj/cce_measurements/new_root//install/include")
-
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 
 #TBB
 list(APPEND EXTRA_LIBS tbb)
@@ -56,6 +52,7 @@ target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurem
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
 target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
+target_link_libraries(threaded_io_test PUBLIC ROOT::RIO ROOT::Tree ROOT::Core)
 
 target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)

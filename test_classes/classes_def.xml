@@ -2,8 +2,12 @@
   <class name="cce::tf::test::SimpleClass" ClassVersion="3"/>
   <class name="cce::tf::test::EmptyBase" ClassVersion="3"/>
   <class name="cce::tf::test::TestClass" ClassVersion="3"/>
-  <class name="cce::tf::test::TestClassWithIntPointer" ClassVersion="3"/>
-  <class name="cce::tf::test::TestClassWithIntUniquePointer" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithPointerToSimpleClass" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithUniquePointerToSimpleClass" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithFloatVector" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithFloatCArray" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithFloatArray" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithSimpleClassVector" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithTestClassVector" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassVectorWithClassWithVector" ClassVersion="3"/>
 </lcgdict>

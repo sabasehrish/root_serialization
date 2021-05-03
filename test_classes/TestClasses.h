@@ -14,6 +14,14 @@ namespace cce::tf::test {
     
     int value() const {return m_int;}
 
+    bool operator==(SimpleClass const& iOther) const {
+      return m_int == iOther.m_int;
+    }
+
+    bool operator!=(SimpleClass const& iOther) const {
+      return not operator==(iOther);
+    }
+
   private:
     int m_int;
   };
@@ -31,6 +39,15 @@ namespace cce::tf::test {
 
     std::string const& stringValue() const {return m_string;}
     float floatValue() { return m_float;}
+
+    bool operator==(TestClass const& iOther) const {
+      return m_string == iOther.m_string && m_float == iOther.m_float;
+    }
+
+    bool operator!=(TestClass const& iOther) const {
+      return not operator==(iOther);
+    }
+
 
   private:
 
@@ -83,50 +100,52 @@ namespace cce::tf::test {
     std::unique_ptr<SimpleClass> m_ptr;
   };
 
-  class TestClassWithIntPointer {
+  class TestClassWithFloatVector {
   public:
-    TestClassWithIntPointer(): m_ptr(nullptr) {}
-    TestClassWithIntPointer(int iValue) : m_ptr(new int(iValue)) {}
+    TestClassWithFloatVector() = default;
+    TestClassWithFloatVector(std::vector<float> iFloat): m_floats(std::move(iFloat)) {}
 
-    TestClassWithIntPointer(TestClassWithIntPointer const&) = delete;
-    TestClassWithIntPointer& operator=(TestClassWithIntPointer const&) = delete;
-
-    TestClassWithIntPointer(TestClassWithIntPointer&& iOther) : m_ptr(nullptr) {
-      std::swap(m_ptr, iOther.m_ptr);
-    }
-    TestClassWithIntPointer& operator=(TestClassWithIntPointer&& iOther) {
-      TestClassWithIntPointer tmp(std::move(iOther));
-      std::swap(m_ptr, tmp.m_ptr);
-      return *this;
-    }
-
-    ~TestClassWithIntPointer() {
-      delete m_ptr;
-    }
-
-    int const* value() const { return m_ptr;}
-
-    
+    std::vector<float> const& values() const {return m_floats;}
   private:
-    int* m_ptr;
+    std::vector<float> m_floats;
   };
 
-  class TestClassWithIntUniquePointer {
+  class TestClassWithFloatCArray {
   public:
-    TestClassWithIntUniquePointer(): m_ptr(nullptr) {}
-    TestClassWithIntUniquePointer(int iValue) : m_ptr(std::make_unique<int>(iValue)) {}
+    TestClassWithFloatCArray() = default;
+    TestClassWithFloatCArray(float iValue) {
+      std::fill(std::begin(m_values), std::end(m_values), iValue);
+    }
     
-    TestClassWithIntUniquePointer(TestClassWithIntUniquePointer const&) = delete;
-    TestClassWithIntUniquePointer& operator=(TestClassWithIntUniquePointer const&) = delete;
-
-    TestClassWithIntUniquePointer(TestClassWithIntUniquePointer&& iOther) = default;
-    TestClassWithIntUniquePointer& operator=(TestClassWithIntUniquePointer&& iOther) = default;
-
-    int const* value() const { return m_ptr.get();}
-    
-  private:
-    std::unique_ptr<int> m_ptr;
+    float m_values[3];
   };
+
+  class TestClassWithFloatArray {
+  public:
+    TestClassWithFloatArray() = default;
+    TestClassWithFloatArray(std::array<float,3> iFloat): m_floats(iFloat) {}
+
+    std::array<float,3> const& values() const {return m_floats;}
+  private:
+    std::array<float,3> m_floats;
+  };
+
+
+  template<typename T>
+  class TestClassWithVector {
+  public:
+    TestClassWithVector() = default;
+    TestClassWithVector(std::vector<T> iValues): m_values(std::move(iValues)) {}
+
+    std::vector<T> const& values() const {return m_values;}
+  private:
+    std::vector<T> m_values;
+  };
+
+  using TestClassWithSimpleClassVector = TestClassWithVector<SimpleClass>;
+  using TestClassWithTestClassVector = TestClassWithVector<TestClass>;
+  using TestClassVectorWithClassWithVector = TestClassWithVector<TestClassWithVector<TestClass>>;
+
 
 }
 #endif

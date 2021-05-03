@@ -75,6 +75,22 @@ namespace {
     }
 
   }
+
+  template<typename T>
+  bool compare_containers( T const& iLHS, T const& iRHS) {
+    if(std::size(iLHS) != std::size(iRHS)) {
+      return false;
+    }
+
+    auto it = std::begin(iLHS);
+    for(auto const& r: iRHS) {
+      if(*it != r) {
+        return false;
+      }
+      std::advance(it,1);
+    }
+    return true;
+  }
 }
 
 
@@ -147,27 +163,73 @@ int main(int argc, char** argv) {
     }
   }
 
-  /*
   {
-    std::cout <<"**TestClassWithIntPointer**"<<std::endl;
-    cce::tf::test::TestClassWithIntPointer v(5);
+    std::cout <<"**TestClassWithFloatVector**"<<std::endl;
+    cce::tf::test::TestClassWithFloatVector v( {1,2,3,5});
     auto pV = runTest(v);
-    if(*v.value() != *pV.value()) {
+    if(not compare_containers(v.values(), pV.values())) {
       std::cout<<"ERROR"<<std::endl;
       return 1;
     }
   }
 
   {
-    std::cout <<"**TestClassWithIntUniquePointer**"<<std::endl;
-    cce::tf::test::TestClassWithIntUniquePointer v(5);
+    std::cout <<"**TestClassWithFloatCArray**"<<std::endl;
+    cce::tf::test::TestClassWithFloatCArray v(3);
     auto pV = runTest(v);
-    if(*v.value() != *pV.value()) {
+    if(not compare_containers(v.m_values, pV.m_values)) {
       std::cout<<"ERROR"<<std::endl;
       return 1;
     }
   }
-  */
+
+  {
+    std::cout <<"**TestClassWithFloatArray**"<<std::endl;
+    cce::tf::test::TestClassWithFloatArray v({1,2,3});
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassWithSimpleClassVector**"<<std::endl;
+    cce::tf::test::TestClassWithSimpleClassVector v( {1,2,3,5});
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassWithTestClassVector**"<<std::endl;
+    cce::tf::test::TestClassWithTestClassVector v( {{"one",1},{"two",2},{"three",3},{"five",5}});
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassVectorWithClassWithVector**"<<std::endl;
+    cce::tf::test::TestClassVectorWithClassWithVector v( 
+                                                        {cce::tf::test::TestClassWithTestClassVector{{{"one",1},{"two",2},{"three",3},{"five",5}}},
+                                                            cce::tf::test::TestClassWithTestClassVector{{{"eight",8}, {"one thousand two hundred and 1",1201}}}});
+    auto pV = runTest(v);
+    if(v.values().size() != pV.values().size()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+    for(int i=0; i<v.values().size(); ++i) {
+      if(not compare_containers(v.values()[i].values(), pV.values()[i].values())) {
+        std::cout<<"ERROR"<<std::endl;
+        return 1;
+      }
+    }
+  }
 
   //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
   for(int i=start; i<argc;++i) {

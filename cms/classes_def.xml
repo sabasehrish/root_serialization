@@ -1,0 +1,15 @@
+<lcgdict>
+ <class name="edm::EventID" ClassVersion="12">
+  <version ClassVersion="12" checksum="1501865997"/>
+  <version ClassVersion="11" checksum="341254076"/>
+  <version ClassVersion="10" checksum="1903450811"/>
+ </class>
+ <class name="edm::Timestamp" ClassVersion="10">
+  <version ClassVersion="10" checksum="959162848"/>
+ </class>
+ <class name="edm::EventAuxiliary" ClassVersion="11">
+  <version ClassVersion="11" checksum="3721392547"/>
+  <version ClassVersion="10" checksum="580036702"/>
+ </class>
+ <class name="edm::ProcessHistoryID"/>
+</lcgdict>

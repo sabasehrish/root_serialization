@@ -1,0 +1,9 @@
+<lcgdict>
+  <class name="cce::tf::test::SimpleClass" ClassVersion="3"/>
+  <class name="cce::tf::test::EmptyBase" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClass" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithIntPointer" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithIntUniquePointer" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithPointerToSimpleClass" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithUniquePointerToSimpleClass" ClassVersion="3"/>
+</lcgdict>

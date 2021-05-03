@@ -1,0 +1,7 @@
+<lcgdict>
+  <class name="cce::tf::test::SimpleClass"/>
+  <class name="cce::tf::test::EmptyBase"/>
+  <class name="cce::tf::test::TestClass"/>
+  <class name="cce::tf::test::TestClassWithIntPointer"/>
+  <class name="cce::tf::test::TestClassWithIntUniquePointer"/>
+</lcgdict>

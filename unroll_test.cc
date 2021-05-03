@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "cms/EventAuxiliary.h"
+#include "test_classes/TestClasses.h"
 
 namespace edm::detail {
   static std::string const invalidHash;
@@ -89,16 +90,84 @@ int main(int argc, char** argv) {
   }
 
   {
+    std::cout <<"**std::vector<int>**"<<std::endl;
     std::vector<int> iv = {1,2,3};
 
     auto pV = runTest(iv);
     std::cout <<"size "<<pV.size()<<std::endl;
   }
   {
+    std::cout <<"**edm::EventAuxiliary**"<<std::endl;
     edm::EventAuxiliary ev({1,1,1}, "32981", edm::Timestamp{0}, true, edm::EventAuxiliary::PhysicsTrigger,12);
     auto pEv = runTest(ev);
     std::cout <<"eventID "<<pEv.event()<<" "<<pEv.processGUID()<<" bx "<<pEv.bunchCrossing()<<std::endl;
   }
+
+  {
+    std::cout <<"**SimpleClass**"<<std::endl;
+    cce::tf::test::SimpleClass v(5);
+    auto pV = runTest(v);
+    if(v.value() != pV.value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClass**"<<std::endl;
+    cce::tf::test::TestClass v("foo", 78.9);
+    auto pV = runTest(v);
+    if(v.stringValue() != pV.stringValue()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+    if(v.floatValue() != pV.floatValue()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+  
+  {
+    std::cout <<"**TestClassWithPointerToSimpleClass**"<<std::endl;
+    cce::tf::test::TestClassWithPointerToSimpleClass v(5);
+    auto pV = runTest(v);
+    if(v.value()->value() != pV.value()->value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassWithUniquePointerToSimpleClass**"<<std::endl;
+    cce::tf::test::TestClassWithUniquePointerToSimpleClass v(5);
+    auto pV = runTest(v);
+    if(v.value()->value() != pV.value()->value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  /*
+  {
+    std::cout <<"**TestClassWithIntPointer**"<<std::endl;
+    cce::tf::test::TestClassWithIntPointer v(5);
+    auto pV = runTest(v);
+    if(*v.value() != *pV.value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassWithIntUniquePointer**"<<std::endl;
+    cce::tf::test::TestClassWithIntUniquePointer v(5);
+    auto pV = runTest(v);
+    if(*v.value() != *pV.value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+  */
 
   //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
   for(int i=start; i<argc;++i) {

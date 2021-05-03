@@ -62,6 +62,7 @@ target_link_libraries(threaded_io_test
                               zstd::libzstd_shared)
 
 add_subdirectory(cms)
+add_subdirectory(test_classes)
 
 add_executable(unroll_test 
   UnrolledDeserializer.cc 
@@ -74,7 +75,8 @@ target_link_libraries(unroll_test
                               ROOT::RIO
                               ROOT::Tree
                               TBB::tbb
-                              cms_dict)
+                              cms_dict
+                              test_classes_dict)
 
 enable_testing()
 add_subdirectory(tests)

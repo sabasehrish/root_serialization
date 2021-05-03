@@ -22,21 +22,23 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 list(APPEND EXTRA_LIBS Core)
 list(APPEND EXTRA_LIBS RIO)
 list(APPEND EXTRA_LIBS Tree)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/lcg/root/6.20.06-ghbfee5/include")
+list(APPEND EXTRA_INCLUDES $ENV{ROOT_INC} ) 
+#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/lcg/root/6.20.06-ghbfee5/include")
 #list(APPEND EXTRA_INCLUDES "/uscms_data/d1/cdj/cce_measurements/new_root//install/include")
 
 
 #TBB
 list(APPEND EXTRA_LIBS tbb)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/include")
+list(APPEND EXTRA_INCLUDES $ENV{TBB_INC} )
+#"/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/include")
 
 #LZ4
 list(APPEND EXTRA_LIBS lz4)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/include")
+#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/include")
 
 #ZSTD
 list(APPEND EXTRA_LIBS zstd)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/include")
+#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/include")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -53,16 +55,15 @@ target_include_directories(threaded_io_test PUBLIC
                            ${EXTRA_INCLUDES}
                            $ENV{HIGHFIVE_INC}
                            $ENV{HDF5_INC}
-                           $ENV{MPICH_INC}
                            )
 
 #target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/install/lib")
 #target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/externals/lib")
 #target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/cms/cmssw/CMSSW_11_2_0_pre6/external/slc7_amd64_gcc820/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/lcg/root/6.20.06-ghbfee5/lib") 
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
+target_link_directories(threaded_io_test PUBLIC $ENV{ROOTSYS}/lib) 
+target_link_directories(threaded_io_test PUBLIC $ENV{TBB_LIB})
+#target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
+#target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
 
 target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS} $ENV{HDF5_LIB}/libhdf5.so )
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads $ENV{HDF5_LIB}/libhdf5.so)

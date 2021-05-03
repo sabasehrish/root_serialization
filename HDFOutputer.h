@@ -19,6 +19,8 @@
 
 #include "SerialTaskQueue.h"
 
+#include "hdf5.h"
+
 using namespace HighFive;
 using product_t = std::vector<char>;
 namespace cce::tf {
@@ -26,13 +28,14 @@ namespace cce::tf {
     public:
     HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
      file_(iFileName, File::ReadWrite | File::Create),
+     file1_(H5Fcreate("some.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)),
      serializers_{std::size_t(iNLanes)},
      serialTime_{std::chrono::microseconds::zero()},
      parallelTime_{0}
      {}
 
 ~HDFOutputer() {
-  //file_.close();
+  H5Fclose(file1_);
 }
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
@@ -57,7 +60,7 @@ namespace cce::tf {
 std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<product_t> & input,int prod_index,int stride);
 private:
   HighFive::File file_;
-
+  hid_t file1_;
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;

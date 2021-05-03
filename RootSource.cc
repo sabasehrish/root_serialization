@@ -30,7 +30,7 @@ RootSource::RootSource(std::string const& iName) :
     TClass* class_ptr=nullptr;
     EDataType type;
     b->GetExpectedType(class_ptr,type);
-
+    std::cout << "Class name: "<< b->GetClassName() << std::endl;
     dataProducts_.emplace_back(i,
 			       reinterpret_cast<void**>(b->GetAddress()),
                                b->GetName(),
@@ -38,11 +38,12 @@ RootSource::RootSource(std::string const& iName) :
 			       &delayedReader_);
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
-      eventAuxReader_ = EventAuxReader(dataProducts_.back().address());
+      auto addr = dataProducts_.back().address();
+      eventAuxReader_ = EventAuxReader([addr](){return cmsEventID(addr);});
     }
   }
   if(not eventAuxReader_) {
-    eventAuxReader_ = EventAuxReader(nullptr);
+    eventAuxReader_ = EventAuxReader();
   }
 }
 

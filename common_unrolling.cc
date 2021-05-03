@@ -25,7 +25,7 @@ namespace {
   TStreamerInfo* buildStreamerInfo(TClass* cl, void* pointer)
   {
     if (!cl) {
-      return 0;
+      return nullptr;
     }
     cl->BuildRealData(pointer);
     TStreamerInfo* sinfo = static_cast<TStreamerInfo*>(cl->GetStreamerInfo(cl->GetClassVersion()));
@@ -161,6 +161,7 @@ namespace {
       auto branchClass = sinfo->GetClass();
 
       //CDJ how to properly handle pointers?
+      //std::cout <<"    element: "<<element->IsA()->GetName()<<std::endl;
       if(element->IsA() == TStreamerObjectAnyPointer::Class()) {
         return false;
       }
@@ -266,9 +267,10 @@ namespace {
   }
   
   if(canUnroll(&iClass, sinfo) ){
+    //std::cout <<"Unrolling "<<iClass.GetName()<<std::endl;
     return buildUnrolledActionSequence(iClass, *sinfo, create);
   }
-
+  //std::cout <<"Did not unroll "<<iClass.GetName()<<std::endl;
   unrolling::OffsetAndSequences vec;
   vec.reserve(1);
   vec.emplace_back(0,setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));

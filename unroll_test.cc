@@ -194,6 +194,16 @@ int main(int argc, char** argv) {
   }
 
   {
+    std::cout <<"**TestClassWithFloatDynamicArray**"<<std::endl;
+    cce::tf::test::TestClassWithFloatDynamicArray v(3);
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
     std::cout <<"**TestClassWithSimpleClassVector**"<<std::endl;
     cce::tf::test::TestClassWithSimpleClassVector v( {1,2,3,5});
     auto pV = runTest(v);

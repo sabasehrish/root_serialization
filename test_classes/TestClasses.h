@@ -130,6 +130,28 @@ namespace cce::tf::test {
     std::array<float,3> m_floats;
   };
 
+  class TestClassWithFloatDynamicArray {
+  public:
+    TestClassWithFloatDynamicArray(): m_size(0), m_floats(nullptr) {}
+    TestClassWithFloatDynamicArray(float iValue) {
+      m_size = 3;
+      m_floats = new float[m_size];
+      std::fill(m_floats, m_floats+m_size, iValue);
+    }
+    ~TestClassWithFloatDynamicArray() {
+      delete [] m_floats;
+    }
+    int size() const {return m_size;}
+    float const* begin() const {return m_floats;}
+    float const* end() const { return m_floats+m_size;}
+
+    std::vector<float> values() const {return std::vector<float>(begin(), end());}
+
+  private:
+    int m_size; ///<
+    float* m_floats; ///<[m_size]
+  };
+
 
   template<typename T>
   class TestClassWithVector {

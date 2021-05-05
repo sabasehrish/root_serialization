@@ -168,6 +168,61 @@ namespace cce::tf::test {
   using TestClassWithTestClassVector = TestClassWithVector<TestClass>;
   using TestClassVectorWithClassWithVector = TestClassWithVector<TestClassWithVector<TestClass>>;
 
+  class PureAbstractBase {
+  public:
+    PureAbstractBase() = default;
+    virtual ~PureAbstractBase() = default;
+
+    virtual int value() const = 0;
+  };
+
+  class InheritFromPureAbstractBase : public PureAbstractBase {
+  public:
+  InheritFromPureAbstractBase() : value_{0} {}
+  InheritFromPureAbstractBase(int iValue) : value_{iValue} {}
+
+    bool operator!=(InheritFromPureAbstractBase const& iOther) const {
+      return value_ != iOther.value_;
+    }
+    int value() const final { return value_;}
+
+  private:
+    int value_;
+  };
+
+  class BaseWithInt {
+  public:
+  BaseWithInt() : iValue_{0} {}
+  BaseWithInt(int iValue) : iValue_{iValue}{}
+    virtual ~BaseWithInt() = default;
+
+    int iValue() const { return iValue_;}
+
+  private:
+    int iValue_;
+  };
+
+  class AbstractInheritingFromBaseWithInt : public BaseWithInt {
+  public:
+    AbstractInheritingFromBaseWithInt() = default;
+  AbstractInheritingFromBaseWithInt(int iValue): BaseWithInt(iValue) {}
+
+    virtual void doSomething() = 0;
+  };
+
+  class InheritFromAbstractInheritingFromBase : public AbstractInheritingFromBaseWithInt {
+  public:
+  InheritFromAbstractInheritingFromBase(): fValue_{0.f} {}
+
+  InheritFromAbstractInheritingFromBase(float iFloat, int iValue):
+    AbstractInheritingFromBaseWithInt(iValue), fValue_{iFloat} {}
+
+    void doSomething() final {}
+
+    float fValue() const {return fValue_;}
+  private:
+    float fValue_;
+  };
 
 }
 #endif

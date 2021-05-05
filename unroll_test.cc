@@ -241,6 +241,37 @@ int main(int argc, char** argv) {
     }
   }
 
+  {
+    std::cout <<"**InheritFromPureAbstractBase**"<<std::endl;
+    cce::tf::test::InheritFromPureAbstractBase v(5);
+    auto pV = runTest(v);
+    if(v.value() != pV.value()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**std::vector<InheritFromPureAbstractBase>**"<<std::endl;
+    std::vector<cce::tf::test::InheritFromPureAbstractBase> v({1,2,3,5});
+    auto pV = runTest(v);
+    if(not compare_containers(v,  pV)) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+
+  {
+    std::cout <<"**InheritFromAbstractInheritingFromBase**"<<std::endl;
+    cce::tf::test::InheritFromAbstractInheritingFromBase v(3.14, 5);
+    auto pV = runTest(v);
+    if(v.iValue() != pV.iValue() or v.fValue() != pV.fValue()) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
   //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
   for(int i=start; i<argc;++i) {
     std::cout <<"class: "<<argv[i]<<std::endl;

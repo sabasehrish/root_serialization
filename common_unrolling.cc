@@ -221,7 +221,7 @@ namespace {
     }
     auto ptr = element->GetClassPointer();
     if(ptr) {
-      std::cout <<"Checking element "<<ptr->GetName()<<std::endl;
+      //std::cout <<"Checking element "<<ptr->GetName()<<std::endl;
       TStreamerInfo* sinfo = buildStreamerInfo(ptr,nullptr);
       if(canUnroll(ptr,sinfo)) {
         //std::cout <<"unrolling "<<ptr->GetName()<<std::endl;

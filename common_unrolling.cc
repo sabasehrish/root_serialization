@@ -18,7 +18,7 @@ namespace {
 
   unrolling::Sequence setActionSequence(TClass *originalClass, TStreamerInfo *localInfo, TVirtualCollectionProxy* collectionProxy, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, bool isSplitNode, int iID, size_t iOffset );
 
-  unrolling::OffsetAndSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create);
+  unrolling::ObjectAndCollectionsSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create);
 
 
 
@@ -215,13 +215,14 @@ namespace {
 // Now with split level. id=-2 for the 'top level' after top level BranchElement is made, will call Unroll on it
 // ftype is still 0 for the sub items (since we are effectively splitlevel == 1)
 
-  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, unrolling::OffsetAndSequences& oSeq) {
+  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, unrolling::OffsetAndSequences& oSeq, unrolling::SequencesForCollections& oCollections, bool unrollCollections) {
     if(not elementNeedsOwnSequence(element, &iClass)) {
       return;
     }
     auto ptr = element->GetClassPointer();
     if(ptr) {
-      TStreamerInfo* sinfo = buildStreamerInfo(ptr);
+      std::cout <<"Checking element "<<ptr->GetName()<<std::endl;
+      TStreamerInfo* sinfo = buildStreamerInfo(ptr,nullptr);
       if(canUnroll(ptr,sinfo)) {
         //std::cout <<"unrolling "<<ptr->GetName()<<std::endl;
         auto offset = element->GetOffset();
@@ -234,9 +235,32 @@ namespace {
           if(not elementNeedsOwnSequence(element, ptr)) {
             continue;
           }
-          addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,oSeq);
+          addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,oSeq, oCollections, unrollCollections);
         }
         return;
+      }
+      //check for STL collections 
+      if(unrollCollections && ptr->CanSplit() ) {
+        auto collProxy = ptr->GetCollectionProxy(); 
+        if(collProxy && not collProxy->HasPointers() && collProxy->GetCollectionType() ==  ROOT::kSTLvector ) {
+          auto valueClass = collProxy->GetValueClass();
+          if(valueClass) {
+            TStreamerInfo* sinfo = buildStreamerInfo(valueClass,nullptr);
+            if(canUnroll(valueClass, sinfo)) {
+              oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
+              TIter next(sinfo->GetElements());
+              TStreamerElement* element = 0;
+              for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
+                if(not elementNeedsOwnSequence(element, ptr)) {
+                  continue;
+                }
+                //NOTE: offsets are relative to address in element of the container
+                addUnrolledActionSequencesForElement(sinfo, id, element, *valueClass, create, 0,oCollections.back().m_offsetAndSequences, oCollections, false);
+              }
+              return;
+            }
+          }
+        }
       }
       //std::cout <<"rolled "<<ptr->GetName()<<std::endl;
     }
@@ -245,19 +269,20 @@ namespace {
     oSeq.emplace_back(baseOffset, setActionSequence(nullptr, parentInfo, nullptr, create, false, idInParent, 0));
   }
 
-  unrolling::OffsetAndSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
-    unrolling::OffsetAndSequences vec;
-    vec.reserve(1);
-    vec.emplace_back(0, setActionSequence(nullptr, &iInfo, nullptr, create, true, -2, 0));
+  unrolling::ObjectAndCollectionsSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
+    unrolling::ObjectAndCollectionsSequences objAndColl;
+    objAndColl.m_objects.reserve(1);
+    unrolling::SequencesForCollections colls;
+    objAndColl.m_objects.emplace_back(0, setActionSequence(nullptr, &iInfo, nullptr, create, true, -2, 0));
     TIter next(iInfo.GetElements());
     TStreamerElement* element = 0;
     for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
-      addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, vec);
+      addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, objAndColl.m_objects, objAndColl.m_collections, true);
     }
-    return vec;
+    return objAndColl;
   }
 
-  unrolling::OffsetAndSequences buildActionSequence(TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
+  unrolling::ObjectAndCollectionsSequences buildActionSequence(TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
   checkIfCanHandle(&iClass);
 
   TStreamerInfo* sinfo = buildStreamerInfo(&iClass);
@@ -271,19 +296,19 @@ namespace {
     return buildUnrolledActionSequence(iClass, *sinfo, create);
   }
   //std::cout <<"Did not unroll "<<iClass.GetName()<<std::endl;
-  unrolling::OffsetAndSequences vec;
-  vec.reserve(1);
-  vec.emplace_back(0,setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
-  return vec; 
+  unrolling::ObjectAndCollectionsSequences objAndColl;
+  objAndColl.m_objects.reserve(1);
+  objAndColl.m_objects.emplace_back(0,setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
+  return objAndColl; 
  }
 }
 
 namespace cce::tf::unrolling {
-  unrolling::OffsetAndSequences buildReadActionSequence(TClass& iClass) {
+  unrolling::ObjectAndCollectionsSequences buildReadActionSequence(TClass& iClass) {
     return buildActionSequence(iClass, TStreamerInfoActions::TActionSequence::ReadMemberWiseActionsGetter);
   }
 
-  unrolling::OffsetAndSequences buildWriteActionSequence(TClass& iClass) {
+  unrolling::ObjectAndCollectionsSequences buildWriteActionSequence(TClass& iClass) {
     return buildActionSequence(iClass, TStreamerInfoActions::TActionSequence::WriteMemberWiseActionsGetter);
   }
 

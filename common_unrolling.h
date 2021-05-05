@@ -9,8 +9,25 @@
 namespace cce::tf::unrolling {
   using Sequence = std::unique_ptr<TStreamerInfoActions::TActionSequence>;  
   using OffsetAndSequences = std::vector<std::pair<int, Sequence>>;
-  OffsetAndSequences buildReadActionSequence(TClass& iClass);
-  OffsetAndSequences buildWriteActionSequence(TClass& iClass);
+
+  struct CollectionActions {
+  CollectionActions( TVirtualCollectionProxy* proxy, int offset): 
+    m_collProxy(proxy), m_offset(offset) {}
+
+    std::unique_ptr<TVirtualCollectionProxy> m_collProxy;
+    int m_offset;
+    OffsetAndSequences m_offsetAndSequences;
+  };
+
+  using SequencesForCollections = std::vector<CollectionActions>;
+
+  struct ObjectAndCollectionsSequences {
+    OffsetAndSequences m_objects;
+    SequencesForCollections m_collections;
+  };
+
+  ObjectAndCollectionsSequences buildReadActionSequence(TClass& iClass);
+  ObjectAndCollectionsSequences buildWriteActionSequence(TClass& iClass);
 
 
 }

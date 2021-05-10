@@ -7,8 +7,8 @@ using namespace cce::tf;
 
 HDFSource::HDFSource(std::string const& iName):
 file_(iName, File::ReadOnly),
-lumi_(file_.getGroup("/Lumi/")), 
-productInfo_(readProductInfo()), 
+lumi_(file_.getGroup("/Lumi/")),
+productInfo_(readProductInfo()),
 classnames_(readClassNames())
 {
   dataProducts_.reserve(productInfo_.size());
@@ -45,7 +45,7 @@ HDFSource::readProductInfo() {
       ++i;
     }
   }
-  return productinfo; 
+  return productinfo;
 }
 
 std::vector<std::string>
@@ -59,11 +59,11 @@ HDFSource::readClassNames() {
     std::string classname;
     a.read(classname);
     classnames.push_back(classname);
-  } 
+  }
   return classnames;
 }
 
-std::pair<long unsigned int, long unsigned int> 
+std::pair<long unsigned int, long unsigned int>
 HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
   std::vector<long unsigned int> st_end;
   auto d = lumi_.getDataSet(pname+"_sz");
@@ -71,53 +71,53 @@ HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
     d.read(st_end);
     st_end.insert(st_end.begin(), 0);
   }
-  else  
-    d.select({static_cast<unsigned long int>(iEventIndex-1)}, {2}).read(st_end); 
+  else
+    d.select({static_cast<unsigned long int>(iEventIndex-1)}, {2}).read(st_end);
   return {st_end[0], st_end[1]};
 }
 
 bool
 HDFSource::readEvent(long iEventIndex) {
-  int run_num;
-  int lumi_num;
+  unsigned int run_num;
+  unsigned int lumi_num;
   lumi_.getAttribute("run").read(run_num);
   lumi_.getAttribute("lumisec").read(lumi_num);
   std::vector<char> product;
   std::vector<product_t> products;
   products.reserve(productInfo_.size());
-  long unsigned int begin; 
+  long unsigned int begin;
   long unsigned int end;
   int i = 0;
   auto evtds = lumi_.getDataSet("Event_IDs");
-  int eventID;
-  evtds.select({iEventIndex}, {1}).read(eventID);
-  eventID_ = {run_num, lumi_num, eventID}; 
-  for (auto pi : productInfo_) { 
+  unsigned int eventID;
+  evtds.select({static_cast<unsigned long>(iEventIndex)}, {1}).read(eventID);
+  eventID_ = {run_num, lumi_num, eventID};
+  for (auto pi : productInfo_) {
       std::tie(begin, end) = getEventOffsets(iEventIndex, pi.name());
       auto dset = lumi_.getDataSet(pi.name());
       auto ds = dset.getSpace();
-      dset.select({begin}, {end-begin}).read(product); 
+      dset.select({begin}, {end-begin}).read(product);
     //  std::cout << pi.name() << ", " << classnames_[i] << "Begin at: " << begin << ", and size of dp: " << (end-begin) << " , " << product.size() << "\n";
-      ++i; 
+      ++i;
       products.push_back(product);
   }
-  deserializeDataProducts(products.begin(), products.end());    
+  deserializeDataProducts(products.begin(), products.end());
   return true;
 }
 
-void HDFSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) { 
+void HDFSource::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd) {
   int productIndex = 0;
   TBufferFile bufferFile{TBuffer::kRead};
   while(it < itEnd) {
     auto const & product = *(it);
     auto storedSize = product.size();
-    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&product[0])), storedSize, kFALSE); 
+    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&product[0])), storedSize, kFALSE);
     dataProducts_[productIndex].classType()->ReadBuffer(bufferFile, dataBuffers_[productIndex]);
     dataProducts_[productIndex].setSize(bufferFile.Length());
     //std::cout <<"Product Name: " << dataProducts_[productIndex].name()  << "Product Index "<< productIndex << ", " << dataProducts_[productIndex].classType() << ", storedSize " << storedSize  <<" Buffer size "<<bufferFile.Length() << ", and Buffer data: " << dataBuffers_[productIndex]<< std::endl;
     //if (bufferFile.Length() != storedSize) return;
     bufferFile.Reset();
-    ++productIndex; 
+    ++productIndex;
     ++it;
   }
   assert(it==itEnd);

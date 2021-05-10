@@ -1,3 +1,10 @@
+# ============================================================================
+# Configuration instructions
+#
+# cmake <dir. with this file> \
+#   -DROOT_DIR=$ROOTSYS/cmake \
+#   -DHIGHFIVE_INC=<include directory of HighFive>
+
 cmake_minimum_required(VERSION 3.10)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -17,75 +24,47 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
-
-#ROOT
-list(APPEND EXTRA_LIBS Core)
-list(APPEND EXTRA_LIBS RIO)
-list(APPEND EXTRA_LIBS Tree)
-list(APPEND EXTRA_INCLUDES $ENV{ROOT_INC} ) 
-#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/lcg/root/6.20.06-ghbfee5/include")
-#list(APPEND EXTRA_INCLUDES "/uscms_data/d1/cdj/cce_measurements/new_root//install/include")
-
-
-#TBB
-list(APPEND EXTRA_LIBS tbb)
-list(APPEND EXTRA_INCLUDES $ENV{TBB_INC} )
-#"/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/include")
-
-#LZ4
-list(APPEND EXTRA_LIBS lz4)
-#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/include")
-
-#ZSTD
-list(APPEND EXTRA_LIBS zstd)
-#list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/include")
-
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+find_package(ROOT REQUIRED COMPONENTS)
 
-#make the library for testing
+list(APPEND EXTRA_LIBS "tbb;lz4;zstd")
+
 add_library(configKeys configKeyValuePairs.cc)
 
+add_subdirectory(art)
+
 # add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc
-	SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc HDFSource.cc HDFOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc SerialRootSource.cc TextDumpOutputer.cc pds_reading.cc SharedPDSSource.cc TestProductsSource.cc TestProductsOutputer.cc)
+add_executable(
+  threaded_io_test
+  HDFOutputer.cc
+  HDFSource.cc
+  Lane.cc
+  PDSOutputer.cc
+  PDSSource.cc
+  RepeatingRootSource.cc
+  RootOutputer.cc
+  RootSource.cc
+  SerialRootSource.cc
+  SerialTaskQueue.cc
+  SharedPDSSource.cc
+  TBufferMergerRootOutputer.cc
+  TestProductsOutputer.cc
+  TestProductsSource.cc
+  TextDumpOutputer.cc
+  configKeyValuePairs.cc
+  outputerFactoryGenerator.cc
+  pds_reading.cc
+  sourceFactoryGenerator.cc
+  threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PUBLIC
-                           "${PROJECT_BINARY_DIR}"
-                           ${EXTRA_INCLUDES}
-                           $ENV{HIGHFIVE_INC}
-                           $ENV{HDF5_INC}
-                           )
+target_include_directories(
+  threaded_io_test PRIVATE ${PROJECT_BINARY_DIR} ${EXTRA_INCLUDES}
+                           ${HIGHFIVE_INC} $ENV{HDF5_INC} $ENV{TBB_INC})
 
-#target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/install/lib")
-#target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/externals/lib")
-#target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/cms/cmssw/CMSSW_11_2_0_pre6/external/slc7_amd64_gcc820/lib")
-target_link_directories(threaded_io_test PUBLIC $ENV{ROOTSYS}/lib) 
-target_link_directories(threaded_io_test PUBLIC $ENV{TBB_LIB})
-#target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
-#target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
-
-target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS} $ENV{HDF5_LIB}/libhdf5.so )
-target_link_libraries(threaded_io_test PRIVATE Threads::Threads $ENV{HDF5_LIB}/libhdf5.so)
+target_link_directories(threaded_io_test PRIVATE $ENV{TBB_LIB} $ENV{HDF5_LIB})
+target_link_libraries(threaded_io_test PRIVATE Threads::Threads ROOT::RIO
+                                               ROOT::Tree hdf5 ${EXTRA_LIBS})
 
 enable_testing()
 add_subdirectory(tests)
-add_test(NAME EmptySourceTest COMMAND threaded_io_test EmptySource 1 1 0 10)
-add_test(NAME DummyOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 DummyOutputer)
-add_test(NAME DummyOutputerUseProductReadyTest COMMAND threaded_io_test EmptySource 1 1 0 10 DummyOutputer=useProductReady)
-add_test(NAME TestProductsTest COMMAND threaded_io_test TestProductsSource 1 1 0 10 TestProductsOutputer)
-add_test(NAME SerializeOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer)
-add_test(NAME SerializeOutputerVerboseTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer=verbose)
-add_test(NAME PDSOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 PDSOutputer=test_empty.pds)
-add_test(NAME TestProductsPDS COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 PDSOutputer=test_prod.pds; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedPDSSource=test_prod.pds 1 1 0 10 TestProductsOutputer")
-add_test(NAME RootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root)
-add_test(NAME RootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root:splitLevel=1)
-add_test(NAME RootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
-add_test(NAME TestProductsROOT COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SerialRootSource=test_prod.root 1 1 0 10 TestProductsOutputer")
-add_test(NAME TestProductsROOTReplicated COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod_repl.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test ReplicatedRootSource=test_prod_repl.root 1 1 0 10 TestProductsOutputer")
-add_test(NAME TestProductsROOTRepeating COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod_rep.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test RepeatingRootSource=test_prod_rep.root:5 1 1 0 100 TestProductsOutputer")
-add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root)
-add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
-add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
-add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
-add_test(NAME HDFOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)

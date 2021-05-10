@@ -4,6 +4,7 @@
 # cmake <dir. with this file> \
 #   -DROOT_DIR=$ROOTSYS/cmake \
 #   -DHIGHFIVE_INC=<include directory of HighFive>
+#   -Dzstd_DIR=<path to zstd lib>/cmake/zstd
 
 cmake_minimum_required(VERSION 3.10)
 
@@ -26,9 +27,10 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+find_package(zstd REQUIRED)
 find_package(ROOT REQUIRED COMPONENTS)
 
-list(APPEND EXTRA_LIBS "tbb;lz4;zstd")
+list(APPEND EXTRA_LIBS "tbb;lz4")
 
 add_library(configKeys configKeyValuePairs.cc)
 
@@ -60,11 +62,11 @@ add_executable(
 
 target_include_directories(
   threaded_io_test PRIVATE ${PROJECT_BINARY_DIR} ${EXTRA_INCLUDES}
-                           ${HIGHFIVE_INC} $ENV{HDF5_INC} $ENV{TBB_INC})
+  ${HIGHFIVE_INC} $ENV{HDF5_INC} $ENV{TBB_INC})
 
 target_link_directories(threaded_io_test PRIVATE $ENV{TBB_LIB} $ENV{HDF5_LIB})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads ROOT::RIO
-                                               ROOT::Tree hdf5 ${EXTRA_LIBS})
+                                               ROOT::Tree hdf5 ${EXTRA_LIBS} zstd::libzstd_shared )
 
 enable_testing()
 add_subdirectory(tests)

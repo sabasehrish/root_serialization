@@ -93,22 +93,45 @@ namespace {
   }
 }
 
+static int runTestClasses();
 
 int main(int argc, char** argv) {
   int start=1;
 
   const std::string debugFlag("-g");
+  const std::string skipFlag("-s");
+  bool skipBuiltinTestClasses = false;
   if(argc > 1) {
     if (debugFlag == argv[1] ) {
       gDebug = 3;
       start +=1;
+
+      if(argc > 2) {
+        if(skipFlag == argv[2]) {
+          skipBuiltinTestClasses = true;
+          start +=1;
+        }
+      }
     }
   }
 
+  int retValue =0;
+  if(not skipBuiltinTestClasses) {
+    retValue = runTestClasses();
+  }
+  //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
+  for(int i=start; i<argc;++i) {
+    std::cout <<"class: "<<argv[i]<<std::endl;
+    testNamedClass(argv[i]);
+  }
+  return retValue;
+}
+
+int runTestClasses() {
   {
     std::cout <<"**std::vector<int>**"<<std::endl;
     std::vector<int> iv = {1,2,3};
-
+    
     auto pV = runTest(iv);
     std::cout <<"size "<<pV.size()<<std::endl;
   }
@@ -118,7 +141,7 @@ int main(int argc, char** argv) {
     auto pEv = runTest(ev);
     std::cout <<"eventID "<<pEv.event()<<" "<<pEv.processGUID()<<" bx "<<pEv.bunchCrossing()<<std::endl;
   }
-
+  
   {
     std::cout <<"**SimpleClass**"<<std::endl;
     cce::tf::test::SimpleClass v(5);
@@ -128,7 +151,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClass**"<<std::endl;
     cce::tf::test::TestClass v("foo", 78.9);
@@ -152,7 +175,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithUniquePointerToSimpleClass**"<<std::endl;
     cce::tf::test::TestClassWithUniquePointerToSimpleClass v(5);
@@ -162,7 +185,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithFloatVector**"<<std::endl;
     cce::tf::test::TestClassWithFloatVector v( {1,2,3,5});
@@ -172,7 +195,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithFloatCArray**"<<std::endl;
     cce::tf::test::TestClassWithFloatCArray v(3);
@@ -182,7 +205,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithFloatArray**"<<std::endl;
     cce::tf::test::TestClassWithFloatArray v({1,2,3});
@@ -192,7 +215,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithFloatDynamicArray**"<<std::endl;
     cce::tf::test::TestClassWithFloatDynamicArray v(3);
@@ -202,7 +225,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithSimpleClassVector**"<<std::endl;
     cce::tf::test::TestClassWithSimpleClassVector v( {1,2,3,5});
@@ -212,7 +235,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassWithTestClassVector**"<<std::endl;
     cce::tf::test::TestClassWithTestClassVector v( {{"one",1},{"two",2},{"three",3},{"five",5}});
@@ -222,7 +245,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**TestClassVectorWithClassWithVector**"<<std::endl;
     cce::tf::test::TestClassVectorWithClassWithVector v( 
@@ -240,7 +263,7 @@ int main(int argc, char** argv) {
       }
     }
   }
-
+  
   {
     std::cout <<"**InheritFromPureAbstractBase**"<<std::endl;
     cce::tf::test::InheritFromPureAbstractBase v(5);
@@ -250,7 +273,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
+  
   {
     std::cout <<"**std::vector<InheritFromPureAbstractBase>**"<<std::endl;
     std::vector<cce::tf::test::InheritFromPureAbstractBase> v({1,2,3,5});
@@ -260,8 +283,8 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-
-
+  
+  
   {
     std::cout <<"**InheritFromAbstractInheritingFromBase**"<<std::endl;
     cce::tf::test::InheritFromAbstractInheritingFromBase v(3.14, 5);
@@ -270,12 +293,6 @@ int main(int argc, char** argv) {
       std::cout<<"ERROR"<<std::endl;
       return 1;
     }
-  }
-
-  //testNamedClass("edm::Wrapper<edm::Association<vector<reco::DeDxHitInfo> > >");
-  for(int i=start; i<argc;++i) {
-    std::cout <<"class: "<<argv[i]<<std::endl;
-    testNamedClass(argv[i]);
   }
   return 0;
 }

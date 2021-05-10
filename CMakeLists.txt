@@ -32,6 +32,8 @@ list(APPEND EXTRA_LIBS "tbb;lz4;zstd")
 
 add_library(configKeys configKeyValuePairs.cc)
 
+add_subdirectory(art)
+
 # add the executable
 add_executable(
   threaded_io_test

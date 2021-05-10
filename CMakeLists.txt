@@ -27,7 +27,13 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-find_package(zstd REQUIRED)
+
+if(DEFINED zstd_DIR)
+  find_package(zstd REQUIRED)
+else()
+  list(APPEND EXTRA_LIBS zstd)
+endif()
+
 find_package(ROOT REQUIRED COMPONENTS)
 
 list(APPEND EXTRA_LIBS "tbb;lz4")

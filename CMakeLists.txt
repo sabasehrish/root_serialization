@@ -30,6 +30,7 @@ find_package(Threads REQUIRED)
 
 if(DEFINED zstd_DIR)
   find_package(zstd REQUIRED)
+  list(APPEND EXTRA_LIBS zstd::libzstd_shared)
 else()
   list(APPEND EXTRA_LIBS zstd)
 endif()
@@ -72,7 +73,7 @@ target_include_directories(
 
 target_link_directories(threaded_io_test PRIVATE $ENV{TBB_LIB} $ENV{HDF5_LIB})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads ROOT::RIO
-                                               ROOT::Tree hdf5 ${EXTRA_LIBS} zstd::libzstd_shared )
+                                               ROOT::Tree hdf5 ${EXTRA_LIBS})
 
 enable_testing()
 add_subdirectory(tests)

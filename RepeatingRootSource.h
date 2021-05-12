@@ -28,7 +28,7 @@ public:
   RepeatingRootSource(RepeatingRootSource const&) = default;
   ~RepeatingRootSource() final;
 
-  size_t numberOfDataProducts() const final {return dataProductsPerLane_[0][0].size();}
+  size_t numberOfDataProducts() const final {return dataProductsPerLane_[0].size();}
   std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex ) final { return dataProductsPerLane_[iLane]; }
   EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final { return identifierPerEvent_[iEventIndex % nUniqueEvents_];}
 

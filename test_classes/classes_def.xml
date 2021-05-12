@@ -5,6 +5,8 @@
   <class name="cce::tf::test::TestClassWithPointerToSimpleClass" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithUniquePointerToSimpleClass" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithFloatVector" ClassVersion="3"/>
+  <class name="std::pair<int, std::vector<cce::tf::test::TestClassWithFloatVector>>"/>
+  <class name="std::vector<cce::tf::test::TestClassWithFloatVector>"/>
   <class name="cce::tf::test::TestClassWithFloatCArray" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithFloatArray" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithFloatDynamicArray" ClassVersion="3"/>
@@ -17,4 +19,6 @@
   <class name="cce::tf::test::BaseWithInt" ClassVersion="3"/>
   <class name="cce::tf::test::AbstractInheritingFromBaseWithInt" ClassVersion="3"/>
   <class name="cce::tf::test::InheritFromAbstractInheritingFromBase" ClassVersion="3"/>
+  <class name="cce::tf::test::RecursiveClass" ClassVersion="3"/>
+  <class name="cce::tf::test::RecursivePointerClass" ClassVersion="3"/>
 </lcgdict>

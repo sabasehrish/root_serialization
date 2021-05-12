@@ -224,5 +224,58 @@ namespace cce::tf::test {
     float fValue_;
   };
 
+  class RecursiveClass {
+  public:
+    RecursiveClass() = default;
+
+    void setClasses(std::vector<RecursiveClass> iClasses) {
+      classes_ = std::move(iClasses);
+    }
+
+    std::vector<RecursiveClass> const& classes() const {return classes_;}
+
+    bool operator!=(RecursiveClass const& iOther) const {
+      if(iOther.classes_.size() == classes_.size()) {
+        for(int i=0; i<classes_.size(); ++i) {
+          if(iOther.classes_[i] != classes_[i]) {
+            return true;
+          }
+        }
+        return false;
+      }
+      return true;
+    }
+
+  private:
+    std::vector<RecursiveClass> classes_;
+  };
+
+  class RecursivePointerClass {
+  public:
+    RecursivePointerClass(): ptr_(nullptr) {}
+    ~RecursivePointerClass(){ delete ptr_;}
+    
+
+    void set(RecursivePointerClass* iPtr) {
+      ptr_ = iPtr;
+    }
+
+    RecursivePointerClass const*  pointer() const {return ptr_;}
+
+    bool operator!=(RecursivePointerClass const& iOther) const {
+      if( (not ptr_) and (not iOther.ptr_) ) {
+        return false;
+      }
+      if( (ptr_ and (not iOther.ptr_) ) or ((not ptr_) and iOther.ptr_) ) {
+        return true;
+      }
+       
+      return *ptr_ != *iOther.ptr_;
+    }
+
+  private:
+    RecursivePointerClass const* ptr_;
+  };
+
 }
 #endif

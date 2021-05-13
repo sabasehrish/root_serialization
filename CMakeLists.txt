@@ -30,6 +30,12 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 #make the library for testing
 add_library(configKeys configKeyValuePairs.cc)
 
+#make the library holding the root dictionaries
+REFLEX_GENERATE_DICTIONARY(G__sequence_classes SequenceFinderForBuiltins.h SELECTION classes_def.xml)
+
+add_library(sequence_classes_dict SHARED G__sequence_classes.cxx)
+target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
+
 add_executable(threaded_io_test
   Lane.cc
   PDSOutputer.cc
@@ -44,6 +50,9 @@ add_executable(threaded_io_test
   TestProductsOutputer.cc
   TestProductsSource.cc
   TextDumpOutputer.cc
+  UnrolledDeserializer.cc
+  UnrolledSerializer.cc
+  common_unrolling.cc
   outputerFactoryGenerator.cc
   pds_reading.cc
   sourceFactoryGenerator.cc
@@ -59,6 +68,7 @@ target_link_libraries(threaded_io_test
                               TBB::tbb
                               Threads::Threads
                               configKeys
+                              sequence_classes_dict
                               zstd::libzstd_shared)
 
 add_subdirectory(cms)
@@ -76,6 +86,7 @@ target_link_libraries(unroll_test
                               ROOT::Tree
                               TBB::tbb
                               cms_dict
+                              sequence_classes_dict
                               test_classes_dict)
 
 enable_testing()

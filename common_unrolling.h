@@ -17,6 +17,8 @@ namespace cce::tf::unrolling {
     std::unique_ptr<TVirtualCollectionProxy> m_collProxy;
     int m_offset;
     OffsetAndSequences m_offsetAndSequences;
+
+    std::vector<CollectionActions> m_collections;
   };
 
   using SequencesForCollections = std::vector<CollectionActions>;

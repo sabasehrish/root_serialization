@@ -20,12 +20,21 @@ public:
   std::vector<char> serialize(void const* address) {
     bufferFile_.Reset();
 
-    for(auto& offAndSeq: offsetAndSequences_.m_objects) {
+    serialize(address, offsetAndSequences_.m_objects, offsetAndSequences_.m_collections);
+
+    //The blob contains the serialized data product
+    std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
+    return blob;
+  }
+
+private:
+  void serialize(void const* address, unrolling::OffsetAndSequences& offsetAndSequences, unrolling::SequencesForCollections& seq4Collections) {
+    for(auto& offAndSeq: offsetAndSequences) {
       //seq->Print();
       bufferFile_.ApplySequence(*(offAndSeq.second), const_cast<char*>(static_cast<char const*>(address)+offAndSeq.first));
     }
 
-    for(auto& coll: offsetAndSequences_.m_collections) {
+    for(auto& coll: seq4Collections) {
       auto collAddress = static_cast<char const*>(address) + coll.m_offset;
 
       TVirtualCollectionProxy::TPushPop helper(coll.m_collProxy.get(), const_cast<char*>(collAddress));
@@ -34,18 +43,11 @@ public:
 
       for(Int_t item=0; item<size; ++item) {
         auto elementAddress = (*coll.m_collProxy)[item];
-        for(auto& offAndSeq: coll.m_offsetAndSequences) {
-          //seq->Print();
-          bufferFile_.ApplySequence(*(offAndSeq.second), elementAddress+offAndSeq.first);
-        }
+        serialize(elementAddress, coll.m_offsetAndSequences, coll.m_collections);
       }
     }
-    //The blob contains the serialized data product
-    std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
-    return blob;
   }
 
-private:
   TBufferFile bufferFile_;
   unrolling::ObjectAndCollectionsSequences offsetAndSequences_;
 };

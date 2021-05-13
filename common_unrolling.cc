@@ -6,6 +6,7 @@
 #include "TStreamerElement.h"
 #include "TStreamerInfo.h"
 
+#include <set>
 #include <iostream>
 
 using namespace cce::tf;
@@ -215,7 +216,7 @@ namespace {
 // Now with split level. id=-2 for the 'top level' after top level BranchElement is made, will call Unroll on it
 // ftype is still 0 for the sub items (since we are effectively splitlevel == 1)
 
-  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, unrolling::OffsetAndSequences& oSeq, unrolling::SequencesForCollections& oCollections, bool unrollCollections) {
+  void addUnrolledActionSequencesForElement(TStreamerInfo* parentInfo, int idInParent, TStreamerElement* element, TClass& iClass, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, int baseOffset, std::set<TClass const*>& hierarchy, unrolling::OffsetAndSequences& oSeq, unrolling::SequencesForCollections& oCollections, bool unrollCollections) {
     if(not elementNeedsOwnSequence(element, &iClass)) {
       return;
     }
@@ -223,7 +224,7 @@ namespace {
     if(ptr) {
       //std::cout <<"Checking element "<<ptr->GetName()<<std::endl;
       TStreamerInfo* sinfo = buildStreamerInfo(ptr,nullptr);
-      if(canUnroll(ptr,sinfo)) {
+      if(canUnroll(ptr,sinfo) and (hierarchy.end() == hierarchy.find(ptr))) {
         //std::cout <<"unrolling "<<ptr->GetName()<<std::endl;
         auto offset = element->GetOffset();
         
@@ -235,18 +236,20 @@ namespace {
           if(not elementNeedsOwnSequence(element, ptr)) {
             continue;
           }
-          addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,oSeq, oCollections, unrollCollections);
+          addUnrolledActionSequencesForElement(sinfo, id, element, *ptr, create, baseOffset+offset,hierarchy, oSeq, oCollections, unrollCollections);
         }
         return;
       }
       //check for STL collections 
       if(unrollCollections && ptr->CanSplit() ) {
+        //std::cout <<"CanSplit "<<ptr->GetName()<<std::endl;
         auto collProxy = ptr->GetCollectionProxy(); 
         if(collProxy && not collProxy->HasPointers() && collProxy->GetCollectionType() ==  ROOT::kSTLvector ) {
           auto valueClass = collProxy->GetValueClass();
           if(valueClass) {
             TStreamerInfo* sinfo = buildStreamerInfo(valueClass,nullptr);
-            if(canUnroll(valueClass, sinfo)) {
+            if(canUnroll(valueClass, sinfo) and hierarchy.end() == hierarchy.find(valueClass)) {
+              hierarchy.insert(valueClass);
               oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
               TIter next(sinfo->GetElements());
               TStreamerElement* element = 0;
@@ -255,12 +258,26 @@ namespace {
                   continue;
                 }
                 //NOTE: offsets are relative to address in element of the container
-                addUnrolledActionSequencesForElement(sinfo, id, element, *valueClass, create, 0,oCollections.back().m_offsetAndSequences, oCollections, false);
+                addUnrolledActionSequencesForElement(sinfo, id, element, *valueClass, create, 0, hierarchy,
+                                                     oCollections.back().m_offsetAndSequences, oCollections.back().m_collections, /*false*/ true);
               }
+              hierarchy.erase(valueClass);
               return;
             }
           }
         }
+      } else {
+        /* deal with vectors of built in types here
+        std::cout <<"!CanSplit "<<ptr->GetName()<<std::endl; 
+        auto collProxy = ptr->GetCollectionProxy(); 
+        if(collProxy && collProxy->GetCollectionType() ==  ROOT::kSTLvector) {
+          if(not collProxy->GetValueClass()) {
+            oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
+            oCollections.back().m_offsetAndSequences.emplace_back(0,new TStreamerInfoActions::TActionSequence(0,0));
+            return;
+          }
+        }
+        */
       }
       //std::cout <<"rolled "<<ptr->GetName()<<std::endl;
     }
@@ -269,7 +286,7 @@ namespace {
     oSeq.emplace_back(baseOffset, setActionSequence(nullptr, parentInfo, nullptr, create, false, idInParent, 0));
   }
 
-  unrolling::ObjectAndCollectionsSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create) {
+  unrolling::ObjectAndCollectionsSequences buildUnrolledActionSequence(TClass& iClass, TStreamerInfo& iInfo, TStreamerInfoActions::TActionSequence::SequenceGetter_t create, std::set<TClass const*>& hierarchy) {
     unrolling::ObjectAndCollectionsSequences objAndColl;
     objAndColl.m_objects.reserve(1);
     unrolling::SequencesForCollections colls;
@@ -277,7 +294,7 @@ namespace {
     TIter next(iInfo.GetElements());
     TStreamerElement* element = 0;
     for (Int_t id = 0; (element = (TStreamerElement*) next()); ++id) {
-      addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, objAndColl.m_objects, objAndColl.m_collections, true);
+      addUnrolledActionSequencesForElement(&iInfo, id, element, iClass, create, 0, hierarchy, objAndColl.m_objects, objAndColl.m_collections, true);
     }
     return objAndColl;
   }
@@ -293,7 +310,9 @@ namespace {
   
   if(canUnroll(&iClass, sinfo) ){
     //std::cout <<"Unrolling "<<iClass.GetName()<<std::endl;
-    return buildUnrolledActionSequence(iClass, *sinfo, create);
+    std::set<TClass const*> hierarchy;
+    hierarchy.insert(&iClass);
+    return buildUnrolledActionSequence(iClass, *sinfo, create, hierarchy);
   }
   //std::cout <<"Did not unroll "<<iClass.GetName()<<std::endl;
   unrolling::ObjectAndCollectionsSequences objAndColl;

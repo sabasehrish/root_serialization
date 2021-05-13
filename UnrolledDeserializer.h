@@ -21,32 +21,32 @@ public:
 
     bufferFile.SetBuffer( const_cast<char*>(iBuffer), iBufferSize, kFALSE);
 
-    void* address = iWriteTo;
-    for(auto& offNSeq: offsetAndSequences_.m_objects) {
-      //seq->Print();
-      bufferFile.ApplySequence(*(offNSeq.second), static_cast<char*>(address)+offNSeq.first);
-    }
-
-    for(auto& coll: offsetAndSequences_.m_collections) {
-      auto collAddress = static_cast<char const*>(address) + coll.m_offset;
-
-      TVirtualCollectionProxy::TPushPop helper(coll.m_collProxy.get(), const_cast<char*>(collAddress));
-      Int_t size;
-      bufferFile >> size;      
-      coll.m_collProxy->Allocate(size, true);
-
-      for(Int_t item=0; item<size; ++item) {
-        auto elementAddress = (*coll.m_collProxy)[item];
-        for(auto& offNSeq: coll.m_offsetAndSequences) {
-          //seq->Print();
-          bufferFile.ApplySequence(*(offNSeq.second), elementAddress+offNSeq.first);
-        }
-      }
-    }
+    deserialize(bufferFile, iWriteTo, offsetAndSequences_.m_objects, offsetAndSequences_.m_collections);
     return bufferFile.Length();
   }
 
 private:
+  void deserialize(TBufferFile& bufferFile, void* address, 
+                   unrolling::OffsetAndSequences const& offsetAndSequences, unrolling::SequencesForCollections const& seq4Collections) const {
+    for(auto& offNSeq: offsetAndSequences) {
+      //seq->Print();
+      bufferFile.ApplySequence(*(offNSeq.second), static_cast<char*>(address)+offNSeq.first);
+    }
+    
+    for(auto& coll: seq4Collections) {
+      auto collAddress = static_cast<char const*>(address) + coll.m_offset;
+      
+      TVirtualCollectionProxy::TPushPop helper(coll.m_collProxy.get(), const_cast<char*>(collAddress));
+      Int_t size;
+      bufferFile >> size;      
+      coll.m_collProxy->Allocate(size, true);
+      
+      for(Int_t item=0; item<size; ++item) {
+        auto elementAddress = (*coll.m_collProxy)[item];
+        deserialize(bufferFile, elementAddress, coll.m_offsetAndSequences, coll.m_collections);
+      }
+    }
+  }
   unrolling::ObjectAndCollectionsSequences offsetAndSequences_;
 };
 }

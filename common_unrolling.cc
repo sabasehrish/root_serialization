@@ -320,6 +320,11 @@ namespace {
                 proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<char>));
                 break;
               }
+            case kUChar_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<unsigned char>));
+                break;
+              }
             }
             if(proxyClass) {
               //std::cout <<"using prox class"<<std::endl;

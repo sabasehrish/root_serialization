@@ -5,6 +5,7 @@
 #include "TClonesArray.h"
 #include "TStreamerElement.h"
 #include "TStreamerInfo.h"
+#include "SequenceFinderForBuiltins.h"
 
 #include <set>
 #include <iostream>
@@ -267,17 +268,69 @@ namespace {
           }
         }
       } else {
-        /* deal with vectors of built in types here
-        std::cout <<"!CanSplit "<<ptr->GetName()<<std::endl; 
+        // deal with vectors of built in types here
+        //std::cout <<"!CanSplit "<<ptr->GetName()<<std::endl; 
         auto collProxy = ptr->GetCollectionProxy(); 
         if(collProxy && collProxy->GetCollectionType() ==  ROOT::kSTLvector) {
           if(not collProxy->GetValueClass()) {
-            oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
-            oCollections.back().m_offsetAndSequences.emplace_back(0,new TStreamerInfoActions::TActionSequence(0,0));
-            return;
+            TClass* proxyClass = nullptr;
+            switch(collProxy->GetType()) {
+            case kFloat_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<float>));
+                break;
+              }
+            case kDouble_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<double>));
+                break;
+              }
+            case kInt_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<int>));
+                break;
+              }
+            case kUInt_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<unsigned int>));
+                break;
+              }
+            case kLong_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<long>));
+                break;
+              }
+            case kULong_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<unsigned long>));
+                break;
+              }
+            case kShort_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<short>));
+                break;
+              }
+            case kUShort_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<unsigned short>));
+                break;
+              }
+            case kChar_t:
+              {
+                proxyClass = TClass::GetClass(typeid(cce::tf::SequenceFinderForBuiltins<char>));
+                break;
+              }
+            }
+            if(proxyClass) {
+              //std::cout <<"using prox class"<<std::endl;
+              TStreamerInfo* sinfo = buildStreamerInfo(proxyClass,nullptr);
+              oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
+              oCollections.back().m_offsetAndSequences.emplace_back(baseOffset, setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
+              return;
+            }
           }
         }
-        */
+        
       }
       //std::cout <<"rolled "<<ptr->GetName()<<std::endl;
     }

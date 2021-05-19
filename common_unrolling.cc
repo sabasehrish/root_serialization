@@ -330,7 +330,8 @@ namespace {
               //std::cout <<"using prox class"<<std::endl;
               TStreamerInfo* sinfo = buildStreamerInfo(proxyClass,nullptr);
               oCollections.emplace_back(collProxy->Generate(), baseOffset+element->GetOffset());
-              oCollections.back().m_offsetAndSequences.emplace_back(baseOffset, setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
+              //base offset is 0 since it is relative to the item in the container
+              oCollections.back().m_offsetAndSequences.emplace_back(0, setActionSequence(nullptr, sinfo, nullptr, create, false, -1, 0));
               return;
             }
           }

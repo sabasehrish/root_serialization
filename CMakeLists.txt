@@ -3,7 +3,7 @@
 #
 # cmake <dir. with this file> \
 #   -DROOT_DIR=$ROOTSYS/cmake \
-#   -DHIGHFIVE_INC=<include directory of HighFive>
+#   -DHIGHFIVE_INC=<include directory of HighFive> \
 #   -Dzstd_DIR=<path to zstd lib>/cmake/zstd
 
 cmake_minimum_required(VERSION 3.10)
@@ -40,8 +40,6 @@ find_package(ROOT REQUIRED COMPONENTS)
 list(APPEND EXTRA_LIBS "tbb;lz4")
 
 add_library(configKeys configKeyValuePairs.cc)
-
-add_subdirectory(art)
 
 # add the executable
 add_executable(

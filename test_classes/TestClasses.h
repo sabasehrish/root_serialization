@@ -2,6 +2,7 @@
 #define cce_tf_TestClasses_h
 
 #include <vector>
+#include <map>
 #include <string>
 #include <memory>
 
@@ -168,6 +169,20 @@ namespace cce::tf::test {
   using TestClassWithTestClassVector = TestClassWithVector<TestClass>;
   using TestClassVectorWithClassWithVector = TestClassWithVector<TestClassWithVector<TestClass>>;
 
+  template<typename K, typename V>
+  class TestClassWithMap {
+  public:
+    TestClassWithMap() = default;
+    TestClassWithMap(std::map<K,V> iValues): m_values(std::move(iValues)) {}
+
+    std::map<K,V> const& values() const {return m_values;}
+  private:
+    std::map<K,V> m_values;
+  };
+
+  using TestClassWithIntFloatMap = TestClassWithMap<int,float>;
+  using TestClassWithIntSimpleClassMap = TestClassWithMap<int, SimpleClass>;
+
   class PureAbstractBase {
   public:
     PureAbstractBase() = default;
@@ -277,5 +292,17 @@ namespace cce::tf::test {
     RecursivePointerClass const* ptr_;
   };
 
+  template<typename OFFSET, typename T>
+  class OffsetTest {
+  public:
+    OffsetTest() = default;
+    OffsetTest(OFFSET iOffset, T&& iValue): offset_(iOffset), value_(iValue) {}
+
+    OFFSET offset() const { return offset_;}
+    T const& value() const { return value_;}
+  private:
+    OFFSET offset_;
+    T value_;
+  };
 }
 #endif

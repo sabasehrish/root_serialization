@@ -312,6 +312,26 @@ int runTestClasses() {
   }
   
   {
+    std::cout <<"**TestClassWithIntFloatMap**"<<std::endl;
+    cce::tf::test::TestClassWithIntFloatMap v( {{1,1.1f},{2,2.2f},{3,3.3f},{5,5.5f}});
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    std::cout <<"**TestClassWithIntSimpleClassMap**"<<std::endl;
+    cce::tf::test::TestClassWithIntSimpleClassMap v( {{1,1},{2,2},{3,3},{5,5}});
+    auto pV = runTest(v);
+    if(not compare_containers(v.values(), pV.values())) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
     std::cout <<"**InheritFromPureAbstractBase**"<<std::endl;
     cce::tf::test::InheritFromPureAbstractBase v(5);
     auto pV = runTest(v);
@@ -367,6 +387,21 @@ int runTestClasses() {
     auto pV = runTest(v);
 
     if(v != pV ) {
+      std::cout<<"ERROR"<<std::endl;
+      return 1;
+    }
+  }
+
+  {
+    using namespace cce::tf::test;
+    std::cout <<"**cce::tf::test::OffsetTest<short,cce::tf::test::TestClassWithFloatVector>**"<<std::endl;
+    OffsetTest<short,TestClassWithFloatVector> v(12, TestClassWithFloatVector{{1.1,2.2,3.3,5.5}});
+    auto pV = runTest(v);
+    if(v.offset() != pV.offset()) {
+      std::cout <<"ERROR"<<std::endl;
+      return 1;
+    }
+    if(not compare_containers(v.value().values(),  pV.value().values())) {
       std::cout<<"ERROR"<<std::endl;
       return 1;
     }

@@ -13,6 +13,12 @@
   <class name="cce::tf::test::TestClassWithSimpleClassVector" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassWithTestClassVector" ClassVersion="3"/>
   <class name="cce::tf::test::TestClassVectorWithClassWithVector" ClassVersion="3"/>
+  <class name="cce::tf::test::TestClassWithIntFloatMap" ClassVersion="3"/>
+  <class name="map<int,float>"/>
+  <class name="pair<int,float>"/>
+  <class name="cce::tf::test::TestClassWithIntSimpleClassMap" ClassVersion="3"/>
+  <class name="map<int,cce::tf::test::SimpleClass>"/>
+  <class name="pair<int,cce::tf::test::SimpleClass>"/>
   <class name="cce::tf::test::PureAbstractBase" ClassVersion="3"/>
   <class name="cce::tf::test::InheritFromPureAbstractBase" ClassVersion="3"/>
   <class name="std::vector<cce::tf::test::InheritFromPureAbstractBase>"/>
@@ -21,4 +27,5 @@
   <class name="cce::tf::test::InheritFromAbstractInheritingFromBase" ClassVersion="3"/>
   <class name="cce::tf::test::RecursiveClass" ClassVersion="3"/>
   <class name="cce::tf::test::RecursivePointerClass" ClassVersion="3"/>
+  <class name="cce::tf::test::OffsetTest<short,cce::tf::test::TestClassWithFloatVector>"/>
 </lcgdict>

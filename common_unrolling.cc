@@ -29,9 +29,15 @@ namespace {
     if (!cl) {
       return nullptr;
     }
+
     cl->BuildRealData(pointer);
     TStreamerInfo* sinfo = static_cast<TStreamerInfo*>(cl->GetStreamerInfo(cl->GetClassVersion()));
-    
+
+    if(cl->GetCollectionType() == ROOT::kSTLvector ) {
+      //avoid looking at any inheritance that might be in the std::vector implementation.
+      // If we did continue, we'd get lots of warnings from ROOT
+      return sinfo;
+    }
     // Create StreamerInfo for all base classes.
     TBaseClass* base = 0;
     TIter nextb(cl->GetListOfBases());

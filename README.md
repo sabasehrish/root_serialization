@@ -124,6 +124,17 @@ or
 > threaded_io_test EmptySource 1 1 0 10 DummyOutputer=useProductReady
 ```
 
+#### TextDumpOutputer
+Dumps the name and sizes for each data product. Specify by its name and the following optional parameters:
+- perEvent: print names and sizes for each event. On by default. Allowed values are `perEvent=t`, `perEvent=f` and `perEvent` which is same as `perEvent=t`.
+- summary: at end of job, print names and average size per event. Off by default. Allowed values are `summary=t`, `summary=f`, and `summary` which is same as `summary=t`.
+```
+> threaded_io_test EmptySource 1 1 0 10 TextDumpOutputer
+```
+or
+```
+> threaded_io_test EmptySource 1 1 0 10 TextDumpOutputer=perEvent=f:summary=t
+```
 
 #### SerializeOutputer
 Uses ROOT to serialize the _event_ data products but does not store them. It prints timing statistics about the serialization. Specify by just using its name and an optional 'verbose' parameter

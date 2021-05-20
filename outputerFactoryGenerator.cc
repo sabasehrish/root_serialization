@@ -118,6 +118,35 @@ namespace {
     return std::make_pair(fileName,config);
   }
 
+  struct TextDumpConfig {
+    bool perEvent=true;
+    bool summary=false;
+  };
+
+  std::optional<TextDumpConfig> parseTextDumpConfig(std::string_view iOptions) {
+    TextDumpConfig conf;
+    auto keyValues = cce::tf::configKeyValuePairs(iOptions);
+    auto itFound = keyValues.find("perEvent");
+    int count = 0;
+    if(itFound != keyValues.end()) {
+      if(not itFound->second.empty() and itFound->second[0]!='t') {
+        conf.perEvent = false;
+      }
+      ++count;
+    }
+    itFound = keyValues.find("summary");
+    if(itFound != keyValues.end()) {
+      if(itFound->second.empty() or itFound->second[0]=='t') {
+        conf.summary = true;
+      }
+      ++count;
+    }
+    if(keyValues.size() != count) {
+      std::cout <<"unknown options passed to TextDumpOutputer, only use 'perEvent' and 'summary'"<<std::endl;
+      return std::nullopt;
+    }
+    return conf;
+  }
 }
 
 std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
@@ -184,12 +213,11 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     }
     outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
   } else if(iType == "TextDumpOutputer") {
-    bool useProductReady = false;
-    if(not iOptions.empty()) {
-      std::cout <<"Unknown option for DummyOutputer: "<<iOptions<<std::endl;
+    auto result = parseTextDumpConfig(iOptions);
+    if(not result) {
       return outFactory;
     }
-    outFactory = [](unsigned int) { return std::make_unique<TextDumpOutputer>();};
+    outFactory = [config = *result](unsigned int) { return std::make_unique<TextDumpOutputer>(config.perEvent, config.summary);};
   } else if(iType == "TestProductsOutputer") {
     outFactory = [](unsigned int iNLanes) { return std::make_unique<TestProductsOutputer>(iNLanes);};
   }

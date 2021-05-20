@@ -48,8 +48,8 @@ void TextDumpOutputer::printSummary() const {
     for(auto const& name: productNames_) {
       double aveSize = double(itSize->load())/nEvents;
       std::cout <<"product: "<<name<<" ave size: "<<aveSize<<"\n";
+      ++itSize;
     }
-    ++itSize;
   }
 }
 

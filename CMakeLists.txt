@@ -19,19 +19,17 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 
 #ROOT
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree HINTS ${ROOT_DIR})
 
 #TBB
-list(APPEND EXTRA_LIBS tbb)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/include")
+find_package(TBB REQUIRED HINTS ${TBB_DIR})
 
 #LZ4
 list(APPEND EXTRA_LIBS lz4)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/include")
+list(APPEND EXTRA_INCLUDES ${LZ4_DIR}/include)
 
 #ZSTD
-list(APPEND EXTRA_LIBS zstd)
-list(APPEND EXTRA_INCLUDES "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/include")
+find_package(zstd HINTS ${ZSTD_DIR})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -47,14 +45,10 @@ target_include_directories(threaded_io_test PUBLIC
                            ${EXTRA_INCLUDES}
                            )
 
-target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/install/lib")
-target_link_directories(threaded_io_test PUBLIC "/uscms_data/d1/cdj/cce_measurements/new_root/externals/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/tbb/2020_U3/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lz4/1.9.2/lib")
-target_link_directories(threaded_io_test PUBLIC "/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/zstd/1.4.5/lib")
+target_link_directories(threaded_io_test PUBLIC ${LZ4_DIR}/lib)
+target_link_libraries(threaded_io_test PUBLIC zstd::libzstd_shared)
 target_link_libraries(threaded_io_test PUBLIC ROOT::RIO ROOT::Tree ROOT::Core)
-
-target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
+target_link_libraries(threaded_io_test PUBLIC TBB::tbb ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
 
 enable_testing()

@@ -12,7 +12,7 @@ To build
 1. cd root_serialization
 1. mkdir build
 1. cd build
-1. cmake ../ -DROOT_DIR=<path to root>/cmake
+1. cmake .. -DZSTD_DIR=path_to_zstd_install -DTBB_DIR=path_to_tbb_install -DLZ4_DIR=path_to_lz4_install -DROOT_DIR=path_to_root_install
 1. make
 
 This will create the executable `threaded_io_test`.

@@ -19,22 +19,17 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 
 #ROOT
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree HINTS ${ROOT_DIR})
 
 #TBB
-find_package(TBB REQUIRED)
-list(APPEND EXTRA_LIBS tbb)
-list(APPEND EXTRA_INCLUDES ${TBB_INCLUDE_DIR})
+find_package(TBB REQUIRED HINTS ${TBB_DIR})
 
 #LZ4
-find_package(LZ4 REQUIRED)
 list(APPEND EXTRA_LIBS lz4)
-list(APPEND EXTRA_INCLUDES ${LZ4_INCLUDE_DIR})
+list(APPEND EXTRA_INCLUDES ${LZ4_DIR}/include)
 
 #ZSTD
-find_package(ZSTD REQUIRED)
-list(APPEND EXTRA_LIBS zstd)
-list(APPEND EXTRA_INCLUDES ${ZSTD_INCLUDE_DIR})
+find_package(zstd HINTS ${ZSTD_DIR})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -50,11 +45,10 @@ target_include_directories(threaded_io_test PUBLIC
                            ${EXTRA_INCLUDES}
                            )
 
-target_link_directories(threaded_io_test PUBLIC ${TBB_LIB_DIR})
-target_link_directories(threaded_io_test PUBLIC ${LZ4_LIB_DIR})
-target_link_directories(threaded_io_test PUBLIC ${ZSTD_LIB_DIR})
+target_link_directories(threaded_io_test PUBLIC ${LZ4_DIR}/lib)
+target_link_libraries(threaded_io_test PUBLIC zstd::libzstd_shared)
 target_link_libraries(threaded_io_test PUBLIC ROOT::RIO ROOT::Tree ROOT::Core)
-target_link_libraries(threaded_io_test PUBLIC ${EXTRA_LIBS})
+target_link_libraries(threaded_io_test PUBLIC TBB::tbb ${EXTRA_LIBS})
 target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
 
 enable_testing()

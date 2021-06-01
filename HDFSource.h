@@ -45,25 +45,25 @@ public:
   size_t numberOfDataProducts() const final {return productInfo_.size();}
   std::vector<DataProductRetriever>& dataProducts() final {return dataProducts_;}
   EventIdentifier eventIdentifier() final { return eventID_;}
-  
-  
+  static herr_t op_func (hid_t loc_id, const char *name, const H5L_info_t *info,void *operator_data);
   using buffer_iterator = std::vector<std::vector<char>>::const_iterator;
 
 private: 
-  //std::vector<ProductInfo> readProductInfo(buffer_iterator&, buffer_iterator);
   std::vector<std::string> readClassNames();
-  std::vector<ProductInfo> readProductInfo();
   std::pair<long unsigned int, long unsigned int> getEventOffsets(long eventindex, std::string pname);
   bool readEvent(long iEventIndex) final; //returns true if an event was read
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
   HighFive::File file_;
   HighFive::Group lumi_;
+  hid_t file1_;
+  hid_t lumi1_;
   EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_; 
   std::vector<void*> dataBuffers_;  
-  std::vector<ProductInfo> productInfo_;
+  inline static std::vector<ProductInfo> productInfo_;
   std::vector<std::string> classnames_;
   HDFDelayedRetriever delayedRetriever_;
+  inline static int dpid_; 
 };
 }
 #endif

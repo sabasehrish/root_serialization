@@ -60,14 +60,38 @@ get_prods_and_sizes(std::vector<product_t> & input,
   return {products, sizes};
 }
 
-template < typename T>
-void write_ds(Group g, std::string name, std::vector<T> data) {
-    DataSet ds = g.getDataSet(name);
-    auto old_dim = ds.getDimensions()[0];
-    auto new_dim = old_dim + data.size();
-    ds.resize({new_dim});
-    ds.select({old_dim}, {data.size()}).write(data);
+template <typename T> 
+void write_ds(hid_t gid, std::string name, std::vector<T> data) {
+  hid_t dset = H5Dopen2(gid, name.c_str(), H5P_DEFAULT); 
+  hid_t dspace = H5Dget_space(dset);
+  hsize_t     maxdims[1] = {H5S_UNLIMITED};
+  hsize_t old_dims[1]; //our datasets are 1D
+  H5Sget_simple_extent_dims(dspace, old_dims, maxdims);
+  //now old_dims[0] has existing length
+  //we need to extend by the size of data
+  hsize_t new_dims[1];
+  new_dims[0] = old_dims[0] + data.size();
+  hsize_t stride[1];
+  stride[0] = data.size();
+  hid_t status = H5Dextend (dset, new_dims);
+  auto filespace = H5Dget_space (dset);
+  status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, old_dims, NULL, stride, NULL); 
+  dspace = H5Screate_simple(1, stride, maxdims);
+  //std::cout << "Old_dims: " << old_dims[0] << ", New dims" << new_dims[0] << std::endl;
+ // std::cout << "event 0 " << data[0] << ", event 1: " << data[1] << std::endl;
+  
+  if (typeid(data[0]) == typeid(int)) {
+    status = H5Dwrite(dset, H5T_STD_I32LE, dspace, filespace, H5P_DEFAULT, &data[0]);  } else if (typeid(data[0]) == typeid(char)) {
+    status = H5Dwrite(dset, H5T_STD_I8LE, dspace, filespace, H5P_DEFAULT, &data[0]);
+  } else if (typeid(data[0]) == typeid(size_t)) {
+    status = H5Dwrite(dset, H5T_STD_U64LE, dspace, filespace, H5P_DEFAULT, &data[0]);
+  } else {
+    std::cerr << "We currently dont support this type\n";
+  }
+H5Dclose(dset);
+H5Sclose(dspace);
 }
+
 
 void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
   if(firstTime_) {
@@ -83,52 +107,66 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
     ++batch_;
   }
   if (batch_ == 2) { //max_batch_size){
-    auto g = file_.getGroup("Lumi");
-    write_ds<int>(g, "Event_IDs", events_);
+    hid_t gid = H5Gopen2(file1_, "Lumi", H5P_DEFAULT);   
+    write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();
     for(auto & [name, index]: dataProductIndices_) {
       auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
-      write_ds<char>(g, name, prods);
-      write_ds<size_t>(g, name+"_sz", sizes);
+      write_ds<char>(gid,name, prods);
+      auto s = name+"_sz";
+      write_ds<size_t>(gid, s, sizes);
     }
     batch_ = 0;
     products_.clear();
     events_.clear();
+    H5Gclose(gid);
   }
 }
+
 void HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
-  DataSetCreateProps props;
-  props.add(Chunking(std::vector<hsize_t>{128}));
-  //props.add(Shuffle());
-  //props.add(Deflate(9));
-  DataSpace dataspace = DataSpace({0}, {DataSpace::UNLIMITED});
-  if(!file_.exist("Lumi")) {
-    file_.createGroup("Lumi");
-  } 
-  auto g = file_.getGroup("Lumi");
-  if(!g.exist("Event_IDs"))
-    g.createDataSet<int>("Event_IDs", dataspace, props);
-  if (!g.hasAttribute("run") && !g.hasAttribute("lumisec")) {
-    auto r = g.createAttribute<int>("run", DataSpace::From(iEventID.run));
-    auto l = g.createAttribute<int>("lumisec", DataSpace::From(iEventID.lumi));
-    r.write(iEventID.run);
-    l.write(iEventID.lumi);
-  } 
+  hsize_t     dims[1] = {0};
+  hsize_t     chunk_dims[1] = {128};
+  hsize_t     maxdims[1] = {H5S_UNLIMITED};
+  hid_t space = H5Screate_simple (1, dims, maxdims); 
+  auto prop   = H5Pcreate(H5P_DATASET_CREATE);
+  auto status = H5Pset_chunk(prop, 1, chunk_dims);
+  hid_t g = H5Gcreate2(file1_, "Lumi", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t dset = H5Dcreate2(g, "Event_IDs", H5T_STD_I32LE, space, H5P_DEFAULT,
+                 prop, H5P_DEFAULT);
+
+  auto aid3  = H5Screate(H5S_SCALAR);
   
+  hid_t r = H5Acreate2(g, "run", H5T_STD_I32LE, aid3, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t l = H5Acreate2(g, "lumisec", H5T_STD_I32LE, aid3, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(r, H5T_STD_I32LE, &iEventID.run);
+  H5Awrite(l, H5T_STD_I32LE, &iEventID.lumi);
+  H5Aclose(r);
+  H5Aclose(l);
+   
   int i = 0; //for data product indices
+  
   for(auto const& s: iSerializers) {
     std::string dp_name{s.name()};
     dataProductIndices_.push_back({dp_name, i});
     ++i;
     std::string dp_sz = dp_name+"_sz";
-    if(!g.exist(dp_name) && !g.exist(dp_sz)) {
-      auto d = g.createDataSet<char>(dp_name, dataspace, props);
-      std::string classname(s.className());
-      auto a = d.createAttribute<std::string>("classname", DataSpace::From(classname));
-      a.write(classname);
-      g.createDataSet<size_t>(dp_sz, dataspace, props); 
-    } 
+    hid_t d = H5Dcreate2(g, dp_name.c_str(), H5T_NATIVE_CHAR, space, H5P_DEFAULT,prop, H5P_DEFAULT);;
+    std::string classname(s.className());
+    auto atype = H5Tcopy(H5T_C_S1); //for creating string attributes
+    H5Tset_size(atype, H5T_VARIABLE);
+    H5Tset_cset(atype, H5T_CSET_UTF8);
+    H5Tset_strpad(atype,H5T_STR_NULLTERM);
+    hid_t a = H5Acreate2(d, "classname", atype, aid3, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(a, atype, &classname);
+    auto d1 = H5Dcreate2(g, dp_sz.c_str(), H5T_STD_U64LE, space, H5P_DEFAULT, prop, H5P_DEFAULT);
+    H5Dclose(d);
+    H5Dclose(d1);
+    H5Aclose(a);
   }
+  H5Gclose(g);
+  status = H5Dclose (dset);
+  status = H5Sclose (space);
 }
+
 
 

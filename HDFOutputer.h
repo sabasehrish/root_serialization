@@ -27,8 +27,7 @@ namespace cce::tf {
   class HDFOutputer : public OutputerBase {
     public:
     HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
-     file_(iFileName, File::ReadWrite | File::Create),
-     file1_(H5Fcreate("some.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)),
+     file1_(H5Fcreate("silly.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)),
      serializers_{std::size_t(iNLanes)},
      serialTime_{std::chrono::microseconds::zero()},
      parallelTime_{0}
@@ -55,11 +54,9 @@ namespace cce::tf {
   void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);
   void writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);
 
-  //void writeEventHeader(EventIdentifier const& iEventID);
   std::vector<std::vector<char>> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
 std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<product_t> & input,int prod_index,int stride);
 private:
-  HighFive::File file_;
   hid_t file1_;
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;

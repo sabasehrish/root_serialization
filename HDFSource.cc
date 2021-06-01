@@ -5,18 +5,62 @@
 
 using namespace cce::tf;
 
+// C function (copied from HDF5 examples) that is passed as Operator function
+// to H5Literate.  
+// Prints the name and type of the object being examined.
+herr_t
+HDFSource::op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
+            void *operator_data)
+{
+  herr_t          status;
+  H5O_info_t      infobuf;
+
+ /*
+ *      * Get type of the object and display its name and type.
+ *        The name of the object is passed to this function by
+ *        the Library.
+ *  */
+  status = H5Oget_info_by_name (loc_id, name, &infobuf, H5O_INFO_BASIC, H5P_DEFAULT);
+//We may want to see if H5O_INFO_ALL will be better
+  switch (infobuf.type) {
+    case H5O_TYPE_GROUP:
+      printf ("  Group: %s\n", name);
+      break;
+    case H5O_TYPE_DATASET:
+      if (strstr(name,"_sz") == NULL && strcmp(name, "Event_IDs") != 0){     
+        printf ("  Dataset: %s\n", name);
+        printf ("  loc id: %d\n", dpid_);
+        productInfo_.push_back({name, dpid_});
+        ++dpid_;
+      }
+      break;
+    case H5O_TYPE_NAMED_DATATYPE:
+      printf ("  Datatype: %s\n", name);
+      break;
+    default:
+      printf ( "  Unknown: %s\n", name);
+  }
+
+  return 0;
+}
+
 HDFSource::HDFSource(std::string const& iName):
 file_(iName, File::ReadOnly),
 lumi_(file_.getGroup("/Lumi/")),
-productInfo_(readProductInfo()),
-classnames_(readClassNames())
+file1_(H5Fopen(iName.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT))
 {
+  dpid_ = 0;
+  std::string gname = "/Lumi";
+  lumi1_ = H5Gopen2(file1_, gname.c_str(), H5P_DEFAULT);
+  H5Literate (lumi1_, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL);
+  
   dataProducts_.reserve(productInfo_.size());
   dataBuffers_.resize(productInfo_.size(), nullptr);
+  classnames_=readClassNames();
   size_t index = 0;
   for (auto p: productInfo_) {
     TClass* cls = TClass::GetClass(classnames_[p.classIndex()].c_str());
-    //std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
+    std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
     dataBuffers_[index] = cls->New();
     assert(cls);
     dataProducts_.emplace_back(index, &dataBuffers_[index], p.name(), cls, &delayedRetriever_);
@@ -25,28 +69,18 @@ classnames_(readClassNames())
 }
 
 
+
 HDFSource::~HDFSource() {
   auto it = dataProducts_.begin();
   for( void * b: dataBuffers_) {
     it->classType()->Destructor(b);
     ++it;
   }
+  productInfo_.clear();
+  H5Gclose(lumi1_);
+  H5Fclose(file1_);
 }
 
-//
-std::vector<HDFSource::ProductInfo>
-HDFSource::readProductInfo() {
-  std::vector<HDFSource::ProductInfo> productinfo;
-  uint32_t i = 0;
-  for (auto p : lumi_.listObjectNames()) {
-    //Event_IDs dataset is a special one
-    if (p.compare(p.size()-3,3,"_sz") != 0 && p != "Event_IDs") {
-      productinfo.push_back({p,i});
-      ++i;
-    }
-  }
-  return productinfo;
-}
 
 std::vector<std::string>
 HDFSource::readClassNames() {
@@ -66,13 +100,33 @@ HDFSource::readClassNames() {
 std::pair<long unsigned int, long unsigned int>
 HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
   std::vector<long unsigned int> st_end;
+  std::vector<long unsigned int> temp;
   auto d = lumi_.getDataSet(pname+"_sz");
+  hid_t dset = H5Dopen2(lumi1_, (pname+"_sz").c_str(), H5P_DEFAULT);
+  auto space = H5Dget_space (dset); 
+  hsize_t stride[1];
+  hsize_t start[1];
   if (iEventIndex == 0) {
     d.read(st_end);
+ // C code 
+    stride[0] = 1;
+    start[0] = 0;
+    auto status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, NULL, stride, NULL);
+    status = H5Dread (dset, H5T_STD_I32LE, H5S_ALL, space, H5P_DEFAULT, &temp[0]);
     st_end.insert(st_end.begin(), 0);
   }
   else
+  {
+   // C code
+   stride[0] = 2;
+   start[0] = iEventIndex-1;
+    auto status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, NULL, stride, NULL);
+    //status = H5Dread (dset, H5T_STD_I32LE, space, H5S_ALL, H5P_DEFAULT, &temp[0]);
+   // end
     d.select({static_cast<unsigned long int>(iEventIndex-1)}, {2}).read(st_end);
+  }
+  
+  H5Dclose(dset);
   return {st_end[0], st_end[1]};
 }
 

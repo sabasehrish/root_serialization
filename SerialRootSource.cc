@@ -36,7 +36,14 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
-      eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
+      auto addr = reinterpret_cast<void**>(b->GetAddress());
+      if (file_->GetKey("RootFileDB")) {
+        // art/ROOT file
+        eventAuxReader_ = EventAuxReader([addr]{ return artEventID(addr); });
+      } else {
+        // CMSSW file
+        eventAuxReader_ = EventAuxReader([addr]{ return cmsEventID(addr); });
+      }
     }
   }
 

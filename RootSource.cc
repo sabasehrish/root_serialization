@@ -38,7 +38,14 @@ RootSource::RootSource(std::string const& iName) :
 			       &delayedReader_);
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
-      eventAuxReader_ = EventAuxReader(dataProducts_.back().address());
+      auto addr = dataProducts_.back().address();
+      if (file_->GetKey("RootFileDB")) {
+        // art/ROOT file
+        eventAuxReader_ = EventAuxReader([addr]{ return artEventID(addr); });
+      } else {
+        // CMSSW file
+        eventAuxReader_ = EventAuxReader([addr]{ return cmsEventID(addr); });
+      }
     }
   }
   if(not eventAuxReader_) {

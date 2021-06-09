@@ -36,8 +36,11 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
-      eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
     }
+  }
+
+  if(eventAuxBranch_) {
+    eventAuxReader_ = EventAuxReader{*file_}.bindToBranch(eventAuxBranch_);
   }
 
   for(int laneId=0; laneId < iNLanes; ++laneId) {
@@ -72,7 +75,7 @@ void SerialRootSource::readEventAsync(unsigned int iLane, long iEventIndex, Opti
         auto start = std::chrono::high_resolution_clock::now();
         if(eventAuxBranch_) {
           eventAuxBranch_->GetEntry(iEventIndex);
-          identifiers_[iLane] = eventAuxReader_->doWork();
+          identifiers_[iLane] = eventAuxReader_.doWork();
         } else if(eventIDBranch_) {
           eventIDBranch_->SetAddress(&identifiers_[iLane]);
           eventIDBranch_->GetEntry(iEventIndex);

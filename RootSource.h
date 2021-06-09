@@ -39,7 +39,7 @@ private:
   std::unique_ptr<TFile> file_;
   TTree* events_;
   RootDelayedRetriever delayedReader_;
-  std::optional<EventAuxReader> eventAuxReader_;
+  EventAuxReader eventAuxReader_;
   TBranch* eventIDBranch_ = nullptr;
   EventIdentifier id_;
   std::vector<DataProductRetriever> dataProducts_;

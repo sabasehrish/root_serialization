@@ -18,6 +18,8 @@ RootSource::RootSource(std::string const& iName) :
 
   dataProducts_.reserve(l->GetEntriesFast());
   branches_.reserve(l->GetEntriesFast());
+
+  void** aux_branch{nullptr};
   for( int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
@@ -38,11 +40,11 @@ RootSource::RootSource(std::string const& iName) :
 			       &delayedReader_);
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
-      eventAuxReader_ = EventAuxReader(dataProducts_.back().address());
+      aux_branch = dataProducts_.back().address();
     }
   }
-  if(not eventAuxReader_) {
-    eventAuxReader_ = EventAuxReader(nullptr);
+  if(aux_branch) {
+    eventAuxReader_.bindToBranch(aux_branch);
   }
 }
 
@@ -50,7 +52,7 @@ EventIdentifier RootSource::eventIdentifier() {
   if(eventIDBranch_) {
     return id_;
   }
-  return eventAuxReader_->doWork();
+  return eventAuxReader_.doWork();
 }
 
 long RootSource::numberOfEvents() { 

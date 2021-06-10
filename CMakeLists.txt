@@ -5,7 +5,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # set the project name
-project(threaded_io_test VERSION 0.1)
+project(threaded_io_test VERSION 0.1 LANGUAGES CXX)
+
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 # want debug symbols
 set(CMAKE_CXX_FLAGS "-g")
@@ -15,41 +17,49 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
-
-
-#ROOT
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree HINTS ${ROOT_DIR})
-
-#TBB
-find_package(TBB REQUIRED HINTS ${TBB_DIR})
-
-#LZ4
-list(APPEND EXTRA_LIBS lz4)
-list(APPEND EXTRA_INCLUDES ${LZ4_DIR}/include)
-
-#ZSTD
-find_package(zstd HINTS ${ZSTD_DIR})
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+find_package(TBB REQUIRED)
+find_package(zstd REQUIRED)
+find_package(lz4 REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
+
 #make the library for testing
 add_library(configKeys configKeyValuePairs.cc)
 
-# add the executable
-add_executable(threaded_io_test threaded_io_test.cc sourceFactoryGenerator.cc outputerFactoryGenerator.cc SerialTaskQueue.cc RootSource.cc PDSSource.cc PDSOutputer.cc RepeatingRootSource.cc Lane.cc RootOutputer.cc configKeyValuePairs.cc TBufferMergerRootOutputer.cc SerialRootSource.cc TextDumpOutputer.cc pds_reading.cc SharedPDSSource.cc TestProductsSource.cc TestProductsOutputer.cc)
+add_executable(threaded_io_test
+  Lane.cc
+  PDSOutputer.cc
+  PDSSource.cc
+  RepeatingRootSource.cc
+  RootOutputer.cc
+  RootSource.cc
+  SerialRootSource.cc
+  SerialTaskQueue.cc
+  SharedPDSSource.cc
+  TBufferMergerRootOutputer.cc
+  TestProductsOutputer.cc
+  TestProductsSource.cc
+  TextDumpOutputer.cc
+  outputerFactoryGenerator.cc
+  pds_reading.cc
+  sourceFactoryGenerator.cc
+  threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PUBLIC
-                           "${PROJECT_BINARY_DIR}"
-                           ${EXTRA_INCLUDES}
-                           )
+target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}")
 
-target_link_directories(threaded_io_test PUBLIC ${LZ4_DIR}/lib)
-target_link_libraries(threaded_io_test PUBLIC zstd::libzstd_shared)
-target_link_libraries(threaded_io_test PUBLIC ROOT::RIO ROOT::Tree ROOT::Core)
-target_link_libraries(threaded_io_test PUBLIC TBB::tbb ${EXTRA_LIBS})
-target_link_libraries(threaded_io_test PRIVATE Threads::Threads)
+target_link_libraries(threaded_io_test
+                      PRIVATE LZ4::lz4
+                              ROOT::Core
+                              ROOT::RIO
+                              ROOT::Tree
+                              TBB::tbb
+                              Threads::Threads
+                              configKeys
+                              zstd::libzstd_shared)
 
 enable_testing()
 add_subdirectory(tests)

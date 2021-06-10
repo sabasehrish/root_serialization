@@ -8,14 +8,23 @@ The CMakeLists.txt uses 3rd party packages from /cvmfs which are identical to th
 code is needed to build the code from this repository. CMS header files and shared libraries are needed if data files containing CMS data are being read.
 
 To build
-1. git clone ....
-1. cd root_serialization
-1. mkdir build
-1. cd build
-1. cmake .. -DZSTD_DIR=path_to_zstd_install -DTBB_DIR=path_to_tbb_install -DLZ4_DIR=path_to_lz4_install -DROOT_DIR=path_to_root_install
-1. make
 
-This will create the executable `threaded_io_test`.
+```
+$ git clone <root_serialization URL>
+$ mkdir build-root-serialization
+$ cd build-root-serialization
+$ cmake <path to root_serialization> \
+  -DROOT_DIR=path_to_ROOT_cmake_targets \
+  [-DTBB_DIR=path_to_tbb_cmake_targets] \
+  [-DZSTD_DIR=path_to_zstd_cmake_targets] \
+  [-DLZ4_DIR=path_to_lz4_install]
+$ make [-j N]
+```
+
+This will create the executable `threaded_io_test`.  Note that CMake
+can use some of the information from ROOT's CMake configuration to
+infer the build information for TBB, zstd, and lz4.  If the ROOT
+runtime is setup, one can use `-DROOT_DIR=$ROOTSYS/cmake`.
 
 ## threaded_io_test design
 The testing structure has 2 customizable component types
@@ -177,5 +186,3 @@ Writes the _event_ data products into a PDS file. Specify both the name of the O
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 PDSOutputer=test.pds
 ```
-
-

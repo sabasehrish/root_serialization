@@ -29,7 +29,7 @@ namespace {
 std::pair<uint32_t, Compression> readPreamble(std::istream& iFile) {
   std::array<uint32_t, 4> header;
   iFile.read(reinterpret_cast<char*>(header.data()),4*4);
-  assert(file_.rdstate() == std::ios_base::goodbit);
+  assert(iFile.rdstate() == std::ios_base::goodbit);
 
   assert(3141592*256+1 == header[0]);
   return std::make_pair(header[3], whichCompression(reinterpret_cast<const char*>(&header[2])));
@@ -125,7 +125,7 @@ std::vector<uint32_t> pds::readWords(std::istream& iFile, uint32_t bufferSize) {
   std::vector<uint32_t> words(bufferSize);
   iFile.read(reinterpret_cast<char*>(words.data()), 4*bufferSize);
   assert(iFile.rdstate() == std::ios_base::goodbit);
-  return words;  
+  return words;
 }
 
 std::vector<ProductInfo> pds::readFileHeader(std::istream& file, Compression& compression) {
@@ -192,8 +192,8 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
   std::vector<uint32_t> uBuffer(size_t(uncompressedBufferSize), 0);
   if(Compression::kLZ4 == compression) {
     LZ4_decompress_safe(reinterpret_cast<char const*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
-			compressedBufferSizeInBytes,
-			uncompressedBufferSize*4);
+                        compressedBufferSizeInBytes,
+                        uncompressedBufferSize*4);
   } else if(Compression::kZSTD == compression) {
     ZSTD_decompress(uBuffer.data(), uncompressedBufferSize*4, &(*(buffer.begin()+1)), compressedBufferSizeInBytes);
   } else if(Compression::kNone == compression) {
@@ -210,7 +210,7 @@ void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std
   while(it < itEnd) {
     auto productIndex = *(it++);
     auto storedSize = *(it++);
-   
+
     //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
     bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize*4, kFALSE);
     dataProducts[productIndex].classType()->ReadBuffer(bufferFile, *dataProducts[productIndex].address());

@@ -17,11 +17,27 @@ $ cmake <path to root_serialization> \
   -DROOT_DIR=path_to_ROOT_cmake_targets \
   [-DTBB_DIR=path_to_tbb_cmake_targets] \
   [-DZSTD_DIR=path_to_zstd_cmake_targets] \
+  [-DLZ4_DIR=path_to_lz4_cmake_targets]
+$ make [-j N]
+```
+
+This will create the executable `threaded_io_test`.
+
+If no cmake target exists for your installation of lz4, you can replace the cmake command above with
+
+```
+$ cmake <path to root_serialization> \
+  -DCMAKE_PREFIX_PATH=path_to_lz4_install \
+  -DROOT_DIR=path_to_ROOT_cmake_targets \
+  [-DTBB_DIR=path_to_tbb_cmake_targets] \
+  [-DZSTD_DIR=path_to_zstd_cmake_targets] \
   [-DLZ4_DIR=path_to_lz4_install]
 $ make [-j N]
 ```
 
-This will create the executable `threaded_io_test`.  Note that CMake
+where `path_to_lz4_install` is the path to the folder holding the `include` and `lib` directories containing the files for lz4.
+
+Note that CMake
 can use some of the information from ROOT's CMake configuration to
 infer the build information for TBB, zstd, and lz4.  If the ROOT
 runtime is setup, one can use `-DROOT_DIR=$ROOTSYS/cmake`.

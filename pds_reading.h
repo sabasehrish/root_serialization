@@ -4,7 +4,7 @@
 #include <istream>
 #include <vector>
 
-#include "UnrolledDeserializer.h"
+#include "DeserializeStrategy.h"
 #include "EventIdentifier.h"
 #include "DataProductRetriever.h"
 
@@ -29,14 +29,15 @@ namespace cce::tf::pds {
   };
   
   enum class Compression {kNone, kLZ4, kZSTD};
+  enum class Serialization {kRoot, kRootUnrolled};
 
-  std::vector<ProductInfo> readFileHeader(std::istream&, Compression&);
+  std::vector<ProductInfo> readFileHeader(std::istream&, Compression&, Serialization&);
 
   constexpr size_t kEventHeaderSizeInWords = 5;
   bool skipToNextEvent(std::istream&); //returns true if an event was skipped
   bool readCompressedEventBuffer(std::istream&, EventIdentifier&, std::vector<uint32_t>& buffer);
   std::vector<uint32_t> uncompressEventBuffer(pds::Compression, std::vector<uint32_t> const& buffer);
-  void deserializeDataProducts(std::vector<uint32_t>::const_iterator, std::vector<uint32_t>::const_iterator, std::vector<DataProductRetriever>&, std::vector<UnrolledDeserializer> const&);
+  void deserializeDataProducts(std::vector<uint32_t>::const_iterator, std::vector<uint32_t>::const_iterator, std::vector<DataProductRetriever>&, DeserializeStrategy const&);
 
 }
 

@@ -26,13 +26,19 @@ namespace {
   return Compression::kNone;
 }
 
-std::pair<uint32_t, Compression> readPreamble(std::istream& iFile) {
+  struct Preamble {
+    uint32_t bufferSize;
+    Compression compression;
+    Serialization serialization;
+  };
+Preamble readPreamble(std::istream& iFile) {
   std::array<uint32_t, 4> header;
   iFile.read(reinterpret_cast<char*>(header.data()),4*4);
   assert(iFile.rdstate() == std::ios_base::goodbit);
 
   assert(3141592*256+1 == header[0]);
-  return std::make_pair(header[3], whichCompression(reinterpret_cast<const char*>(&header[2])));
+  Serialization serialization = (header[0] -3141592*256-1) == 0? Serialization::kRoot : Serialization::kRootUnrolled; 
+  return {header[3], whichCompression(reinterpret_cast<const char*>(&header[2])), serialization};
 }
 
 using buffer_iterator = std::vector<std::uint32_t>::const_iterator;
@@ -128,10 +134,11 @@ std::vector<uint32_t> pds::readWords(std::istream& iFile, uint32_t bufferSize) {
   return words;
 }
 
-std::vector<ProductInfo> pds::readFileHeader(std::istream& file, Compression& compression) {
+std::vector<ProductInfo> pds::readFileHeader(std::istream& file, Compression& compression, Serialization& serialization) {
   auto preamble = readPreamble(file);
-  auto bufferSize = preamble.first;
-  compression = preamble.second;
+  auto bufferSize = preamble.bufferSize;
+  compression = preamble.compression;
+  serialization = preamble.serialization;
 
   //1 word beyond the buffer is the crosscheck value
   std::vector<uint32_t> buffer = readWords(file, bufferSize+1);
@@ -204,7 +211,7 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
 }
 
 #include <iostream>
-void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts, std::vector<UnrolledDeserializer> const& deserializers) {
+void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts, DeserializeStrategy const& deserializers) {
 
   while(it < itEnd) {
     auto productIndex = *(it++);

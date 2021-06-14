@@ -85,6 +85,7 @@ namespace {
   struct PDSConfig {
     int compressionLevel_=18;
     std::string compressionAlgorithm_="ZSTD";
+    std::string serializationAlgorithm_="ROOT";
   };
 
   std::optional<std::pair<std::string, PDSConfig>> parsePDSConfig(std::string_view iOptions) {
@@ -106,6 +107,11 @@ namespace {
       if(itFound != keyValues.end()) {
 	config.compressionAlgorithm_ = itFound->second;
 	++foundOptions;
+      }
+      itFound = keyValues.find("serializationAlgorithm");
+      if(itFound != keyValues.end()) {
+        config.serializationAlgorithm_ = itFound->second;
+        ++foundOptions;
       }
       if(foundOptions != keyValues.size()) {
 	std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
@@ -172,7 +178,17 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       return outFactory;
     }
     auto compressionLevel = result->second.compressionLevel_;
-    outFactory = [fileName, compression, compressionLevel](unsigned int nLanes) { return std::make_unique<PDSOutputer>(fileName, nLanes, compression, compressionLevel);};
+    PDSOutputer::Serialization serialization = PDSOutputer::Serialization::kRoot;
+    auto const& serializationName = result->second.serializationAlgorithm_;
+    if(serializationName == "" or serializationName=="ROOT") {
+      serialization = PDSOutputer::Serialization::kRoot;
+    } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
+      serialization = PDSOutputer::Serialization::kRootUnrolled;
+    } else {
+      std::cout <<"unknown serialization "<<serializationName<<std::endl;
+      return outFactory;
+    }
+    outFactory = [fileName, compression, compressionLevel, serialization](unsigned int nLanes) { return std::make_unique<PDSOutputer>(fileName, nLanes, compression, compressionLevel, serialization);};
   } else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
     if(not result) {

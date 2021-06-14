@@ -1,4 +1,6 @@
 #include "PDSOutputer.h"
+#include "UnrolledSerializerWrapper.h"
+#include "SerializerWrapper.h"
 #include "summarize_serializers.h"
 #include "lz4.h"
 #include "zstd.h"
@@ -10,6 +12,12 @@ using namespace cce::tf;
 
 void PDSOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
+  switch(serialization_) {
+  case Serialization::kRoot:
+    {   s = SerializeStrategy::make<SerializeProxy<SerializerWrapper>>(); break; }
+  case Serialization::kRootUnrolled:
+    {   s = SerializeStrategy::make<SerializeProxy<UnrolledSerializerWrapper>>(); break; }
+  }
   s.reserve(iDPs.size());
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
@@ -44,7 +52,7 @@ void PDSOutputer::printSummary() const  {
 
 
 
-void PDSOutputer::output(EventIdentifier const& iEventID, std::vector<UnrolledSerializerWrapper> const& iSerializers, std::vector<uint32_t>const& iBuffer) {
+void PDSOutputer::output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<uint32_t>const& iBuffer) {
   if(firstTime_) {
     writeFileHeader(iSerializers);
     firstTime_ = false;
@@ -62,7 +70,7 @@ void PDSOutputer::output(EventIdentifier const& iEventID, std::vector<UnrolledSe
   */
 }
 
-void PDSOutputer::writeFileHeader(std::vector<UnrolledSerializerWrapper> const& iSerializers) {
+void PDSOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   std::set<std::string> typeNamesSet;
   for(auto const& w: iSerializers) {
     std::string n(w.className());
@@ -133,7 +141,11 @@ void PDSOutputer::writeFileHeader(std::vector<UnrolledSerializerWrapper> const& 
   
   {
     //The file type identifier
-    const uint32_t id = 3141592*256+1;
+    uint32_t comp = 0;
+    if(serialization_ == Serialization::kRootUnrolled) {
+      comp = 1;
+    }
+    const uint32_t id = 3141592*256+1 + comp;
     file_.write(reinterpret_cast<char const*>(&id), 4);
   }
   {
@@ -187,7 +199,7 @@ void PDSOutputer::writeEventHeader(EventIdentifier const& iEventID) {
   file_.write(reinterpret_cast<char const*>(buffer.data()), headerBufferSizeInWords*4);
 }
 
-std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(std::vector<UnrolledSerializerWrapper> const& iSerializers) const{
+std::vector<uint32_t> PDSOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
   //Calculate buffer size needed
   uint32_t bufferSize = 0;
   for(auto const& s: iSerializers) {

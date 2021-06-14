@@ -1,6 +1,9 @@
 #include "PDSSource.h"
 #include "TClass.h"
 
+#include "Deserializer.h"
+#include "UnrolledDeserializer.h"
+
 using namespace cce::tf;
 using namespace cce::tf::pds;
 
@@ -33,7 +36,17 @@ PDSSource::PDSSource(std::string const& iName) :
                  SourceBase(),
   file_{iName, std::ios_base::binary}
 {
-  auto productInfo = readFileHeader(file_, compression_);
+  pds::Serialization serialization;
+  auto productInfo = readFileHeader(file_, compression_, serialization);
+
+  switch(serialization) {
+  case pds::Serialization::kRoot: { 
+    deserializers_ = DeserializeStrategy::make<DeserializeProxy<Deserializer>>(); break;
+  }
+  case pds::Serialization::kRootUnrolled: {
+    deserializers_ = DeserializeStrategy::make<DeserializeProxy<UnrolledDeserializer>>(); break;
+  }
+  }
 
   dataProducts_.reserve(productInfo.size());
   dataBuffers_.resize(productInfo.size(), nullptr);

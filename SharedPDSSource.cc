@@ -1,4 +1,7 @@
 #include "SharedPDSSource.h"
+#include "Deserializer.h"
+#include "UnrolledDeserializer.h"
+
 #include "TClass.h"
 
 using namespace cce::tf;
@@ -8,15 +11,26 @@ SharedPDSSource::SharedPDSSource(unsigned int iNLanes, unsigned long long iNEven
                  file_{iName, std::ios_base::binary},
   readTime_{std::chrono::microseconds::zero()}
 {
-  auto productInfo = readFileHeader(file_, compression_);
+  pds::Serialization serialization;
+  auto productInfo = readFileHeader(file_, compression_, serialization);
 
   laneInfos_.reserve(iNLanes);
   for(unsigned int i = 0; i< iNLanes; ++i) {
-    laneInfos_.emplace_back(productInfo);
+    DeserializeStrategy strategy;
+    switch(serialization) {
+    case pds::Serialization::kRoot: { 
+      strategy = DeserializeStrategy::make<DeserializeProxy<Deserializer>>(); break;
+    }
+    case pds::Serialization::kRootUnrolled: {
+      strategy = DeserializeStrategy::make<DeserializeProxy<UnrolledDeserializer>>(); break;
+    }
+    }
+    laneInfos_.emplace_back(productInfo, std::move(strategy));
   }
 }
 
-SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo):
+SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo, DeserializeStrategy deserialize):
+  deserializers_{std::move(deserialize)},
   decompressTime_{std::chrono::microseconds::zero()},
   deserializeTime_{std::chrono::microseconds::zero()}
 {

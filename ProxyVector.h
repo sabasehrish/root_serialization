@@ -30,7 +30,7 @@ class ProxyVectorImpBase {
  virtual ~ProxyVectorImpBase() = default;
 
  virtual void reserve(std::size_t) = 0;
- virtual void emplace_back(ARGS... args) = 0;
+ virtual P& emplace_back(ARGS... args) = 0;
  virtual std::size_t size() const = 0;
 
  virtual P const& operator[](std::size_t index) const = 0;
@@ -71,8 +71,8 @@ template<typename T, typename PROXY, typename... ARGS>
    storage_.reserve(iSize);
  }
 
- void emplace_back(ARGS... iArgs ) {
-   storage_.emplace_back(std::forward<ARGS>(iArgs)...);
+ T& emplace_back(ARGS... iArgs ) {
+   return storage_.emplace_back(std::forward<ARGS>(iArgs)...);
  }
 
  std::size_t size() const { return storage_.size();}
@@ -101,7 +101,7 @@ class ProxyVector {
   ProxyVector(ProxyVector&&) = default;
 
  void reserve(std::size_t iSize) { imp_->reserve(iSize);}
- void emplace_back(ARGS... iargs) {imp_->emplace_back(std::forward<ARGS>(iargs)...);}
+ P& emplace_back(ARGS... iargs) { return imp_->emplace_back(std::forward<ARGS>(iargs)...);}
  std::size_t size() const {return imp_->size();}
 
  P const& operator[](std::size_t index) const {

@@ -5,5 +5,5 @@ namespace cce::tf {
     struct SequenceFinderForBuiltins {
       T value_;
     };
-};
+}
 #endif

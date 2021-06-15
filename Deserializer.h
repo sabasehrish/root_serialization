@@ -8,8 +8,7 @@
 namespace cce::tf {
 class Deserializer {
 public:
- Deserializer(TClass* iClass) : class_{iClass} {}
-
+  explicit Deserializer(TClass* iClass) : class_{iClass} {}
 
   int deserialize(std::vector<char> const& iBuffer, void* iWriteTo) const {
     return deserialize(&iBuffer.front(), iBuffer.size(), iWriteTo);

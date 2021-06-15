@@ -50,6 +50,9 @@ namespace cce::tf {
     LaneInfo(LaneInfo&&) = default;
     LaneInfo(LaneInfo const&) = delete;
 
+    LaneInfo& operator=(LaneInfo&&) = default;
+    LaneInfo& operator=(LaneInfo const&) = delete;
+
     EventIdentifier eventID_;
     std::vector<DataProductRetriever> dataProducts_;
     std::vector<void*> dataBuffers_;

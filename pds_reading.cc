@@ -210,7 +210,6 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
   return uBuffer;
 }
 
-#include <iostream>
 void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts, DeserializeStrategy const& deserializers) {
 
   while(it < itEnd) {

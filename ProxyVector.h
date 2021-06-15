@@ -1,6 +1,26 @@
 #if !defined(ProxyVector_h)
 #define ProxyVector_h
 
+/*---------------------------------------
+The ProxyVector class is intended to look like a contiguous container
+holding base classes by value. The elements of a given ProxyVector are
+all the same actual type (which inherit from the given base class).
+
+The actual underlying implementation uses the Pimpl idiom via the use of
+ProxyVectorImpBase and ProxyVectorImp. The elements are stored in the
+ProxyVectorImp via std::vector<> holding the concrete class by value.
+
+Using ProxyVector instead of a std::vector<std::unique_ptr<Base>> allows
+for better memory cache locality as each successive element of the container
+is guaranteed to be next to each other in memory. Also requiring all the
+elements to be of the same type means virtual function lookups should be
+cached on the first element request and be reused for each subsequent call
+when looping over all elements. 
+  ---------------------------------------*/
+
+namespace cce::tf {
+
+namespace implementation {
 //Base implementation
 template<typename P, typename... ARGS>
 class ProxyVectorImpBase {
@@ -67,7 +87,7 @@ template<typename T, typename PROXY, typename... ARGS>
  private:
  std::vector<T> storage_;
 };
-
+}
 
 //User facing class
 template<typename P, typename... ARGS>
@@ -116,13 +136,13 @@ class ProxyVector {
 
  template<typename T>
  static ProxyVector<P, ARGS...> make() {
-   return ProxyVector<P, ARGS...>( std::make_unique<ProxyVectorImp<T, P, ARGS...>>() );
+   return ProxyVector<P, ARGS...>( std::make_unique<implementation::ProxyVectorImp<T, P, ARGS...>>() );
  }
 
  private:
- ProxyVector( std::unique_ptr<ProxyVectorImpBase<P, ARGS...>> iImp): imp_(std::move(iImp)) {}
- std::unique_ptr<ProxyVectorImpBase<P, ARGS...>> imp_;
+ ProxyVector( std::unique_ptr<implementation::ProxyVectorImpBase<P, ARGS...>> iImp): imp_(std::move(iImp)) {}
+ std::unique_ptr<implementation::ProxyVectorImpBase<P, ARGS...>> imp_;
 };
 
-
+}
 #endif

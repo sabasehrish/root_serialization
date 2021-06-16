@@ -14,45 +14,28 @@ HDFSource::op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
 {
   herr_t          status;
   H5O_info_t      infobuf;
-
- /*
- *      * Get type of the object and display its name and type.
- *        The name of the object is passed to this function by
- *        the Library.
- *  */
   status = H5Oget_info_by_name (loc_id, name, &infobuf, H5O_INFO_BASIC, H5P_DEFAULT);
 //We may want to see if H5O_INFO_ALL will be better
   switch (infobuf.type) {
-    case H5O_TYPE_GROUP:
-      printf ("  Group: %s\n", name);
-      break;
     case H5O_TYPE_DATASET:
       if (strstr(name,"_sz") == NULL && strcmp(name, "Event_IDs") != 0){     
-        printf ("  Dataset: %s\n", name);
-        printf ("  loc id: %d\n", dpid_);
         productInfo_.push_back({name, dpid_});
         ++dpid_;
       }
       break;
-    case H5O_TYPE_NAMED_DATATYPE:
-      printf ("  Datatype: %s\n", name);
-      break;
     default:
-      printf ( "  Unknown: %s\n", name);
+      printf ( "  Other type: %s\n", name);
   }
 
   return 0;
 }
 
 HDFSource::HDFSource(std::string const& iName):
-file_(iName, File::ReadOnly),
-lumi_(file_.getGroup("/Lumi/")),
-file1_(H5Fopen(iName.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT))
+file_(File::open(iName.c_str())),
+lumi_(Group::open(file_, "/Lumi"))
 {
   dpid_ = 0;
-  std::string gname = "/Lumi";
-  lumi1_ = H5Gopen2(file1_, gname.c_str(), H5P_DEFAULT);
-  H5Literate (lumi1_, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL);
+  H5Literate (lumi_, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL);
   
   dataProducts_.reserve(productInfo_.size());
   dataBuffers_.resize(productInfo_.size(), nullptr);
@@ -61,10 +44,10 @@ file1_(H5Fopen(iName.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT))
   for (auto p: productInfo_) {
     TClass* cls = TClass::GetClass(classnames_[p.classIndex()].c_str());
     std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
-    dataBuffers_[index] = cls->New();
-    assert(cls);
-    dataProducts_.emplace_back(index, &dataBuffers_[index], p.name(), cls, &delayedRetriever_);
-    ++index;
+      dataBuffers_[index] = cls->New();
+      assert(cls);
+      dataProducts_.emplace_back(index, &dataBuffers_[index], p.name(), cls, &delayedRetriever_);
+      ++index;
   }
 }
 
@@ -77,8 +60,6 @@ HDFSource::~HDFSource() {
     ++it;
   }
   productInfo_.clear();
-  H5Gclose(lumi1_);
-  H5Fclose(file1_);
 }
 
 
@@ -86,75 +67,91 @@ std::vector<std::string>
 HDFSource::readClassNames() {
   std::vector<std::string> classnames;
   for (auto pi : productInfo_) {
-    auto d = lumi_.getDataSet(pi.name());
-    std::vector<std::string> all_attribute_keys = d.listAttributeNames();
-  //  std::cout << i << ", " << all_attribute_keys.size() << "\n";
-    auto a = d.getAttribute(all_attribute_keys[0]);
-    std::string classname;
-    a.read(classname);
-    classnames.push_back(classname);
+    auto dset = Dataset::open(lumi_, (pi.name()).c_str());
+    auto aid = Attribute::open(dset, "classname");
+    auto tid = H5Aget_type(aid); 
+    auto sz = H5Aget_storage_size(aid);
+    char* attribute_name= new char[sz+1];
+    H5Aread(aid, tid, &attribute_name);
+    std::string s(attribute_name);
+    H5free_memory(attribute_name);
+    //std::cout << s << '\n';
+    classnames.push_back(s);
   }
   return classnames;
 }
 
+
 std::pair<long unsigned int, long unsigned int>
 HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
-  std::vector<long unsigned int> st_end;
-  std::vector<long unsigned int> temp;
-  auto d = lumi_.getDataSet(pname+"_sz");
-  hid_t dset = H5Dopen2(lumi1_, (pname+"_sz").c_str(), H5P_DEFAULT);
-  auto space = H5Dget_space (dset); 
-  hsize_t stride[1];
-  hsize_t start[1];
+  long unsigned int st_end[10];
+  auto dset = Dataset::open(lumi_, (pname+"_sz").c_str());
+  auto space = Dataspace::get_space(dset); 
+  auto status = H5Dread(dset, H5T_STD_U64LE, space, space, H5P_DEFAULT, st_end);
   if (iEventIndex == 0) {
-    d.read(st_end);
- // C code 
-    stride[0] = 1;
-    start[0] = 0;
-    auto status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, NULL, stride, NULL);
-    status = H5Dread (dset, H5T_STD_I32LE, H5S_ALL, space, H5P_DEFAULT, &temp[0]);
-    st_end.insert(st_end.begin(), 0);
+    return {0, st_end[iEventIndex]};
   }
   else
   {
-   // C code
-   stride[0] = 2;
-   start[0] = iEventIndex-1;
-    auto status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, NULL, stride, NULL);
-    //status = H5Dread (dset, H5T_STD_I32LE, space, H5S_ALL, H5P_DEFAULT, &temp[0]);
-   // end
-    d.select({static_cast<unsigned long int>(iEventIndex-1)}, {2}).read(st_end);
+   return {st_end[iEventIndex-1], st_end[iEventIndex]};
   }
-  
-  H5Dclose(dset);
-  return {st_end[0], st_end[1]};
 }
+
 
 bool
 HDFSource::readEvent(long iEventIndex) {
-  unsigned int run_num;
-  unsigned int lumi_num;
-  lumi_.getAttribute("run").read(run_num);
-  lumi_.getAttribute("lumisec").read(lumi_num);
+  unsigned int run_num[1];
+  unsigned int lumi_num[1];
+  auto attr_r = Attribute::open(lumi_, "run");
+  H5Aread(attr_r, H5T_STD_I32LE,run_num);
+  auto attr_l = Attribute::open(lumi_, "lumisec");
+  H5Aread(attr_l, H5T_STD_I32LE,lumi_num);
   std::vector<char> product;
   std::vector<product_t> products;
   products.reserve(productInfo_.size());
   long unsigned int begin;
   long unsigned int end;
   int i = 0;
-  auto evtds = lumi_.getDataSet("Event_IDs");
-  unsigned int eventID;
-  evtds.select({static_cast<unsigned long>(iEventIndex)}, {1}).read(eventID);
-  eventID_ = {run_num, lumi_num, eventID};
+  auto dset = Dataset::open(lumi_, "Event_IDs");
+  unsigned int eventID[1];
+  hsize_t coords[1]; 
+  coords[0] = iEventIndex;
+  hsize_t d = 1;
+  auto fspace = Dataspace::get_space(dset);
+  auto mspace = Dataspace::create_simple(1, &d, NULL); 
+  H5Sselect_elements(fspace, H5S_SELECT_SET, 1, (const hsize_t *)&coords);
+  H5Dread(dset, H5T_STD_I32LE, mspace, fspace, H5P_DEFAULT, eventID); 
+  //std::cout << "Reading event: " << eventID[0] << std::endl;
+  eventID_ = {run_num[0], lumi_num[0], eventID[0]};
+  hsize_t start[1];
+  hsize_t stride[1];
+  hsize_t count[1];
+  hsize_t block[1];
+  hsize_t dimsr[2];
+  char *product1;
   for (auto pi : productInfo_) {
       std::tie(begin, end) = getEventOffsets(iEventIndex, pi.name());
-      auto dset = lumi_.getDataSet(pi.name());
-      auto ds = dset.getSpace();
-      dset.select({begin}, {end-begin}).read(product);
-    //  std::cout << pi.name() << ", " << classnames_[i] << "Begin at: " << begin << ", and size of dp: " << (end-begin) << " , " << product.size() << "\n";
+      auto dset1 = Dataset::open(lumi_, (pi.name()).c_str());
+      auto fspace1 = Dataspace::get_space(dset1);
+      auto rank = H5Sget_simple_extent_ndims (fspace1);
+      H5Sget_simple_extent_dims (fspace1, dimsr, NULL);
+      hsize_t num[1];
+      num[0] = end-begin;
+      auto mspace1 = Dataspace::create_simple(1, &num[0], NULL); 
+      std::cout << "Reading: " << pi.name() << ", " << classnames_[i] << " Ndims: "<< rank << ", Begin at: " << begin << ", and end at : " << end << "and dims are: "<< dimsr[0] << ", " << dimsr[1] << '\n';
+      product1 = new char[num[0]];
+      start[0]  = begin;
+      stride[0] = 1;
+      count[0]  = num[0];
+      block[0]  = 1;
+      auto err = H5Sselect_hyperslab(fspace1, H5S_SELECT_SET, start, stride, count, block);
+      //std::cout << "syperslab: "<< err << std::endl;
+      H5Dread(dset1, H5T_NATIVE_CHAR, mspace1, fspace1, H5P_DEFAULT, product1);
       ++i;
-      products.push_back(product);
+      products.push_back({product1, product1 + num[0]});
+      delete[] product1;
   }
+
   deserializeDataProducts(products.begin(), products.end());
   return true;
 }

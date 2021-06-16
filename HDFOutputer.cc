@@ -6,8 +6,16 @@
 #include <set>
 
 using namespace cce::tf;
-using namespace HighFive;
 using product_t = std::vector<char>; 
+
+HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
+  file_(File::create(iFileName.c_str())),
+  serializers_{std::size_t(iNLanes)},
+  serialTime_{std::chrono::microseconds::zero()},
+  parallelTime_{0}
+  {}
+
+HDFOutputer::~HDFOutputer() { }
 
 void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
@@ -54,7 +62,6 @@ get_prods_and_sizes(std::vector<product_t> & input,
   for(int j = prod_index; j< input.size(); j+=stride) {
     std::cout << prod_index << ", " << offsets_[prod_index] << "\n";
     sizes.push_back(offsets_[prod_index]+=input[j].size());
-    //sizes.push_back(input[j].size());
     products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
   }
   return {products, sizes};
@@ -62,8 +69,8 @@ get_prods_and_sizes(std::vector<product_t> & input,
 
 template <typename T> 
 void write_ds(hid_t gid, std::string name, std::vector<T> data) {
-  hid_t dset = H5Dopen2(gid, name.c_str(), H5P_DEFAULT); 
-  hid_t dspace = H5Dget_space(dset);
+  auto dset = Dataset::open(gid, name.c_str()); 
+  auto dspace = Dataspace::get_space(dset);
   hsize_t     maxdims[1] = {H5S_UNLIMITED};
   hsize_t old_dims[1]; //our datasets are 1D
   H5Sget_simple_extent_dims(dspace, old_dims, maxdims);
@@ -76,20 +83,8 @@ void write_ds(hid_t gid, std::string name, std::vector<T> data) {
   hid_t status = H5Dextend (dset, new_dims);
   auto filespace = H5Dget_space (dset);
   status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, old_dims, NULL, stride, NULL); 
-  dspace = H5Screate_simple(1, stride, maxdims);
-  //std::cout << "Old_dims: " << old_dims[0] << ", New dims" << new_dims[0] << std::endl;
- // std::cout << "event 0 " << data[0] << ", event 1: " << data[1] << std::endl;
-  
-  if (typeid(data[0]) == typeid(int)) {
-    status = H5Dwrite(dset, H5T_STD_I32LE, dspace, filespace, H5P_DEFAULT, &data[0]);  } else if (typeid(data[0]) == typeid(char)) {
-    status = H5Dwrite(dset, H5T_STD_I8LE, dspace, filespace, H5P_DEFAULT, &data[0]);
-  } else if (typeid(data[0]) == typeid(size_t)) {
-    status = H5Dwrite(dset, H5T_STD_U64LE, dspace, filespace, H5P_DEFAULT, &data[0]);
-  } else {
-    std::cerr << "We currently dont support this type\n";
-  }
-H5Dclose(dset);
-H5Sclose(dspace);
+  auto dspace1 = Dataspace::create_simple(1, stride, maxdims);
+  dset.write<T>(dspace1, filespace, data); //H5Dwrite
 }
 
 
@@ -107,7 +102,7 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
     ++batch_;
   }
   if (batch_ == 2) { //max_batch_size){
-    hid_t gid = H5Gopen2(file1_, "Lumi", H5P_DEFAULT);   
+    Group gid = Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();
     for(auto & [name, index]: dataProductIndices_) {
@@ -119,53 +114,37 @@ void HDFOutputer::output(EventIdentifier const& iEventID, std::vector<Serializer
     batch_ = 0;
     products_.clear();
     events_.clear();
-    H5Gclose(gid);
   }
 }
 
 void HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers) {
   hsize_t     dims[1] = {0};
   hsize_t     chunk_dims[1] = {128};
-  hsize_t     maxdims[1] = {H5S_UNLIMITED};
-  hid_t space = H5Screate_simple (1, dims, maxdims); 
+  hsize_t     max_dims[1] = {H5S_UNLIMITED};
+  auto space = Dataspace::create_simple (1, dims, max_dims); 
   auto prop   = H5Pcreate(H5P_DATASET_CREATE);
   auto status = H5Pset_chunk(prop, 1, chunk_dims);
-  hid_t g = H5Gcreate2(file1_, "Lumi", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  hid_t dset = H5Dcreate2(g, "Event_IDs", H5T_STD_I32LE, space, H5P_DEFAULT,
-                 prop, H5P_DEFAULT);
+  Group g = Group::create(file_, "Lumi");
+  Dataset dset = Dataset::create(g, "Event_IDs", H5T_STD_I32LE, space, prop);
 
-  auto aid3  = H5Screate(H5S_SCALAR);
-  
-  hid_t r = H5Acreate2(g, "run", H5T_STD_I32LE, aid3, H5P_DEFAULT, H5P_DEFAULT);
-  hid_t l = H5Acreate2(g, "lumisec", H5T_STD_I32LE, aid3, H5P_DEFAULT, H5P_DEFAULT);
-  H5Awrite(r, H5T_STD_I32LE, &iEventID.run);
-  H5Awrite(l, H5T_STD_I32LE, &iEventID.lumi);
-  H5Aclose(r);
-  H5Aclose(l);
-   
-  int i = 0; //for data product indices
+  const auto aid3  = H5Screate(H5S_SCALAR);
+  Attribute r = Attribute::create<int>(g, "run", aid3);
+  Attribute l = Attribute::create<int>(g, "lumisec", aid3);
+  r.write<int>(iEventID.run);
+  l.write<int>(iEventID.lumi);
+  int dp_index = 0; //for data product indices
   
   for(auto const& s: iSerializers) {
     std::string dp_name{s.name()};
-    dataProductIndices_.push_back({dp_name, i});
-    ++i;
+    dataProductIndices_.push_back({dp_name, dp_index});
+    ++dp_index;
     std::string dp_sz = dp_name+"_sz";
-    hid_t d = H5Dcreate2(g, dp_name.c_str(), H5T_NATIVE_CHAR, space, H5P_DEFAULT,prop, H5P_DEFAULT);;
+    Dataset d = Dataset::create(g, dp_name.c_str(), H5T_NATIVE_CHAR, space, prop);
     std::string classname(s.className());
-    auto atype = H5Tcopy(H5T_C_S1); //for creating string attributes
-    H5Tset_size(atype, H5T_VARIABLE);
-    H5Tset_cset(atype, H5T_CSET_UTF8);
-    H5Tset_strpad(atype,H5T_STR_NULLTERM);
-    hid_t a = H5Acreate2(d, "classname", atype, aid3, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(a, atype, &classname);
-    auto d1 = H5Dcreate2(g, dp_sz.c_str(), H5T_STD_U64LE, space, H5P_DEFAULT, prop, H5P_DEFAULT);
-    H5Dclose(d);
-    H5Dclose(d1);
-    H5Aclose(a);
+    Attribute a = Attribute::create<std::string>(d, "classname", aid3);
+    a.write<std::string>(classname);
+    Dataset::create(g, dp_sz.c_str(), H5T_STD_U64LE, space, prop);
   }
-  H5Gclose(g);
-  status = H5Dclose (dset);
-  status = H5Sclose (space);
 }
 
 

@@ -7,10 +7,6 @@
 #include <cstdint>
 #include <fstream>
 
-#include <highfive/H5DataSet.hpp>
-#include <highfive/H5DataSpace.hpp>
-#include <highfive/H5DataType.hpp>
-#include <highfive/H5File.hpp>
 
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
@@ -19,23 +15,17 @@
 
 #include "SerialTaskQueue.h"
 
-#include "hdf5.h"
+#include "HDFCxx.h"
 
-using namespace HighFive;
 using product_t = std::vector<char>;
+
 namespace cce::tf {
   class HDFOutputer : public OutputerBase {
     public:
-    HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
-     file1_(H5Fcreate("silly.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)),
-     serializers_{std::size_t(iNLanes)},
-     serialTime_{std::chrono::microseconds::zero()},
-     parallelTime_{0}
-     {}
-
-~HDFOutputer() {
-  H5Fclose(file1_);
-}
+    HDFOutputer(std::string const& iFileName, unsigned int iNLanes);
+    HDFOutputer(HDFOutputer&&) = default;
+    HDFOutputer(HDFOutputer const&) = default;
+    ~HDFOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
 
@@ -57,7 +47,7 @@ namespace cce::tf {
   std::vector<std::vector<char>> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
 std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<product_t> & input,int prod_index,int stride);
 private:
-  hid_t file1_;
+  File file_;
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;

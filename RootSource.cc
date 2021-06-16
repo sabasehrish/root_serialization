@@ -18,10 +18,13 @@ RootSource::RootSource(std::string const& iName) :
 
   dataProducts_.reserve(l->GetEntriesFast());
   branches_.reserve(l->GetEntriesFast());
-  for( int i=0; i< l->GetEntriesFast(); ++i) {
+  auto start = 0;
+  auto end = l->GetEntriesFast();
+  for( int i=start; i< end; ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
     //std::cout<<b->GetClassName()<<std::endl;
+    //if(b->GetName()!= eventAuxiliaryBranchName) continue;
     if(eventIDBranchName == b->GetName()) {
       eventIDBranch_ = b;
       continue;

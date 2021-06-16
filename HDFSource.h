@@ -1,22 +1,18 @@
 #if !defined(HDFSource_h)
 #define HDFSource_h
 
-
-#include <string>
+#include <iostream>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
-#include <highfive/H5DataSet.hpp>
-#include <highfive/H5DataSpace.hpp>
-#include <highfive/H5DataType.hpp>
-#include <highfive/H5File.hpp>
-
-#include "SourceBase.h"
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
+#include "SourceBase.h"
 
-using namespace HighFive;
+#include "HDFCxx.h"
+
 using product_t = std::vector<char>;
 using event_t = std::vector<int>;
 
@@ -53,17 +49,15 @@ private:
   std::pair<long unsigned int, long unsigned int> getEventOffsets(long eventindex, std::string pname);
   bool readEvent(long iEventIndex) final; //returns true if an event was read
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
-  HighFive::File file_;
-  HighFive::Group lumi_;
-  hid_t file1_;
-  hid_t lumi1_;
+  File file_;
+  Group lumi_;
   EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_; 
   std::vector<void*> dataBuffers_;  
   inline static std::vector<ProductInfo> productInfo_;
   std::vector<std::string> classnames_;
   HDFDelayedRetriever delayedRetriever_;
-  inline static int dpid_; 
+  inline static uint32_t dpid_; 
 };
 }
 #endif

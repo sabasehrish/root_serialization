@@ -8,7 +8,7 @@
 
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
-#include "SerializerWrapper.h"
+#include "SerializeStrategy.h"
 #include "DataProductRetriever.h"
 
 #include "SerialTaskQueue.h"
@@ -17,11 +17,14 @@ namespace cce::tf {
 class PDSOutputer :public OutputerBase {
  public:
   enum class Compression {kNone, kLZ4, kZSTD};
- PDSOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel ): 
+  enum class Serialization {kRoot, kRootUnrolled};
+ PDSOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
+             Serialization iSerialization ): 
   file_(iFileName, std::ios_base::out| std::ios_base::binary),
   serializers_{std::size_t(iNLanes)},
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
+  serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
   {}
@@ -40,11 +43,11 @@ class PDSOutputer :public OutputerBase {
     return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
   }
 
-  void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers, std::vector<uint32_t> const& iBuffer);
-  void writeFileHeader(std::vector<SerializerWrapper> const& iSerializers);
+  void output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<uint32_t> const& iBuffer);
+  void writeFileHeader(SerializeStrategy const& iSerializers);
 
   void writeEventHeader(EventIdentifier const& iEventID);
-  std::vector<uint32_t> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
+  std::vector<uint32_t> writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const;
 
   std::vector<uint32_t> compressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
 
@@ -57,9 +60,10 @@ private:
 
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
-  mutable std::vector<std::vector<SerializerWrapper>> serializers_;
+  mutable std::vector<SerializeStrategy> serializers_;
   Compression compression_;
   int compressionLevel_;
+  Serialization serialization_;
   bool firstTime_ = true;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

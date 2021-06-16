@@ -20,13 +20,19 @@ cce::tf::sourceFactoryGenerator(std::string_view iType, std::string_view iOption
   } else if( iType == "RepeatingRootSource") {
     std::string fileName( iOptions );
     unsigned int nUniqueEvents = 10;
+    std::string branchToRead;
     auto pos = fileName.find(':');
     if(pos != std::string::npos) {
       nUniqueEvents = std::stoul(fileName.substr(pos+1));
+      auto leftOptions = fileName.substr(pos+1);
       fileName = fileName.substr(0,pos);
+      pos = leftOptions.find(':', 0);
+      if(pos != std::string::npos) {
+        branchToRead = leftOptions.substr(pos+1);
+      }
     }
-    sourceFactory = [fileName, nUniqueEvents](unsigned int iNLanes, unsigned long long iNEvents) {
-      return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNLanes, iNEvents);
+    sourceFactory = [fileName, nUniqueEvents, branchToRead](unsigned int iNLanes, unsigned long long iNEvents) {
+      return std::make_unique<RepeatingRootSource>(fileName, nUniqueEvents, iNLanes, iNEvents, branchToRead);
     };
   } else if( iType == "SerialRootSource") {
     std::string fileName( iOptions );

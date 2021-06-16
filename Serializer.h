@@ -16,9 +16,9 @@ public:
   Serializer(Serializer const&):
     bufferFile_{TBuffer::kWrite} {}
 
-  std::vector<char> serialize(void* address, TClass* tClass) {
+  std::vector<char> serialize(void const* address, TClass* tClass) {
     bufferFile_.Reset();
-    tClass->WriteBuffer(bufferFile_, address);
+    tClass->WriteBuffer(bufferFile_, const_cast<void*>(address));
     //The blob contains the serialized data product
     std::vector<char> blob(bufferFile_.Buffer(), bufferFile_.Buffer()+bufferFile_.Length());
     return blob;

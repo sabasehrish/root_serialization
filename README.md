@@ -59,7 +59,7 @@ All `Lane`s share the same `Outputer`. Therefore an `Outputer` is required to be
 For the moment, each `Lane` also has its own copy of the `Source`. That is likely to be changed in the future to better mimic the behavior of actual HEP processing
 framemworks.
 
-The want data is processed is as follows:
+The way data is processed is as follows:
 1. When a `Lane` is no longer processing an _event_ it requests a new one from the system. The system advances an atomic counter and tells the `Lane` to use
 the _event_ associated with that index.
 1. The `Lane` then passes the _event_ index to the `Source` and asks it to asynchronously retrieve the _event_ data products.
@@ -113,7 +113,7 @@ Reads a standard ROOT file. All concurrent Events share the same Source. Access 
 
 
 #### RepeatingRootSource
-Reads the first N events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read and, optionally, the number of events to read (default is 10) , e.g.
+Reads the first N events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read and, optionally, the number of events to read (default is 10) and a singular TBranch to read, e.g.
 
 ```
 > threaded_io_test RepeatingRootSource=test.root 1 1 0 1000
@@ -122,6 +122,11 @@ or
 ```
 > threaded_io_test RepeatingRootSource=test.root:5 1 1 0 1000
 ```
+or
+```
+> threaded_io_test RepeatingRootSource=test.root:5:ints 1 1 0 1000
+```
+
 
 
 #### ReplicatedPDSSource
@@ -199,6 +204,17 @@ Writes the _event_ data products into a PDS file. Specify both the name of the O
 - compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values
   - 0 - 19 (negative values and values 20-22 are possible but not considered good choices by the zstandard authors)
 - compressionAlgorithm: name of compression algorithm. Allowed valued "", "None", "ZSTD", "LZ4"
+- serializationAlgorithm: name of a serialization algorithm. Allowed values "", "ROOT", "ROOTUnrolled" or "Unrolled". The default is "ROOT" (which is the same as ""). Both _unrolled_ names correspond to the same algorithm.
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 PDSOutputer=test.pds
 ```
+
+## unroll_test
+
+The _unroll_test_ executable is meant to allow testing of the unrolled serialization process and allow comparison of object serialization sizes with respect to ROOT's standard serialization. The executable takes the following command line arguments
+
+unroll_test [-g] [-s] [list of class names]
+
+- -g : turns on ROOT verbose debugging output
+- -s : skips running the built in test cases
+- [list of class names] : names of C++ classes with ROOT dictionaries. The executable will perform serialization/deserialization on defaultly constructed instances of these classes and report the bytes needed for storage.

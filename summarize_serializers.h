@@ -8,12 +8,13 @@
 #include "SerializerWrapper.h"
 
 namespace cce::tf {
-inline void summarize_serializers(std::vector<std::vector<SerializerWrapper>> const& iSerializersPerLane) {
+template <typename C>
+inline void summarize_serializers(std::vector<C> const& iSerializersPerLane) {
 
   std::chrono::microseconds serializerTime = std::chrono::microseconds::zero();
   
   std::vector<std::pair<std::string_view, std::chrono::microseconds>> serializerTimes;
-  serializerTimes.reserve(iSerializersPerLane[0].size());
+  serializerTimes.reserve( iSerializersPerLane[0].size());
   bool isFirst = true;
   for(auto const& serializers: iSerializersPerLane) {
     if(isFirst) {

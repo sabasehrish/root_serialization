@@ -10,7 +10,7 @@ project(threaded_io_test VERSION 0.1 LANGUAGES CXX)
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 # want debug symbols
-set(CMAKE_CXX_FLAGS "-g")
+set(CMAKE_CXX_FLAGS "-g3")
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -30,7 +30,14 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 #make the library for testing
 add_library(configKeys configKeyValuePairs.cc)
 
+#make the library holding the root dictionaries
+REFLEX_GENERATE_DICTIONARY(G__sequence_classes SequenceFinderForBuiltins.h SELECTION classes_def.xml)
+
+add_library(sequence_classes_dict SHARED G__sequence_classes.cxx)
+target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
+
 add_executable(threaded_io_test
+  DeserializeStrategy.cc
   Lane.cc
   PDSOutputer.cc
   PDSSource.cc
@@ -39,11 +46,15 @@ add_executable(threaded_io_test
   RootSource.cc
   SerialRootSource.cc
   SerialTaskQueue.cc
+  SerializeStrategy.cc
   SharedPDSSource.cc
   TBufferMergerRootOutputer.cc
   TestProductsOutputer.cc
   TestProductsSource.cc
   TextDumpOutputer.cc
+  UnrolledDeserializer.cc
+  UnrolledSerializer.cc
+  common_unrolling.cc
   outputerFactoryGenerator.cc
   pds_reading.cc
   sourceFactoryGenerator.cc
@@ -59,7 +70,26 @@ target_link_libraries(threaded_io_test
                               TBB::tbb
                               Threads::Threads
                               configKeys
+                              sequence_classes_dict
                               zstd::libzstd_shared)
+
+add_subdirectory(cms)
+add_subdirectory(test_classes)
+
+add_executable(unroll_test 
+  UnrolledDeserializer.cc 
+  UnrolledSerializer.cc
+  common_unrolling.cc
+  unroll_test.cc)
+
+target_link_libraries(unroll_test
+                      PRIVATE ROOT::Core
+                              ROOT::RIO
+                              ROOT::Tree
+                              TBB::tbb
+                              cms_dict
+                              sequence_classes_dict
+                              test_classes_dict)
 
 enable_testing()
 add_subdirectory(tests)
@@ -73,12 +103,14 @@ add_test(NAME SerializeOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 1
 add_test(NAME SerializeOutputerVerboseTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer=verbose)
 add_test(NAME PDSOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 PDSOutputer=test_empty.pds)
 add_test(NAME TestProductsPDS COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 PDSOutputer=test_prod.pds; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedPDSSource=test_prod.pds 1 1 0 10 TestProductsOutputer")
+add_test(NAME TestProductsPDSUnrolled COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 PDSOutputer=test_prod_unroll.pds:serializationAlgorithm=Unrolled; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedPDSSource=test_prod_unroll.pds 1 1 0 10 TestProductsOutputer")
 add_test(NAME RootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root)
 add_test(NAME RootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME RootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
 add_test(NAME TestProductsROOT COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SerialRootSource=test_prod.root 1 1 0 10 TestProductsOutputer")
 add_test(NAME TestProductsROOTReplicated COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod_repl.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test ReplicatedRootSource=test_prod_repl.root 1 1 0 10 TestProductsOutputer")
 add_test(NAME TestProductsROOTRepeating COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod_rep.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test RepeatingRootSource=test_prod_rep.root:5 1 1 0 100 TestProductsOutputer")
+add_test(NAME TestProductsROOTRepeatingOneBranch COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootOutputer=test_prod_rep_1branch.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test RepeatingRootSource=test_prod_rep_1branch.root:5:floats 1 1 0 100 TestProductsOutputer")
 add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root)
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)

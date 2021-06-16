@@ -23,12 +23,13 @@ class RepeatingRootDelayedRetriever : public DelayedProductRetriever {
 
 class RepeatingRootSource : public SharedSourceBase {
 public:
-  RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents);
+  RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents,
+                      std::string const& iBranchToRead);
   RepeatingRootSource(RepeatingRootSource&&) = default;
   RepeatingRootSource(RepeatingRootSource const&) = default;
   ~RepeatingRootSource() final;
 
-  size_t numberOfDataProducts() const final {return dataProductsPerLane_[0][0].size();}
+  size_t numberOfDataProducts() const final {return dataProductsPerLane_[0].size();}
   std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex ) final { return dataProductsPerLane_[iLane]; }
   EventIdentifier eventIdentifier(unsigned int iLane, long iEventIndex) final { return identifierPerEvent_[iEventIndex % nUniqueEvents_];}
 

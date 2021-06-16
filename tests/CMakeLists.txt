@@ -68,3 +68,9 @@ add_test(
 add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
 add_test(NAME HDFOutputerEmptyTest
          COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)
+add_test(
+  NAME TestProductsHDF
+  COMMAND
+    bash -c
+    "${TEST_EXEC} TestProductsSource 1 1 0 10 HDFOutputer=test_prod.h5; ${TEST_EXEC} HDFSource=test_prod.h5 1 1 0 10 TestProductsOutputer"
+)

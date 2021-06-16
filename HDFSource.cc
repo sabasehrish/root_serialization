@@ -145,7 +145,6 @@ HDFSource::readEvent(long iEventIndex) {
       count[0]  = num[0];
       block[0]  = 1;
       auto err = H5Sselect_hyperslab(fspace1, H5S_SELECT_SET, start, stride, count, block);
-      //std::cout << "syperslab: "<< err << std::endl;
       H5Dread(dset1, H5T_NATIVE_CHAR, mspace1, fspace1, H5P_DEFAULT, product1);
       ++i;
       products.push_back({product1, product1 + num[0]});

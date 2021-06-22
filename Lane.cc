@@ -30,7 +30,7 @@ TaskHolder Lane::makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder
                       make_functor_task([index,  holder, this]() {
                           auto laneIndex = this->index_;
                           auto& w = waiters_[index];
-                          w.waitAsync(source_->dataProducts(index_, presentEventIndex_),std::move(holder));
+                          w.waitAsync(dataProducts(),std::move(holder));
                         }) );
   }
 }
@@ -60,7 +60,7 @@ void Lane::processEventAsync(tbb::task_group& group, TaskHolder iCallback, const
   //NOTE: I once replaced with with a tbb::parallel_for but that made the code slower and did not
   // scale as well as the number of threads were increased.
   size_t index=0;
-  for(auto& d: source_->dataProducts(index_, presentEventIndex_)) {
+  for(auto& d: mutableDataProducts()) {
     d.getAsync(makeTaskForDataProduct(group, index,d, outputer, holder));
     ++index;
   }

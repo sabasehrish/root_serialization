@@ -1,0 +1,11 @@
+<lcgdict>
+  <class name="cce::tf::SequenceFinderForBuiltins<int>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<unsigned int>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<long>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<unsigned long>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<short>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<unsigned short>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<char>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<float>" ClassVersion="3"/>
+  <class name="cce::tf::SequenceFinderForBuiltins<double>" ClassVersion="3"/>
+</lcgdict>

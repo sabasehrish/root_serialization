@@ -36,8 +36,7 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
-      auto addr = reinterpret_cast<void**>(b->GetAddress());
-      eventAuxReader_ = EventAuxReader([addr](){return cmsEventID(addr);});
+      eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
     }
   }
 

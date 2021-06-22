@@ -26,6 +26,7 @@ public:
   long presentEventIndex() const { return presentEventIndex_;}
 private:
 
+  std::vector<DataProductRetriever>& mutableDataProducts() { return source_->dataProducts(index_, presentEventIndex_); }
   TaskHolder makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder holder) ;
 
   TaskHolder makeTaskForDataProduct(tbb::task_group& group, size_t index, DataProductRetriever& iDP, OutputerBase const& outputer, TaskHolder holder) ;

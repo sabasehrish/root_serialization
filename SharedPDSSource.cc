@@ -1,4 +1,7 @@
 #include "SharedPDSSource.h"
+#include "Deserializer.h"
+#include "UnrolledDeserializer.h"
+
 #include "TClass.h"
 
 using namespace cce::tf;
@@ -8,20 +11,32 @@ SharedPDSSource::SharedPDSSource(unsigned int iNLanes, unsigned long long iNEven
                  file_{iName, std::ios_base::binary},
   readTime_{std::chrono::microseconds::zero()}
 {
-  auto productInfo = readFileHeader(file_, compression_);
+  pds::Serialization serialization;
+  auto productInfo = readFileHeader(file_, compression_, serialization);
 
   laneInfos_.reserve(iNLanes);
   for(unsigned int i = 0; i< iNLanes; ++i) {
-    laneInfos_.emplace_back(productInfo);
+    DeserializeStrategy strategy;
+    switch(serialization) {
+    case pds::Serialization::kRoot: { 
+      strategy = DeserializeStrategy::make<DeserializeProxy<Deserializer>>(); break;
+    }
+    case pds::Serialization::kRootUnrolled: {
+      strategy = DeserializeStrategy::make<DeserializeProxy<UnrolledDeserializer>>(); break;
+    }
+    }
+    laneInfos_.emplace_back(productInfo, std::move(strategy));
   }
 }
 
-SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo):
+SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo, DeserializeStrategy deserialize):
+  deserializers_{std::move(deserialize)},
   decompressTime_{std::chrono::microseconds::zero()},
   deserializeTime_{std::chrono::microseconds::zero()}
 {
   dataProducts_.reserve(productInfo.size());
   dataBuffers_.resize(productInfo.size(), nullptr);
+  deserializers_.reserve(productInfo.size());
   size_t index =0;
   for(auto const& pi : productInfo) {
     
@@ -33,6 +48,7 @@ SharedPDSSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& product
                                pi.name(),
                                cls,
 			       &delayedRetriever_);
+    deserializers_.emplace_back(cls);
     ++index;
   }
 }
@@ -73,7 +89,7 @@ void SharedPDSSource::readEventAsync(unsigned int iLane, long iEventIndex,  Opti
               std::chrono::duration_cast<decltype(laneInfo.decompressTime_)>(std::chrono::high_resolution_clock::now() - start);
             
             start = std::chrono::high_resolution_clock::now();
-            pds::deserializeDataProducts(uBuffer.begin(), uBuffer.end(), laneInfo.dataProducts_);
+            pds::deserializeDataProducts(uBuffer.begin(), uBuffer.end(), laneInfo.dataProducts_, laneInfo.deserializers_);
             laneInfo.deserializeTime_ += 
               std::chrono::duration_cast<decltype(laneInfo.deserializeTime_)>(std::chrono::high_resolution_clock::now() - start);
           });

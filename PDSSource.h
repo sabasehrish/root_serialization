@@ -11,6 +11,7 @@
 #include "SourceBase.h"
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
+#include "DeserializeStrategy.h"
 #include "pds_reading.h"
 
 namespace cce::tf {
@@ -39,6 +40,7 @@ private:
   long presentEventIndex_ = 0;
   EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_;
+  DeserializeStrategy deserializers_;
   std::vector<void*> dataBuffers_;
   PDSDelayedRetriever delayedRetriever_;
 };

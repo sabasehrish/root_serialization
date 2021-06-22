@@ -26,13 +26,19 @@ namespace {
   return Compression::kNone;
 }
 
-std::pair<uint32_t, Compression> readPreamble(std::istream& iFile) {
+  struct Preamble {
+    uint32_t bufferSize;
+    Compression compression;
+    Serialization serialization;
+  };
+Preamble readPreamble(std::istream& iFile) {
   std::array<uint32_t, 4> header;
   iFile.read(reinterpret_cast<char*>(header.data()),4*4);
-  assert(file_.rdstate() == std::ios_base::goodbit);
+  assert(iFile.rdstate() == std::ios_base::goodbit);
 
   assert(3141592*256+1 == header[0]);
-  return std::make_pair(header[3], whichCompression(reinterpret_cast<const char*>(&header[2])));
+  Serialization serialization = (header[0] -3141592*256-1) == 0? Serialization::kRoot : Serialization::kRootUnrolled; 
+  return {header[3], whichCompression(reinterpret_cast<const char*>(&header[2])), serialization};
 }
 
 using buffer_iterator = std::vector<std::uint32_t>::const_iterator;
@@ -125,13 +131,14 @@ std::vector<uint32_t> pds::readWords(std::istream& iFile, uint32_t bufferSize) {
   std::vector<uint32_t> words(bufferSize);
   iFile.read(reinterpret_cast<char*>(words.data()), 4*bufferSize);
   assert(iFile.rdstate() == std::ios_base::goodbit);
-  return words;  
+  return words;
 }
 
-std::vector<ProductInfo> pds::readFileHeader(std::istream& file, Compression& compression) {
+std::vector<ProductInfo> pds::readFileHeader(std::istream& file, Compression& compression, Serialization& serialization) {
   auto preamble = readPreamble(file);
-  auto bufferSize = preamble.first;
-  compression = preamble.second;
+  auto bufferSize = preamble.bufferSize;
+  compression = preamble.compression;
+  serialization = preamble.serialization;
 
   //1 word beyond the buffer is the crosscheck value
   std::vector<uint32_t> buffer = readWords(file, bufferSize+1);
@@ -192,8 +199,8 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
   std::vector<uint32_t> uBuffer(size_t(uncompressedBufferSize), 0);
   if(Compression::kLZ4 == compression) {
     LZ4_decompress_safe(reinterpret_cast<char const*>(&(*(buffer.begin()+1))), reinterpret_cast<char*>(uBuffer.data()),
-			compressedBufferSizeInBytes,
-			uncompressedBufferSize*4);
+                        compressedBufferSizeInBytes,
+                        uncompressedBufferSize*4);
   } else if(Compression::kZSTD == compression) {
     ZSTD_decompress(uBuffer.data(), uncompressedBufferSize*4, &(*(buffer.begin()+1)), compressedBufferSizeInBytes);
   } else if(Compression::kNone == compression) {
@@ -203,20 +210,18 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
   return uBuffer;
 }
 
-
-void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts) {
-  TBufferFile bufferFile{TBuffer::kRead};
+void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std::vector<DataProductRetriever>& dataProducts, DeserializeStrategy const& deserializers) {
 
   while(it < itEnd) {
     auto productIndex = *(it++);
     auto storedSize = *(it++);
-   
+
+    //std::cout <<dataProducts[productIndex].name()<<" "<<dataProducts[productIndex].classType()->GetName()<<std::endl;
     //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
-    bufferFile.SetBuffer(const_cast<char*>(reinterpret_cast<char const*>(&*it)), storedSize*4, kFALSE);
-    dataProducts[productIndex].classType()->ReadBuffer(bufferFile, *dataProducts[productIndex].address());
-    dataProducts[productIndex].setSize(bufferFile.Length());
+    auto readSize = deserializers[productIndex].deserialize(reinterpret_cast<char const*>(&*it), storedSize*4, *dataProducts[productIndex].address());
+    dataProducts[productIndex].setSize(readSize);
   //std::cout <<" size "<<bufferFile.Length()<<"\n";
-    bufferFile.Reset();
+
     it = it+storedSize;
   }
   assert(it==itEnd);

@@ -86,6 +86,7 @@ namespace {
   struct PDSConfig {
     int compressionLevel_=18;
     std::string compressionAlgorithm_="ZSTD";
+    std::string serializationAlgorithm_="ROOT";
   };
 
   std::optional<std::pair<std::string, PDSConfig>> parsePDSConfig(std::string_view iOptions) {
@@ -108,6 +109,11 @@ namespace {
 	config.compressionAlgorithm_ = itFound->second;
 	++foundOptions;
       }
+      itFound = keyValues.find("serializationAlgorithm");
+      if(itFound != keyValues.end()) {
+        config.serializationAlgorithm_ = itFound->second;
+        ++foundOptions;
+      }
       if(foundOptions != keyValues.size()) {
 	std::cout <<"Unknown options for RootOutputer "<<remainingOptions<<std::endl;
 	for(auto const& kv: keyValues) {
@@ -119,6 +125,35 @@ namespace {
     return std::make_pair(fileName,config);
   }
 
+  struct TextDumpConfig {
+    bool perEvent=true;
+    bool summary=false;
+  };
+
+  std::optional<TextDumpConfig> parseTextDumpConfig(std::string_view iOptions) {
+    TextDumpConfig conf;
+    auto keyValues = cce::tf::configKeyValuePairs(iOptions);
+    auto itFound = keyValues.find("perEvent");
+    int count = 0;
+    if(itFound != keyValues.end()) {
+      if(not itFound->second.empty() and itFound->second[0]!='t') {
+        conf.perEvent = false;
+      }
+      ++count;
+    }
+    itFound = keyValues.find("summary");
+    if(itFound != keyValues.end()) {
+      if(itFound->second.empty() or itFound->second[0]=='t') {
+        conf.summary = true;
+      }
+      ++count;
+    }
+    if(keyValues.size() != count) {
+      std::cout <<"unknown options passed to TextDumpOutputer, only use 'perEvent' and 'summary'"<<std::endl;
+      return std::nullopt;
+    }
+    return conf;
+  }
 }
 
 std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
@@ -144,7 +179,17 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       return outFactory;
     }
     auto compressionLevel = result->second.compressionLevel_;
-    outFactory = [fileName, compression, compressionLevel](unsigned int nLanes) { return std::make_unique<PDSOutputer>(fileName, nLanes, compression, compressionLevel);};
+    PDSOutputer::Serialization serialization = PDSOutputer::Serialization::kRoot;
+    auto const& serializationName = result->second.serializationAlgorithm_;
+    if(serializationName == "" or serializationName=="ROOT") {
+      serialization = PDSOutputer::Serialization::kRoot;
+    } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
+      serialization = PDSOutputer::Serialization::kRootUnrolled;
+    } else {
+      std::cout <<"unknown serialization "<<serializationName<<std::endl;
+      return outFactory;
+    }
+    outFactory = [fileName, compression, compressionLevel, serialization](unsigned int nLanes) { return std::make_unique<PDSOutputer>(fileName, nLanes, compression, compressionLevel, serialization);};
   } else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
     if(not result) {
@@ -188,12 +233,11 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     std::string outputInfo{iOptions};
     outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<HDFOutputer>(outputInfo, nLanes);};
   } else if(iType == "TextDumpOutputer") {
-    bool useProductReady = false;
-    if(not iOptions.empty()) {
-      std::cout <<"Unknown option for DummyOutputer: "<<iOptions<<std::endl;
+    auto result = parseTextDumpConfig(iOptions);
+    if(not result) {
       return outFactory;
     }
-    outFactory = [](unsigned int) { return std::make_unique<TextDumpOutputer>();};
+    outFactory = [config = *result](unsigned int) { return std::make_unique<TextDumpOutputer>(config.perEvent, config.summary);};
   } else if(iType == "TestProductsOutputer") {
     outFactory = [](unsigned int iNLanes) { return std::make_unique<TestProductsOutputer>(iNLanes);};
   }

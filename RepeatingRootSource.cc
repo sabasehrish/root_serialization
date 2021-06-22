@@ -4,10 +4,11 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TClass.h"
+#include <unordered_set>
 
 using namespace cce::tf;
 
-RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents) :
+RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents, std::string const& iBranchToRead) :
   SharedSourceBase(iNEvents),
   nUniqueEvents_(iNUniqueEvents),
   dataProductsPerLane_(iNLanes),
@@ -26,8 +27,14 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
   for(auto& dataProducts: dataProductsPerLane_) {
     dataProducts.reserve(l->GetEntriesFast());
   }
+  std::unordered_set<std::string> branchesToRead;
+  if(not iBranchToRead.empty()) {
+    branchesToRead.insert(iBranchToRead);
+    branchesToRead.insert(eventAuxiliaryBranchName);
+  }
   std::vector<TBranch*> branches;
   branches.reserve(l->GetEntriesFast());
+  int index=0;
   for( int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
@@ -41,8 +48,12 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     EDataType type;
     b->GetExpectedType(class_ptr,type);
     assert(class_ptr != nullptr);
+    if((not branchesToRead.empty()) and branchesToRead.end() == branchesToRead.find(b->GetName())) {
+      continue;
+    }
+    std::cout<<b->GetName()<<std::endl;
     for(auto& dataProducts: dataProductsPerLane_) {
-      dataProducts.emplace_back(i,
+      dataProducts.emplace_back(index,
                                 nullptr,
                                 b->GetName(),
                                 class_ptr,
@@ -50,15 +61,15 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     }
     branches.emplace_back(b);
     if(eventAuxiliaryBranchName == dataProductsPerLane_[0].back().name()) {
-      eventAuxIndex = i;
+      eventAuxIndex = index;
     }
+    ++index;
   }
 
   for(int i=0; i<nUniqueEvents_; ++i) {
     fillBuffer(i, dataBuffersPerEvent_[i], branches);
     if(eventAuxIndex != -1) {
-      auto addr = &dataBuffersPerEvent_[i][eventAuxIndex].address_;
-      identifierPerEvent_[i] = EventAuxReader([addr](){return cmsEventID(addr);}).doWork();
+      identifierPerEvent_[i] = EventAuxReader(&dataBuffersPerEvent_[i][eventAuxIndex].address_).doWork();
       //std::cout <<"id "<<identifierPerEvent_[i].event<<std::endl;
     } else if(eventIDBranch) {
       eventIDBranch->SetAddress(&identifierPerEvent_[i]);

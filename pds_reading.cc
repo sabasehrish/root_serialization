@@ -36,7 +36,7 @@ Preamble readPreamble(std::istream& iFile) {
   iFile.read(reinterpret_cast<char*>(header.data()),4*4);
   assert(iFile.rdstate() == std::ios_base::goodbit);
 
-  assert(3141592*256+1 == header[0]);
+  assert(3141592*256+1 == header[0] or 3141592*256+2 == header[0]);
   Serialization serialization = (header[0] -3141592*256-1) == 0? Serialization::kRoot : Serialization::kRootUnrolled; 
   return {header[3], whichCompression(reinterpret_cast<const char*>(&header[2])), serialization};
 }

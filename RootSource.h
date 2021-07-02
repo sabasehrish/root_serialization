@@ -41,6 +41,7 @@ private:
   RootDelayedRetriever delayedReader_;
   EventAuxReader eventAuxReader_;
   TBranch* eventIDBranch_ = nullptr;
+  TBranch* eventAuxBranch_ = nullptr;
   EventIdentifier id_;
   std::vector<DataProductRetriever> dataProducts_;
   std::vector<TBranch*> branches_;

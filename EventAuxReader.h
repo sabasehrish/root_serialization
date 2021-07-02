@@ -7,8 +7,8 @@
 #include "art/EventAuxiliary.h"
 #include "cms/EventAuxiliary.h"
 
+#include "TBranch.h"
 #include "TFile.h"
-class TBranch;
 
 namespace cce::tf {
 
@@ -34,35 +34,23 @@ namespace cce::tf {
 
   class EventAuxReader {
   public:
-    EventAuxReader() = default;
-
     explicit EventAuxReader(TFile& file)
       : func_{select_reader(file)}
     {}
 
-    EventAuxReader& bindToBranch(void** branchToRead) noexcept
+    EventIdentifier doWork(TBranch* eventAuxBranch)
     {
-      boundBranch_ = reinterpret_cast<void**>(branchToRead);
-      return *this;
+      assert(eventAuxBranch);
+      return doWork(reinterpret_cast<void**>(eventAuxBranch->GetAddress()));
     }
 
-    EventAuxReader& bindToBranch(TBranch* branchToRead) noexcept
+    EventIdentifier doWork(void** eventAuxBranch)
     {
-      return bindToBranch(reinterpret_cast<void**>(branchToRead));
-    }
-
-    EventIdentifier doWork()
-    {
-      if(boundBranch_ == nullptr) {
-        return EventIdentifier{0,0,0};
-      }
-      assert(func_);
-      return func_(boundBranch_);
+      return func_(eventAuxBranch);
     }
 
   private:
     std::function<EventIdentifier(void**)> func_{};
-    void** boundBranch_{nullptr};
   };
 }
 #endif

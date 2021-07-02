@@ -71,7 +71,7 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     fillBuffer(i, dataBuffersPerEvent_[i], branches);
     if(eventAuxIndex != -1) {
       auto addr = &dataBuffersPerEvent_[i][eventAuxIndex].address_;
-      identifierPerEvent_[i] = aux_reader.bindToBranch(addr).doWork();
+      identifierPerEvent_[i] = aux_reader.doWork(addr);
       //std::cout <<"id "<<identifierPerEvent_[i].event<<std::endl;
     } else if(eventIDBranch) {
       eventIDBranch->SetAddress(&identifierPerEvent_[i]);

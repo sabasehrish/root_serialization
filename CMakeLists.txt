@@ -70,8 +70,8 @@ add_executable(threaded_io_test
   sourceFactoryGenerator.cc
   threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" $ENV{HDF5_INC})
-target_link_directories(threaded_io_test PRIVATE $ENV{HDF5_LIB})
+target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
+target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
 
 target_link_libraries(threaded_io_test
                       PRIVATE LZ4::lz4

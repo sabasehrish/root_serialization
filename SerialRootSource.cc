@@ -10,6 +10,7 @@ using namespace cce::tf;
 SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName):
   SharedSourceBase(iNEvents),
   file_{TFile::Open(iName.c_str())},
+  eventAuxReader_{*file_},
   accumulatedTime_{std::chrono::microseconds::zero()}
  {
   delayedReaders_.reserve(iNLanes);
@@ -36,7 +37,6 @@ SerialRootSource::SerialRootSource(unsigned iNLanes, unsigned long long iNEvents
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == b->GetName()) {
       eventAuxBranch_ = b;
-      eventAuxReader_ = EventAuxReader(reinterpret_cast<void**>(b->GetAddress()));
     }
   }
 
@@ -72,7 +72,7 @@ void SerialRootSource::readEventAsync(unsigned int iLane, long iEventIndex, Opti
         auto start = std::chrono::high_resolution_clock::now();
         if(eventAuxBranch_) {
           eventAuxBranch_->GetEntry(iEventIndex);
-          identifiers_[iLane] = eventAuxReader_->doWork();
+          identifiers_[iLane] = eventAuxReader_.doWork(eventAuxBranch_);
         } else if(eventIDBranch_) {
           eventIDBranch_->SetAddress(&identifiers_[iLane]);
           eventIDBranch_->GetEntry(iEventIndex);

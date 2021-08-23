@@ -8,7 +8,8 @@
 using namespace cce::tf;
 
 RootSource::RootSource(std::string const& iName) :
-  file_{TFile::Open(iName.c_str())}
+  file_{TFile::Open(iName.c_str())},
+  eventAuxReader_{*file_}
 {
   events_ = file_->Get<TTree>("Events");
   auto l = events_->GetListOfBranches();
@@ -18,6 +19,8 @@ RootSource::RootSource(std::string const& iName) :
 
   dataProducts_.reserve(l->GetEntriesFast());
   branches_.reserve(l->GetEntriesFast());
+
+  TBranch* aux_branch{nullptr};
   for( int i=0; i< l->GetEntriesFast(); ++i) {
     auto b = dynamic_cast<TBranch*>((*l)[i]);
     //std::cout<<b->GetName()<<std::endl;
@@ -38,11 +41,8 @@ RootSource::RootSource(std::string const& iName) :
 			       &delayedReader_);
     branches_.emplace_back(b);
     if(eventAuxiliaryBranchName == dataProducts_.back().name()) {
-      eventAuxReader_ = EventAuxReader(dataProducts_.back().address());
+      eventAuxBranch_ = b;
     }
-  }
-  if(not eventAuxReader_) {
-    eventAuxReader_ = EventAuxReader(nullptr);
   }
 }
 
@@ -50,7 +50,7 @@ EventIdentifier RootSource::eventIdentifier() {
   if(eventIDBranch_) {
     return id_;
   }
-  return eventAuxReader_->doWork();
+  return eventAuxReader_.doWork(eventAuxBranch_);
 }
 
 long RootSource::numberOfEvents() { 

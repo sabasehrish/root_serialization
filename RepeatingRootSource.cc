@@ -66,10 +66,12 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     ++index;
   }
 
+  EventAuxReader aux_reader{*file_};
   for(int i=0; i<nUniqueEvents_; ++i) {
     fillBuffer(i, dataBuffersPerEvent_[i], branches);
     if(eventAuxIndex != -1) {
-      identifierPerEvent_[i] = EventAuxReader(&dataBuffersPerEvent_[i][eventAuxIndex].address_).doWork();
+      auto addr = &dataBuffersPerEvent_[i][eventAuxIndex].address_;
+      identifierPerEvent_[i] = aux_reader.doWork(addr);
       //std::cout <<"id "<<identifierPerEvent_[i].event<<std::endl;
     } else if(eventIDBranch) {
       eventIDBranch->SetAddress(&identifierPerEvent_[i]);

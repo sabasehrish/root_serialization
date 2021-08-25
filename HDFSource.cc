@@ -66,7 +66,7 @@ HDFSource::~HDFSource() {
 std::vector<std::string>
 HDFSource::readClassNames() {
   std::vector<std::string> classnames;
-  for (auto pi : productInfo_) {
+  for (auto const& pi : productInfo_) {
     auto dset = Dataset::open(lumi_, (pi.name()).c_str());
     auto aid = Attribute::open(dset, "classname");
     auto tid = H5Aget_type(aid); 

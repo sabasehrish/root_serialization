@@ -3,7 +3,7 @@
 #
 # cmake <dir. with this file> \
 #   -DROOT_DIR=$ROOTSYS/cmake \
-#   -DHIGHFIVE_INC=<include directory of HighFive>
+#   -DHDF5_DIR=<HDF5 dir> \
 #   -Dzstd_DIR=<path to zstd lib>/cmake/zstd
 
 cmake_minimum_required(VERSION 3.10)

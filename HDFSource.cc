@@ -82,7 +82,7 @@ HDFSource::readClassNames() {
 
 
 std::pair<long unsigned int, long unsigned int>
-HDFSource::getEventOffsets(long iEventIndex, std::string pname) {
+HDFSource::getEventOffsets(long iEventIndex, std::string const& pname) {
   hsize_t nelements = 2;
   long unsigned int offsets[nelements];
   hsize_t coords[nelements]; 

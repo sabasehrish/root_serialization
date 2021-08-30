@@ -9,7 +9,7 @@ using namespace cce::tf;
 using product_t = std::vector<char>; 
 
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
-  file_(File::create(iFileName.c_str())),
+  file_(hdf5::File::create(iFileName.c_str())),
   serializers_{std::size_t(iNLanes)},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
@@ -72,8 +72,8 @@ write_ds(hid_t gid,
          std::string name, 
          std::vector<T> data) {
   const hsize_t ndims = 1;
-  auto dset = Dataset::open(gid, name.c_str()); 
-  auto old_fspace = Dataspace::get_space(dset);
+  auto dset = hdf5::Dataset::open(gid, name.c_str()); 
+  auto old_fspace = hdf5::Dataspace::get_space(dset);
   hsize_t max_dims[ndims] = {H5S_UNLIMITED};
   hsize_t old_dims[ndims]; //our datasets are 1D
   H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
@@ -84,9 +84,9 @@ write_ds(hid_t gid,
   hsize_t slab_size[ndims];
   slab_size[0] = data.size();
   dset.set_extent(new_dims);
-  auto new_fspace = Dataspace::get_space (dset);
+  auto new_fspace = hdf5::Dataspace::get_space (dset);
   new_fspace.select_hyperslab(old_dims, slab_size);
-  auto mem_space = Dataspace::create_simple(ndims, slab_size, max_dims);
+  auto mem_space = hdf5::Dataspace::create_simple(ndims, slab_size, max_dims);
   dset.write<T>(mem_space, new_fspace, data); //H5Dwrite
 }
 
@@ -105,7 +105,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 
   ++batch_;
   if (batch_ == 2) { //max_batch_size){
-    Group gid = Group::open(file_, "Lumi");   
+    hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();
     for(auto & [name, index]: dataProductIndices_) {
@@ -127,15 +127,15 @@ HDFOutputer::writeFileHeader(EventIdentifier const& iEventID,
   constexpr hsize_t     dims[ndims] = {0};
   constexpr hsize_t     chunk_dims[ndims] = {128};
   constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
-  auto space = Dataspace::create_simple (ndims, dims, max_dims); 
-  auto prop   = Property::create();
+  auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
+  auto prop   = hdf5::Property::create();
   prop.set_chunk(ndims, chunk_dims);
-  Group g = Group::create(file_, "Lumi");
-  Dataset dset = Dataset::create<int>(g, "Event_IDs", space, prop);
+  hdf5::Group g = hdf5::Group::create(file_, "Lumi");
+  hdf5::Dataset dset = hdf5::Dataset::create<int>(g, "Event_IDs", space, prop);
 
-  const auto scalar_space  = Dataspace::create_scalar();
-  Attribute r = Attribute::create<int>(g, "run", scalar_space);
-  Attribute l = Attribute::create<int>(g, "lumisec", scalar_space);
+  const auto scalar_space  = hdf5::Dataspace::create_scalar();
+  hdf5::Attribute r = hdf5::Attribute::create<int>(g, "run", scalar_space);
+  hdf5::Attribute l = hdf5::Attribute::create<int>(g, "lumisec", scalar_space);
   r.write<int>(iEventID.run);
   l.write<int>(iEventID.lumi);
   int dp_index = 0; //for data product indices
@@ -145,11 +145,11 @@ HDFOutputer::writeFileHeader(EventIdentifier const& iEventID,
     dataProductIndices_.push_back({dp_name, dp_index});
     ++dp_index;
     std::string dp_sz = dp_name+"_sz";
-    Dataset d = Dataset::create<char>(g, dp_name.c_str(), space, prop);
+    hdf5::Dataset d = hdf5::Dataset::create<char>(g, dp_name.c_str(), space, prop);
     std::string classname(s.className());
-    Attribute a = Attribute::create<std::string>(d, "classname", scalar_space);
+    hdf5::Attribute a = hdf5::Attribute::create<std::string>(d, "classname", scalar_space);
     a.write<std::string>(classname);
-    Dataset::create<size_t>(g, dp_sz.c_str(), space, prop);
+    hdf5::Dataset::create<size_t>(g, dp_sz.c_str(), space, prop);
   }
 }
 

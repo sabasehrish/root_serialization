@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace cce::tf {
+namespace cce::tf::hdf5 {
 
 
 inline hid_t string_type() {

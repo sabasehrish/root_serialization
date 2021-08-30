@@ -46,11 +46,11 @@ public:
 
 private: 
   std::vector<std::string> readClassNames();
-  std::pair<long unsigned int, long unsigned int> getEventOffsets(long eventindex, std::string pname);
+  std::pair<long unsigned int, long unsigned int> getEventOffsets(long eventindex, std::string const& pname);
   bool readEvent(long iEventIndex) final; //returns true if an event was read
   void deserializeDataProducts(buffer_iterator, buffer_iterator);
-  File file_;
-  Group lumi_;
+  hdf5::File file_;
+  hdf5::Group lumi_;
   EventIdentifier eventID_;
   std::vector<DataProductRetriever> dataProducts_; 
   std::vector<void*> dataBuffers_;  

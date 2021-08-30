@@ -47,7 +47,7 @@ namespace cce::tf {
   std::vector<std::vector<char>> writeDataProductsToOutputBuffer(std::vector<SerializerWrapper> const& iSerializers) const;
 std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<product_t> & input,int prod_index,int stride);
 private:
-  File file_;
+  hdf5::File file_;
   mutable SerialTaskQueue queue_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;

@@ -37,9 +37,6 @@ namespace cce::tf {
   void printSummary() const final;
 
  private:
-  static inline size_t bytesToWords(size_t nBytes) {
-    return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
-  }
 
   void output(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);
   void writeFileHeader(EventIdentifier const& iEventID, std::vector<SerializerWrapper> const& iSerializers);

@@ -5,43 +5,44 @@
 
 using namespace cce::tf;
 
-// C function (copied from HDF5 examples) that is passed as Operator function
-// to H5Literate.  
-// Prints the name and type of the object being examined.
-herr_t
-HDFSource::op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
-            void *operator_data)
-{
-  herr_t          status;
-  H5O_info_t      infobuf;
-  status = H5Oget_info_by_name (loc_id, name, &infobuf, H5O_INFO_BASIC, H5P_DEFAULT);
-//We may want to see if H5O_INFO_ALL will be better
-  switch (infobuf.type) {
-    case H5O_TYPE_DATASET:
-      if (strstr(name,"_sz") == NULL && strcmp(name, "Event_IDs") != 0){     
-        productInfo_.push_back({name, dpid_});
-        ++dpid_;
-      }
-      break;
-    default:
-      printf ( "  Other type: %s\n", name);
+using product_t = std::vector<char>;
+namespace {
+  // C function (copied from HDF5 examples) that is passed as Operator function
+  // to H5Literate.  
+  // Prints the name and type of the object being examined.
+  herr_t
+  op_func (hid_t loc_id, const char *name, const H5L_info_t *info, void *opdata)
+  {
+    herr_t          status;
+    H5O_info_t      infobuf;
+    status = H5Oget_info_by_name (loc_id, name, &infobuf, H5O_INFO_BASIC, H5P_DEFAULT);
+  //We may want to see if H5O_INFO_ALL will be better
+    switch (infobuf.type) {
+      case H5O_TYPE_DATASET:
+        if (strstr(name,"_sz") == NULL && strcmp(name, "Event_IDs") != 0){     
+          auto productInfos = reinterpret_cast<std::vector<HDFSource::ProductInfo>*>(opdata);
+          productInfos->push_back({name, productInfos->size()});
+        }
+        break;
+      default:
+        printf ( "  Other type: %s\n", name);
+    }
+    return 0;
   }
-
-  return 0;
 }
+
 
 HDFSource::HDFSource(std::string const& iName):
 file_(hdf5::File::open(iName.c_str())),
 lumi_(hdf5::Group::open(file_, "/Lumi"))
 {
-  dpid_ = 0;
-  H5Literate (lumi_, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL);
+  H5Literate (lumi_, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, &productInfos_);
   
-  dataProducts_.reserve(productInfo_.size());
-  dataBuffers_.resize(productInfo_.size(), nullptr);
+  dataProducts_.reserve(productInfos_.size());
+  dataBuffers_.resize(productInfos_.size(), nullptr);
   classnames_=readClassNames();
   size_t index = 0;
-  for (auto p: productInfo_) {
+  for (auto p: productInfos_) {
     TClass* cls = TClass::GetClass(classnames_[p.classIndex()].c_str());
     //std::cout << p.name() << ", " << classnames_[p.classIndex()].c_str() << std::endl;
       dataBuffers_[index] = cls->New();
@@ -59,23 +60,22 @@ HDFSource::~HDFSource() {
     it->classType()->Destructor(b);
     ++it;
   }
-  productInfo_.clear();
 }
 
 
 std::vector<std::string>
 HDFSource::readClassNames() {
   std::vector<std::string> classnames;
-  for (auto const& pi : productInfo_) {
+  for (auto const& pi : productInfos_) {
     auto dset = hdf5::Dataset::open(lumi_, (pi.name()).c_str());
     auto aid = hdf5::Attribute::open(dset, "classname");
     auto tid = H5Aget_type(aid); 
     auto sz = H5Aget_storage_size(aid);
-    char* attribute_name= new char[sz+1];
+    char* attribute_name; //= new char[sz+1];
     H5Aread(aid, tid, &attribute_name);
     std::string s(attribute_name);
     H5free_memory(attribute_name);
-    classnames.push_back(s);
+    classnames.push_back(std::move(s));
   }
   return classnames;
 }
@@ -83,7 +83,7 @@ HDFSource::readClassNames() {
 
 std::pair<long unsigned int, long unsigned int>
 HDFSource::getEventOffsets(long iEventIndex, std::string const& pname) {
-  hsize_t nelements = 2;
+  constexpr hsize_t nelements = 2;
   long unsigned int offsets[nelements];
   hsize_t coords[nelements]; 
   coords[0] = (iEventIndex == 0) ? iEventIndex: iEventIndex-1;
@@ -124,9 +124,8 @@ HDFSource::readEvent(long iEventIndex) {
   long unsigned int begin;
   long unsigned int end;
   std::vector<product_t> products;
-  products.reserve(productInfo_.size());
-  char *product;
-  for (auto pi : productInfo_) {
+  products.reserve(productInfos_.size());
+  for (auto pi : productInfos_) {
       std::tie(begin, end) = getEventOffsets(iEventIndex, pi.name());
       auto prods_dset = hdf5::Dataset::open(lumi_, (pi.name()).c_str());
       auto prods_fspace = hdf5::Dataspace::get_space(prods_dset);
@@ -134,13 +133,12 @@ HDFSource::readEvent(long iEventIndex) {
       dp_sz[0] = end-begin;
       auto prods_mspace = hdf5::Dataspace::create_simple(1, &dp_sz[0], NULL); 
       //std::cout << "Reading: " << pi.name() << ", Begin at: " << begin << ", and end at : " << end << '\n';
-      product = new char[dp_sz[0]];
+      std::unique_ptr<char[]> product(new char[dp_sz[0]]);
       start[0]  = begin;
       count[0]  = dp_sz[0];
       prods_fspace.select_hyperslab(start, count);
-      H5Dread(prods_dset, H5T_NATIVE_CHAR, prods_mspace, prods_fspace, H5P_DEFAULT, product);
-      products.push_back({product, product + dp_sz[0]});
-      delete[] product;
+      H5Dread(prods_dset, H5T_NATIVE_CHAR, prods_mspace, prods_fspace, H5P_DEFAULT, product.get());
+      products.push_back({product.get(), product.get() + dp_sz[0]});
   }
 
   deserializeDataProducts(products.begin(), products.end());

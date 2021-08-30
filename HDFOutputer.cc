@@ -3,7 +3,10 @@
 #include "lz4.h"
 #include <iostream>
 #include <cstring>
+#include <cmath>
 #include <set>
+
+constexpr int max_batch_size = 2; 
 
 using namespace cce::tf;
 using product_t = std::vector<char>; 
@@ -20,12 +23,13 @@ HDFOutputer::~HDFOutputer() { }
 void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
   s.reserve(iDPs.size());
+  dataProductIndices_.reserve(iDPs.size());
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-  products_.reserve(10000);
-  events_.reserve(100);
-  offsets_.reserve(10000);
+   products_.reserve(10000);
+   events_.reserve(100);
+   offsets_.reserve(10000);
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -58,7 +62,9 @@ get_prods_and_sizes(std::vector<product_t> & input,
          int prod_index, 
          int stride) {
   product_t products; 
-  std::vector<size_t> sizes; 
+  std::vector<size_t> sizes;
+  sizes.reserve(input.size()); 
+  // or may use (std::ceil(double(input.size()-prod_index)/stride)); 
   for(int j = prod_index; j< input.size(); j+=stride) {
     sizes.push_back(offsets_[prod_index]+=input[j].size());
     products.insert(end(products), std::make_move_iterator(begin(input[j])), std::make_move_iterator(end(input[j])));
@@ -70,11 +76,11 @@ template <typename T>
 void 
 write_ds(hid_t gid, 
          std::string name, 
-         std::vector<T> data) {
-  const hsize_t ndims = 1;
+         std::vector<T> const& data) {
+  constexpr hsize_t ndims = 1;
   auto dset = hdf5::Dataset::open(gid, name.c_str()); 
   auto old_fspace = hdf5::Dataspace::get_space(dset);
-  hsize_t max_dims[ndims] = {H5S_UNLIMITED};
+  hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};
   hsize_t old_dims[ndims]; //our datasets are 1D
   H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
   //now old_dims[0] has existing length
@@ -104,7 +110,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-  if (batch_ == 2) { //max_batch_size){
+  if (batch_ == max_batch_size) {
     hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();
@@ -123,7 +129,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 void 
 HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, 
                              std::vector<SerializerWrapper> const& iSerializers) {
-  const hsize_t ndims = 1;
+  constexpr hsize_t ndims = 1;
   constexpr hsize_t     dims[ndims] = {0};
   constexpr hsize_t     chunk_dims[ndims] = {128};
   constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
@@ -142,7 +148,7 @@ HDFOutputer::writeFileHeader(EventIdentifier const& iEventID,
   
   for(auto const& s: iSerializers) {
     std::string dp_name{s.name()};
-    dataProductIndices_.push_back({dp_name, dp_index});
+    dataProductIndices_.emplace_back(dp_name, dp_index);
     ++dp_index;
     std::string dp_sz = dp_name+"_sz";
     hdf5::Dataset d = hdf5::Dataset::create<char>(g, dp_name.c_str(), space, prop);

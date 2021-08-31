@@ -1,4 +1,5 @@
 #include "outputerFactoryGenerator.h"
+#include "HDFOutputer.h"
 #include "PDSOutputer.h"
 #include "RootOutputer.h"
 #include "SerializeOutputer.h"
@@ -228,6 +229,9 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
       useProductReady = true;
     }
     outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
+  } else if(iType == "HDFOutputer") {
+    std::string outputInfo{iOptions};
+    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<HDFOutputer>(outputInfo, nLanes);};
   } else if(iType == "TextDumpOutputer") {
     auto result = parseTextDumpConfig(iOptions);
     if(not result) {
@@ -237,6 +241,5 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
   } else if(iType == "TestProductsOutputer") {
     outFactory = [](unsigned int iNLanes) { return std::make_unique<TestProductsOutputer>(iNLanes);};
   }
-
   return outFactory;
 }

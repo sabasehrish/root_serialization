@@ -1,3 +1,11 @@
+# ============================================================================
+# Configuration instructions
+#
+# cmake <dir. with this file> \
+#   -DROOT_DIR=$ROOTSYS/cmake \
+#   -DHDF5_DIR=<HDF5 dir> \
+#   -Dzstd_DIR=<path to zstd lib>/cmake/zstd
+
 cmake_minimum_required(VERSION 3.10)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -10,12 +18,10 @@ project(threaded_io_test VERSION 0.1 LANGUAGES CXX)
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 # want debug symbols
-set(CMAKE_CXX_FLAGS "-g3")
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 find_package(TBB REQUIRED)
@@ -38,6 +44,8 @@ target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
 
 add_executable(threaded_io_test
   DeserializeStrategy.cc
+  HDFOutputer.cc
+  HDFSource.cc
   Lane.cc
   PDSOutputer.cc
   PDSSource.cc
@@ -60,7 +68,8 @@ add_executable(threaded_io_test
   sourceFactoryGenerator.cc
   threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}")
+target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
+target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
 
 target_link_libraries(threaded_io_test
                       PRIVATE LZ4::lz4
@@ -71,7 +80,8 @@ target_link_libraries(threaded_io_test
                               Threads::Threads
                               configKeys
                               sequence_classes_dict
-                              zstd::libzstd_shared)
+                              zstd::libzstd_shared
+                              hdf5)
 
 add_subdirectory(cms)
 add_subdirectory(test_classes)
@@ -115,3 +125,6 @@ add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptyS
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
 add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
+add_test(NAME HDFOutputerEmptyTest
+         COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)
+add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prod.h5 1 1 0 10 TestProductsOutputer")

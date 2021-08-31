@@ -19,7 +19,7 @@ namespace {
   //We may want to see if H5O_INFO_ALL will be better
     switch (infobuf.type) {
       case H5O_TYPE_DATASET:
-        if (strstr(name,"_sz") == NULL && strcmp(name, "Event_IDs") != 0){     
+        if (strstr(name,"_sz") == nullptr && strcmp(name, "Event_IDs") != 0){     
           auto productInfos = reinterpret_cast<std::vector<HDFSource::ProductInfo>*>(opdata);
           productInfos->push_back({name, productInfos->size()});
         }
@@ -71,10 +71,10 @@ HDFSource::readClassNames() {
     auto aid = hdf5::Attribute::open(dset, "classname");
     auto tid = H5Aget_type(aid); 
     auto sz = H5Aget_storage_size(aid);
-    char* attribute_name; //= new char[sz+1];
+    char* attribute_name; 
     H5Aread(aid, tid, &attribute_name);
     std::string s(attribute_name);
-    H5free_memory(attribute_name);
+    free(attribute_name);
     classnames.push_back(std::move(s));
   }
   return classnames;
@@ -103,7 +103,7 @@ HDFSource::getEventOffsets(long iEventIndex, std::string const& pname) {
 
 bool
 HDFSource::readEvent(long iEventIndex) {
-  hsize_t ndims = 1;
+  constexpr hsize_t ndims = 1;
   unsigned int run_num[ndims];
   unsigned int lumi_num[ndims];
   auto attr_r = hdf5::Attribute::open(lumi_, "run");

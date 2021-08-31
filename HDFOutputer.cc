@@ -7,9 +7,34 @@
 #include <set>
 
 constexpr int max_batch_size = 2; 
-
 using namespace cce::tf;
 using product_t = std::vector<char>; 
+
+namespace {
+  template <typename T> 
+  void 
+  write_ds(hid_t gid, 
+           std::string name, 
+           std::vector<T> const& data) {
+    constexpr hsize_t ndims = 1;
+    auto dset = hdf5::Dataset::open(gid, name.c_str()); 
+    auto old_fspace = hdf5::Dataspace::get_space(dset);
+    hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};
+    hsize_t old_dims[ndims]; //our datasets are 1D
+    H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
+    //now old_dims[0] has existing length
+    //we need to extend by the size of data
+    hsize_t new_dims[ndims];
+    new_dims[0] = old_dims[0] + data.size();
+    hsize_t slab_size[ndims];
+    slab_size[0] = data.size();
+    dset.set_extent(new_dims);
+    auto new_fspace = hdf5::Dataspace::get_space (dset);
+    new_fspace.select_hyperslab(old_dims, slab_size);
+    auto mem_space = hdf5::Dataspace::create_simple(ndims, slab_size, max_dims);
+    dset.write<T>(mem_space, new_fspace, data); //H5Dwrite
+  }
+}
 
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
   file_(hdf5::File::create(iFileName.c_str())),
@@ -27,9 +52,9 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-   products_.reserve(10000);
-   events_.reserve(100);
-   offsets_.reserve(10000);
+   products_.reserve(iDPs.size() * max_batch_size);
+   events_.reserve(max_batch_size);
+   offsets_.reserve(max_batch_size);
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -72,29 +97,6 @@ get_prods_and_sizes(std::vector<product_t> & input,
   return {products, sizes};
 }
 
-template <typename T> 
-void 
-write_ds(hid_t gid, 
-         std::string name, 
-         std::vector<T> const& data) {
-  constexpr hsize_t ndims = 1;
-  auto dset = hdf5::Dataset::open(gid, name.c_str()); 
-  auto old_fspace = hdf5::Dataspace::get_space(dset);
-  hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};
-  hsize_t old_dims[ndims]; //our datasets are 1D
-  H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
-  //now old_dims[0] has existing length
-  //we need to extend by the size of data
-  hsize_t new_dims[ndims];
-  new_dims[0] = old_dims[0] + data.size();
-  hsize_t slab_size[ndims];
-  slab_size[0] = data.size();
-  dset.set_extent(new_dims);
-  auto new_fspace = hdf5::Dataspace::get_space (dset);
-  new_fspace.select_hyperslab(old_dims, slab_size);
-  auto mem_space = hdf5::Dataspace::create_simple(ndims, slab_size, max_dims);
-  dset.write<T>(mem_space, new_fspace, data); //H5Dwrite
-}
 
 
 void 

@@ -16,12 +16,12 @@ inline hid_t string_type() {
   return atype;
 }
 
-template<typename T> hid_t H5filetype_for = -1;
+template<typename T> constexpr hid_t H5filetype_for = -1;
 template<> inline hid_t H5filetype_for<int> = H5T_STD_I32LE;
 template<> inline hid_t H5filetype_for<char> = H5T_STD_I8LE;
 template<> inline hid_t H5filetype_for<size_t> = H5T_STD_U64LE;
 
-template<typename T> hid_t H5memtype_for = -1;
+template<typename T> constexpr hid_t H5memtype_for = -1;
 template<> inline hid_t H5memtype_for<int> = H5T_NATIVE_INT;
 template<> inline hid_t H5memtype_for<char> = H5T_NATIVE_CHAR;
 template<> inline hid_t H5memtype_for<size_t> = H5T_NATIVE_ULLONG;

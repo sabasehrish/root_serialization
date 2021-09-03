@@ -6,7 +6,7 @@
 #   -DHDF5_DIR=<HDF5 dir> \
 #   -Dzstd_DIR=<path to zstd lib>/cmake/zstd
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)

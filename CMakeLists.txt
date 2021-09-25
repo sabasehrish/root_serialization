@@ -18,10 +18,11 @@ project(threaded_io_test VERSION 0.1 LANGUAGES CXX)
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 # want debug symbols
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 find_package(TBB REQUIRED)
@@ -81,6 +82,7 @@ target_link_libraries(threaded_io_test
                               configKeys
                               sequence_classes_dict
                               zstd::libzstd_shared
+			      stdc++
                               hdf5)
 
 add_subdirectory(cms)
@@ -98,6 +100,7 @@ target_link_libraries(unroll_test
                               ROOT::Tree
                               TBB::tbb
                               cms_dict
+			      stdc++
                               sequence_classes_dict
                               test_classes_dict)
 

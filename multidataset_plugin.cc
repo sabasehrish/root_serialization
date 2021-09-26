@@ -112,7 +112,7 @@ int dataset_recycle_all() {
     int i;
     for ( i = 0; i < dataset_recycle_size; ++i ) {
         if ( dataset_recycle[i] >= 0 ) {
-            H5Sclose(dataset_recycle[i]);
+            H5Dclose(dataset_recycle[i]);
         }
     }
     if (dataset_recycle_size) {

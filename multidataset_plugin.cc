@@ -32,7 +32,7 @@ int register_dataset_recycle(hid_t did) {
             dataset_recycle_size_limit *= 2;
             hid_t *temp = (hid_t*) malloc(dataset_recycle_size_limit*sizeof(hid_t));
             memcpy(temp, dataset_recycle, sizeof(hid_t) * dataset_recycle_size);
-            free(datasetrecycle);
+            free(dataset_recycle);
             dataset_recycle = temp;
         } else {
             dataset_recycle_size_limit = 512;
@@ -170,7 +170,7 @@ int flush_multidatasets() {
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
     for ( i = 0; i < dataset_size; ++i ) {
         //MPI_Barrier(MPI_COMM_WORLD);
-        H5Dwrite (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, dxplid_coll, multi_datasets[i].u.wbuf);
+        H5Dwrite (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, H5P_DEFAULT, multi_datasets[i].u.wbuf);
     }
 #endif
 

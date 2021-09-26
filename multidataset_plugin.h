@@ -25,7 +25,7 @@ typedef struct H5D_rw_multi_t
 int init_multidataset();
 int register_dataset_recycle(hid_t did);
 int register_dataspace_recycle(hid_t dsid);
-int register_memspace_recycle(hid_t msid)
+int register_memspace_recycle(hid_t msid);
 int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write);
 int dataset_recycle_all();
 int dataspace_recycle_all();

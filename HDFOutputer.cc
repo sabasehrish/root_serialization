@@ -52,7 +52,7 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   new_dims[0] = old_dims[0] + data_size;
   slab_size[0] = data_size;
   H5Dset_extent(did, new_dims);
-  H5Dclose(dsid);
+  H5Sclose(dsid);
 
   dsid = H5Dget_space(did);
   H5Sselect_hyperslab(dsid, H5S_SELECT_SET, old_dims, NULL, slab_size, NULL);

@@ -5,6 +5,8 @@
 #include <cstring>
 #include <cmath>
 #include <set>
+#include "H5Timing.h"
+#include "multidataset_plugin.h"
 
 constexpr int max_batch_size = 2; 
 using namespace cce::tf;

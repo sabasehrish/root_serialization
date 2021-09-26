@@ -39,7 +39,7 @@ int register_dataset_recycle(hid_t did) {
             dataset_recycle = (hid_t*) malloc(dataset_recycle_size_limit*sizeof(hid_t));
         }
     }
-    dataset_recycle[dataset_recycle_size] = dsid;
+    dataset_recycle[dataset_recycle_size] = did;
     dataset_recycle_size++;
     return 0;
 }
@@ -164,7 +164,7 @@ int flush_multidatasets() {
 
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
-    H5Dwrite_multi(dxplid_coll, dataset_size, multi_datasets);
+    H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets);
 #else
 
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);

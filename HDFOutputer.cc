@@ -59,7 +59,6 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   msid = H5Screate_simple(ndims, slab_size, max_dims);
 
   register_multidataset(data, did, dsid, msid, mtype, 1);
-  flush_multidatasets();
   register_dataset_recycle(did);
   register_dataspace_recycle(dsid);
   register_memspace_recycle(msid);
@@ -159,6 +158,11 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
       register_dataset_sz_timer_end();
     }
+    flush_multidatasets();
+    dataset_recycle_all();
+    dataspace_recycle_all();
+    memspace_recycle_all();
+
     batch_ = 0;
     products_.clear();
     events_.clear();

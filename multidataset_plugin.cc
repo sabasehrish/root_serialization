@@ -1,5 +1,11 @@
 #include "multidataset_plugin.h"
 
+
+static H5D_rw_multi_t *multi_datasets;
+static hid_t *dataset_recycle;
+static hid_t *memspace_recycle;
+static hid_t *dataspace_recycle;
+
 static int dataset_size;
 static int dataset_size_limit;
 static int dataset_recycle_size;
@@ -17,6 +23,7 @@ int init_multidataset() {
     dataspace_recycle_size_limit = 0;
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
+    return 0;
 }
 
 int register_dataset_recycle(hid_t did) {

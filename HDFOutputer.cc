@@ -38,7 +38,7 @@ namespace {
   }
 }
 
-int write_multidatasets(hid_t gid, char *name, char* data, size_t data_size, hid_t mtype) {
+int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
   const hsize_t ndims = 1;
   hid_t did, dsid, msid;
   hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};

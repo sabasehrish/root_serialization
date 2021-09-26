@@ -58,10 +58,11 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   H5Sselect_hyperslab(dsid, H5S_SELECT_SET, old_dims, NULL, slab_size, NULL);
   msid = H5Screate_simple(ndims, slab_size, max_dims);
 
+  register_multidataset(data, did, dsid, msid, mtype, 1);
+  flush_multidatasets();
   register_dataset_recycle(did);
   register_dataspace_recycle(dsid);
   register_memspace_recycle(msid);
-  register_multidataset(data, did, dsid, msid, mtype, 1);
   return 0;
 }
 

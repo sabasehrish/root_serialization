@@ -45,6 +45,8 @@ target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
 
 add_executable(threaded_io_test
   DeserializeStrategy.cc
+  multidataset_plugin.cc
+  H5Timing.cc
   HDFOutputer.cc
   HDFSource.cc
   Lane.cc

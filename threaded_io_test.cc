@@ -17,6 +17,7 @@
 #include "tbb/global_control.h"
 #include "tbb/task_arena.h"
 #include "H5Timing.h"
+#include "multidataset_plugin.h"
 
 namespace {
   std::pair<std::string, std::string> parseCompound(const char* iArg) {

@@ -158,10 +158,12 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
       register_dataset_sz_timer_end();
     }
+    register_dataset_timer_start("flush_all");
     flush_multidatasets();
     dataset_recycle_all();
     dataspace_recycle_all();
     memspace_recycle_all();
+    register_dataset_timer_end();
 
     batch_ = 0;
     products_.clear();

@@ -38,6 +38,13 @@ namespace {
   }
 }
 
+int append_dataset(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+  hid_t did = H5Dopen2(gid, name, H5P_DEFAULT);
+  H5DOappend( did, H5P_DEFAULT, 0, data_size, mtype, buffer);
+  H5Dclose(did);
+  return 0;
+}
+
 int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
   const hsize_t ndims = 1;
   hid_t did, dsid, msid;
@@ -149,13 +156,15 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
       register_dataset_timer_start(name.c_str());
       //write_ds<char>(gid, name, prods);
-      write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      //write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
       register_dataset_timer_end();
 
       auto s = name+"_sz";
       register_dataset_sz_timer_start(s.c_str());
       //write_ds<size_t>(gid, s, sizes);
-      write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
+      //write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
+      append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
       register_dataset_sz_timer_end();
     }
     register_dataset_timer_start("flush_all");

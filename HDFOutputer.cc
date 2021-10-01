@@ -41,7 +41,7 @@ namespace {
 
 int append_dataset(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
   hid_t did = H5Dopen2(gid, name, H5P_DEFAULT);
-  H5DOappend( did, H5P_DEFAULT, 0, data_size, mtype, buffer);
+  H5DOappend( did, H5P_DEFAULT, 0, data_size, mtype, data);
   H5Dclose(did);
   return 0;
 }

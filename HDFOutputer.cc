@@ -71,7 +71,6 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   register_dataspace_recycle(dsid);
   register_memspace_recycle(msid);
 
-  flush_multidatasets();
   return 0;
 }
 
@@ -177,7 +176,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(int));
 #endif
-      total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(int);
+      total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
+      flush_multidatasets();
     }
 #ifdef H5_TIMING_ENABLE
     register_dataset_timer_start("flush_all");

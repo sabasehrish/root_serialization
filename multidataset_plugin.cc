@@ -83,7 +83,7 @@ int register_memspace_recycle(hid_t msid) {
 
 int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
     if (dataset_size == dataset_size_limit) {
-        if ( dataset_size_limit > 0 ) {
+        if ( dataset_size_limit ) {
             dataset_size_limit *= 2;
             H5D_rw_multi_t *temp = (H5D_rw_multi_t*) malloc(dataset_size_limit*sizeof(H5D_rw_multi_t));
             memcpy(temp, multi_datasets, sizeof(H5D_rw_multi_t) * dataset_size);

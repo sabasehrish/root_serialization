@@ -86,6 +86,12 @@ int register_memspace_recycle(hid_t msid) {
 }
 
 int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
+    int dims[H5S_MAX_RANK];
+    int mdims[H5S_MAX_RANK];
+    size_t esize = H5Tget_size (mtype);
+    H5Sget_simple_extent_dims (msid, dims, mdims);
+    esize *= dims[0];
+
     if (dataset_size == dataset_size_limit) {
         if ( dataset_size_limit ) {
             dataset_size_limit *= 2;
@@ -104,7 +110,8 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
     multi_datasets[dataset_size].dset_space_id = dsid;
     multi_datasets[dataset_size].mem_type_id = mtype;
     if (write) {
-        multi_datasets[dataset_size].u.wbuf = buf;
+        multi_datasets[dataset_size].u.wbuf = (void*) malloc(esize);
+        memcpy(multi_datasets[dataset_size].u.wbuf, buf, esize);
     } else {
         multi_datasets[dataset_size].u.rbuf = buf;
     }
@@ -185,7 +192,9 @@ int flush_multidatasets() {
     }
 
     //printf("rank %d number of hyperslab called %d\n", rank, hyperslab_count);
-
+    for ( i = 0; i < dataset_size; ++i ) {
+        free(multi_datasets[i].u.wbuf);
+    }
     if (dataset_size) {
         free(multi_datasets);
     }

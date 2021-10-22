@@ -87,8 +87,8 @@ int register_memspace_recycle(hid_t msid) {
 }
 
 int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
-    int dims[H5S_MAX_RANK];
-    int mdims[H5S_MAX_RANK];
+    hsize_t dims[H5S_MAX_RANK];
+    hsize_t mdims[H5S_MAX_RANK];
     size_t esize = H5Tget_size (mtype);
     H5Sget_simple_extent_dims (msid, dims, mdims);
     esize *= dims[0];

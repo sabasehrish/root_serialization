@@ -25,6 +25,8 @@ int init_multidataset() {
     dataspace_recycle_size_limit = 0;
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
+    dataset_recycle_size_limit = 0;
+    dataset_recycle_size = 0;
     return 0;
 }
 

@@ -5,6 +5,7 @@ static H5D_rw_multi_t *multi_datasets;
 static hid_t *dataset_recycle;
 static hid_t *memspace_recycle;
 static hid_t *dataspace_recycle;
+static void** temp_mem;
 
 static int dataset_size;
 static int dataset_size_limit;
@@ -99,8 +100,14 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
             memcpy(temp, multi_datasets, sizeof(H5D_rw_multi_t) * dataset_size);
             free(multi_datasets);
             multi_datasets = temp;
+
+            void *new_memory = (void*) malloc(dataset_size_limit*sizeof(void*));
+            memcpy(new_memory, temp_mem, sizeof(void*) * dataset_size);
+            free(temp_mem);
+            temp_mem = new_memory;
         } else {
             dataset_size_limit = MEM_SIZE;
+            temp_mem = (void*) malloc(sizeof(void*) * dataset_size_limit);
             multi_datasets = (H5D_rw_multi_t*) malloc(dataset_size_limit*sizeof(H5D_rw_multi_t));
         }
     }
@@ -110,8 +117,9 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
     multi_datasets[dataset_size].dset_space_id = dsid;
     multi_datasets[dataset_size].mem_type_id = mtype;
     if (write) {
-        multi_datasets[dataset_size].u.wbuf = (void*) malloc(esize);
-        memcpy(multi_datasets[dataset_size].u.wbuf, buf, esize);
+        temp_mem[dataset_size] = (void*) malloc(esize);
+        memcpy(temp_mem[dataset_size], buf, esize);
+        multi_datasets[dataset_size].u.wbuf = temp_mem[dataset_size];
     } else {
         multi_datasets[dataset_size].u.rbuf = buf;
     }
@@ -193,9 +201,10 @@ int flush_multidatasets() {
 
     //printf("rank %d number of hyperslab called %d\n", rank, hyperslab_count);
     for ( i = 0; i < dataset_size; ++i ) {
-        free(multi_datasets[i].u.wbuf);
+        free(temp_mem[i]);
     }
     if (dataset_size) {
+        free(temp_mem[i]);
         free(multi_datasets);
     }
     dataset_size = 0;

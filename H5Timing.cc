@@ -1,5 +1,7 @@
 #include "H5Timing.h"
 
+#ifdef H5_TIMING_ENABLE
+
 H5TimerArray *dataset_timers;
 H5TimerArray *dataset_sz_timers;
 H5TimerArray *dataset_read_timers;
@@ -176,3 +178,4 @@ int finalize_timers() {
     free(dataset_timers);
     return 0;
 }
+#endif

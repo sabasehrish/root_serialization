@@ -140,7 +140,9 @@ get_prods_and_sizes(std::vector<product_t> & input,
 void 
 HDFOutputer::output(EventIdentifier const& iEventID, 
                     std::vector<SerializerWrapper> const& iSerializers) {
+#ifdef H5_TIMING_ENABLE
   size_t total_data_size = 0;
+#endif
   if(firstTime_) {
     writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
@@ -176,7 +178,9 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(int));
 #endif
+#ifdef H5_TIMING_ENABLE
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
+#endif
     }
 #ifdef H5_TIMING_ENABLE
     register_dataset_timer_start("flush_all");

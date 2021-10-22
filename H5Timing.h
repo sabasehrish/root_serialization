@@ -11,6 +11,7 @@
 typedef struct{
     double start;
     double end;
+    size_t data_size;
     char *name;
 } H5Timer;
 
@@ -22,13 +23,13 @@ typedef struct{
 
 int init_timers();
 int register_dataset_timer_start(const char *name);
-int register_dataset_timer_end();
+int register_dataset_timer_end(size_t data_size);
 int register_dataset_sz_timer_start(const char *name);
-int register_dataset_sz_timer_end();
+int register_dataset_sz_timer_end(size_t data_size);
 int register_dataset_read_timer_start(const char *name);
-int register_dataset_read_timer_end();
+int register_dataset_read_timer_end(size_t data_size);
 int register_dataset_sz_read_timer_start(const char *name);
-int register_dataset_sz_read_timer_end();
+int register_dataset_sz_read_timer_end(size_t data_size);
 int finalize_timers();
 
 #endif

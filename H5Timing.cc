@@ -57,10 +57,11 @@ static int check_timer_size(H5TimerArray *timers) {
     strcpy(timers->timer_array[timers->size].name, name); \
 }
 
-#define TIMER_END(timers) { \
+#define TIMER_END(timers, data_size) { \
     struct timeval temp_time;     \
     gettimeofday(&temp_time, NULL); \
     timers->timer_array[timers->size].end = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0; \
+    timers->timer_array[timers->size].data_size = data_size; \
     timers->size++; \
 }
 
@@ -68,8 +69,8 @@ int register_dataset_timer_start(const char *name) {
     TIMER_START(dataset_timers);
     return 0;
 }
-int register_dataset_timer_end() {
-    TIMER_END(dataset_timers);
+int register_dataset_timer_end(size_t data_size) {
+    TIMER_END(dataset_timers, data_size);
     return 0;
 }
 
@@ -78,8 +79,8 @@ int register_dataset_sz_timer_start(const char *name) {
     return 0;
 }
 
-int register_dataset_sz_timer_end() {
-    TIMER_END(dataset_sz_timers);
+int register_dataset_sz_timer_end(size_t data_size) {
+    TIMER_END(dataset_sz_timers, data_size);
     return 0;
 }
 
@@ -87,8 +88,8 @@ int register_dataset_read_timer_start(const char *name) {
     TIMER_START(dataset_read_timers);
     return 0;
 }
-int register_dataset_read_timer_end() {
-    TIMER_END(dataset_read_timers);
+int register_dataset_read_timer_end(size_t data_size) {
+    TIMER_END(dataset_read_timers, data_size);
     return 0;
 }
 
@@ -97,20 +98,20 @@ int register_dataset_sz_read_timer_start(const char *name) {
     return 0;
 }
 
-int register_dataset_sz_read_timer_end() {
-    TIMER_END(dataset_sz_read_timers);
+int register_dataset_sz_read_timer_end(size_t data_size) {
+    TIMER_END(dataset_sz_read_timers, data_size);
     return 0;
 }
 
 int record_timer(H5TimerArray *timer, const char* filename) {
     FILE *stream;
-    size_t i;
+    size_t i, total_mem_size;
     double total_time = 0, min_time = -1, max_time = -1;
     stream = fopen(filename, "w");
     fprintf(stream, "dataset_name,start,end,elapse\n");
-
+    total_mem_size = 0;
     for ( i = 0; i < timer->size; ++i ) {
-        fprintf(stream, "%s, %lf, %lf, %lf\n", timer->timer_array[i].name, timer->timer_array[i].start, timer->timer_array[i].end, (timer->timer_array[i].end - timer->timer_array[i].start)/1000000);
+        fprintf(stream, "%s, %lf, %lf, %lf, %zu\n", timer->timer_array[i].name, timer->timer_array[i].start, timer->timer_array[i].end, (timer->timer_array[i].end - timer->timer_array[i].start)/1000000, timer->timer_array[i].data_size);
         total_time += (timer->timer_array[i].end - timer->timer_array[i].start)/1000000;
         if (min_time == -1 || min_time > timer->timer_array[i].start) {
             min_time = timer->timer_array[i].start;
@@ -118,8 +119,9 @@ int record_timer(H5TimerArray *timer, const char* filename) {
         if (max_time == -1 || max_time < timer->timer_array[i].end) {
             max_time = timer->timer_array[i].end;
         }
+        total_mem_size += timer->timer_array[i].data_size;
     }
-    fprintf(stream, "total,%lf,%lf,%lf\n", min_time, max_time, total_time);
+    fprintf(stream, "total,%lf,%lf,%lf,%zu\n", min_time, max_time, total_time,);
     fclose(stream);
     return 0;
 }

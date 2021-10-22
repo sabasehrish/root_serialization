@@ -139,6 +139,7 @@ get_prods_and_sizes(std::vector<product_t> & input,
 void 
 HDFOutputer::output(EventIdentifier const& iEventID, 
                     std::vector<SerializerWrapper> const& iSerializers) {
+  size_t total_data_size = 0;
   if(firstTime_) {
     writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
@@ -159,21 +160,22 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       //write_ds<char>(gid, name, prods);
       //write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
       append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
-      register_dataset_timer_end();
+      register_dataset_timer_end((size_t)prods.size());
 
       auto s = name+"_sz";
       register_dataset_sz_timer_start(s.c_str());
       //write_ds<size_t>(gid, s, sizes);
       //write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
       append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
-      register_dataset_sz_timer_end();
+      register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(int));
+      total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(int);
     }
     register_dataset_timer_start("flush_all");
     flush_multidatasets();
     dataset_recycle_all();
     dataspace_recycle_all();
     memspace_recycle_all();
-    register_dataset_timer_end();
+    register_dataset_timer_end(total_data_size);
 
     batch_ = 0;
     products_.clear();

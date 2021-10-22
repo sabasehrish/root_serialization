@@ -121,7 +121,7 @@ int record_timer(H5TimerArray *timer, const char* filename) {
         }
         total_mem_size += timer->timer_array[i].data_size;
     }
-    fprintf(stream, "total,%lf,%lf,%lf,%zu\n", min_time, max_time, total_time,);
+    fprintf(stream, "total,%lf,%lf,%lf,%zu\n", min_time, max_time, total_time, total_mem_size);
     fclose(stream);
     return 0;
 }

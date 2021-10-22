@@ -71,10 +71,7 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   register_dataspace_recycle(dsid);
   register_memspace_recycle(msid);
 
-    flush_multidatasets();
-    dataset_recycle_all();
-    dataspace_recycle_all();
-    memspace_recycle_all();
+  flush_multidatasets();
   return 0;
 }
 

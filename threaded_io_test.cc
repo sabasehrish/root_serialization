@@ -52,7 +52,9 @@ int main(int argc, char* argv[]) {
                 "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
     return 1;
   }
+#ifdef H5_TIMING_ENABLE
   init_timers();
+#endif
   init_multidataset();
   int parallelism = tbb::this_task_arena::max_concurrency();
   bool useIMT=false;
@@ -185,7 +187,9 @@ int main(int argc, char* argv[]) {
   std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
+#ifdef H5_TIMING_ENABLE
   finalize_timers();
+#endif
   source->printSummary();
   out->printSummary();
 }

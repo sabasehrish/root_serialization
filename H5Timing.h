@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
-#define TIMING_DEBUG 1
+#undef H5_TIMING_ENABLE
 
 typedef struct{
     double start;

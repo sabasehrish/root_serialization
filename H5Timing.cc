@@ -108,7 +108,7 @@ int record_timer(H5TimerArray *timer, const char* filename) {
     size_t i, total_mem_size;
     double total_time = 0, min_time = -1, max_time = -1;
     stream = fopen(filename, "w");
-    fprintf(stream, "dataset_name,start,end,elapse\n");
+    fprintf(stream, "dataset_name,start,end,elapse,data_size\n");
     total_mem_size = 0;
     for ( i = 0; i < timer->size; ++i ) {
         fprintf(stream, "%s, %lf, %lf, %lf, %zu\n", timer->timer_array[i].name, timer->timer_array[i].start, timer->timer_array[i].end, (timer->timer_array[i].end - timer->timer_array[i].start)/1000000, timer->timer_array[i].data_size);

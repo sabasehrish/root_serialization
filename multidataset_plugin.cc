@@ -16,6 +16,8 @@ static int memspace_recycle_size;
 static int memspace_recycle_size_limit;
 hsize_t total_data_size;
 
+#define MEM_SIZE 2048
+
 int init_multidataset() {
     dataset_size = 0;
     dataset_size_limit = 0;
@@ -35,7 +37,7 @@ int register_dataset_recycle(hid_t did) {
             free(dataset_recycle);
             dataset_recycle = temp;
         } else {
-            dataset_recycle_size_limit = 512;
+            dataset_recycle_size_limit = MEM_SIZE;
             dataset_recycle = (hid_t*) malloc(dataset_recycle_size_limit*sizeof(hid_t));
         }
     }
@@ -54,7 +56,7 @@ int register_dataspace_recycle(hid_t dsid) {
             free(dataspace_recycle);
             dataspace_recycle = temp;
         } else {
-            dataspace_recycle_size_limit = 512;
+            dataspace_recycle_size_limit = MEM_SIZE;
             dataspace_recycle = (hid_t*) malloc(dataspace_recycle_size_limit*sizeof(hid_t));
         }
     }
@@ -72,7 +74,7 @@ int register_memspace_recycle(hid_t msid) {
             free(memspace_recycle);
             memspace_recycle = temp;
         } else {
-            memspace_recycle_size_limit = 512;
+            memspace_recycle_size_limit = MEM_SIZE;
             memspace_recycle = (hid_t*) malloc(memspace_recycle_size_limit*sizeof(hid_t));
         }
     }
@@ -90,7 +92,7 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
             free(multi_datasets);
             multi_datasets = temp;
         } else {
-            dataset_size_limit = 512;
+            dataset_size_limit = MEM_SIZE;
             multi_datasets = (H5D_rw_multi_t*) malloc(dataset_size_limit*sizeof(H5D_rw_multi_t));
         }
     }

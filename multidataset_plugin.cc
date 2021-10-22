@@ -204,7 +204,6 @@ int flush_multidatasets() {
         free(temp_mem[i]);
     }
     if (dataset_size) {
-        free(temp_mem[i]);
         free(multi_datasets);
     }
     dataset_size = 0;

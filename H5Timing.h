@@ -8,6 +8,7 @@
 #include <unistd.h>
 #undef H5_TIMING_ENABLE
 
+#ifdef H5_TIMING_ENABLE
 typedef struct{
     double start;
     double end;
@@ -31,5 +32,6 @@ int register_dataset_read_timer_end(size_t data_size);
 int register_dataset_sz_read_timer_start(const char *name);
 int register_dataset_sz_read_timer_end(size_t data_size);
 int finalize_timers();
+#endif
 
 #endif

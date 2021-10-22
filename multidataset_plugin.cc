@@ -101,13 +101,13 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
             free(multi_datasets);
             multi_datasets = temp;
 
-            void *new_memory = (void*) malloc(dataset_size_limit*sizeof(void*));
+            void *new_memory = (void**) malloc(dataset_size_limit*sizeof(void*));
             memcpy(new_memory, temp_mem, sizeof(void*) * dataset_size);
             free(temp_mem);
             temp_mem = new_memory;
         } else {
             dataset_size_limit = MEM_SIZE;
-            temp_mem = (void*) malloc(sizeof(void*) * dataset_size_limit);
+            temp_mem = (void**) malloc(sizeof(void*) * dataset_size_limit);
             multi_datasets = (H5D_rw_multi_t*) malloc(dataset_size_limit*sizeof(H5D_rw_multi_t));
         }
     }

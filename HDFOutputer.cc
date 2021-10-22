@@ -167,8 +167,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       auto s = name+"_sz";
       register_dataset_sz_timer_start(s.c_str());
       //write_ds<size_t>(gid, s, sizes);
-      write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
-      //append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_INT);
+      write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      //append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
       register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(int));
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(int);
     }

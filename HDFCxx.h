@@ -2,6 +2,7 @@
 #define HDFCxx_h
 
 #include "hdf5.h"
+#include "mpi/mpicpp.h"
 #include <stdexcept>
 #include <vector>
 
@@ -36,12 +37,43 @@ class File {
   public:
     static File create(const char *name) {
       return File(H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT));
-    } 
+    }
+
+    static File parallel_create(const char *name) {
+        MPI_Info info;
+        MPI_Info_create(&info);
+        auto plist_id = H5Pcreate (H5P_FILE_ACCESS);
+        auto  ret = H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
+        auto f = File(H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id));
+    //    H5Pset_fclose_degree(f, H5F_CLOSE_STRONG);
+        return f;
+    }
+
     static File open(const char *name) {
       return File(H5Fopen(name, H5F_ACC_RDONLY, H5P_DEFAULT));
     }
+    
+    static File parallel_open(const char *name, MPI_Comm comm) {
+        MPI_Info info;
+        MPI_Info_create(&info);
+        auto plist_id = H5Pcreate (H5P_FILE_ACCESS);
+        auto  ret = H5Pset_fapl_mpio(plist_id, comm, info);
+        return File(H5Fopen(name, H5F_ACC_RDWR, plist_id));
+    }
+
+    herr_t close() {
+     //   H5Pset_fclose_degree(file_, H5F_CLOSE_STRONG);
+        return H5Fclose(file_);
+    }
+    herr_t flush() {
+      return H5Fflush(file_, H5F_SCOPE_GLOBAL);
+    }
+    int increment() {
+      return H5Iinc_ref(file_);   
+    }
+
     ~File() {
-      H5Fclose(file_);
+      close();
     }
     operator hid_t() const {return file_;}
   private:
@@ -61,8 +93,18 @@ class Group {
     static Group open(hid_t id, const char *name) {
       return Group(H5Gopen2(id, name, H5P_DEFAULT));
     }
+
+    herr_t close() {
+      return H5Gclose(group_);
+    }
+    herr_t flush() {
+      return H5Gflush(group_);
+    }
+    int increment() {
+      return H5Iinc_ref(group_);   
+    }
     ~Group() {
-      H5Gclose(group_);
+     close();
     }
     operator hid_t() const {return group_;}
   private:
@@ -84,16 +126,27 @@ class Dataset {
     } 
     static Dataset open(hid_t id, const char *name){
       return Dataset(H5Dopen2(id, name, H5P_DEFAULT));}
+
     ~Dataset() { 
-       H5Dclose(dataset_);
+       close();
     }
     operator hid_t() const {return dataset_;}
     
     template<typename T>
     auto 
     write(hid_t dspace, hid_t filespace, std::vector<T> const & data) {
-      return H5Dwrite(dataset_, H5memtype_for<T>, dspace, filespace, H5P_DEFAULT, &data[0]);
+        return H5Dwrite(dataset_, H5memtype_for<T>, dspace, filespace, H5P_DEFAULT, &data[0]);
     }
+
+    template<typename T>
+    auto 
+    parallel_write(hid_t dspace, hid_t filespace, std::vector<T> const & data) {
+        auto plist_id = H5Pcreate (H5P_DATASET_XFER);
+        auto  ret = H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        auto status = H5Dwrite(dataset_, H5memtype_for<T>, dspace, filespace, plist_id, &data[0]);
+        return status;
+    }
+  
   
     auto set_extent(hsize_t const *dims) {
      auto err = H5Dset_extent(dataset_, dims);
@@ -102,6 +155,13 @@ class Dataset {
      }
     }
  
+    herr_t close() {
+      return H5Dclose(dataset_);
+    }
+
+    herr_t flush() {
+      return H5Dflush(dataset_);
+    }
   private: 
       explicit Dataset(hid_t ds_id):dataset_(ds_id) {
       if (dataset_ < 0) {
@@ -120,6 +180,9 @@ class Attribute {
     } 
     static Attribute open(hid_t id, const char *name){
       return Attribute(H5Aopen(id, name, H5P_DEFAULT));
+    }
+    herr_t close() {
+      return H5Aclose(attribute_);
     }
     ~Attribute() { 
        H5Aclose(attribute_);
@@ -159,6 +222,9 @@ class Dataspace {
         throw std::runtime_error("Unable to select hyperslab\n");
       }
     } 
+    herr_t close() {
+      return H5Sclose(dspace_);
+    }
     ~Dataspace() {
       H5Sclose(dspace_);
     }

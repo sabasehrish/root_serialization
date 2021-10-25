@@ -215,7 +215,7 @@ namespace {
   class Maker : public OutputerMakerBase {
   public:
     Maker(): OutputerMakerBase("TBufferMergerRootOutputer") {}
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
 
       bool concurrentWrite = params.get<bool>("concurrentWrite",true);
 

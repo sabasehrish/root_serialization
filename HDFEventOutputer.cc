@@ -187,7 +187,7 @@ namespace {
   public:
     HDFEventMaker(): OutputerMakerBase("HDFEventOutputer") {}
     
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
       auto fileName = params.get<std::string>("fileName");
       if(not fileName) {
         std::cout<<" no file name given for HDFEventOutputer\n";

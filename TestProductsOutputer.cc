@@ -70,7 +70,7 @@ namespace {
     class TestProductsMaker : public OutputerMakerBase {
   public:
     TestProductsMaker(): OutputerMakerBase("TestProductsOutputer") {}
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
       return std::make_unique<TestProductsOutputer>(iNLanes);
     }
     };

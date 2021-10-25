@@ -1,0 +1,286 @@
+#include "TROOT.h"
+#include "TVirtualStreamerInfo.h"
+#include "TObject.h"
+#include <iostream>
+#include <iterator>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <atomic>
+#include <iomanip>
+#include <cmath>
+
+#include "../outputerFactoryGenerator.h"
+#include "../sourceFactoryGenerator.h"
+
+#include "../Lane.h"
+
+#include "tbb/task_group.h"
+#include "tbb/global_control.h"
+#include "tbb/task_arena.h"
+
+#include "CLI11.hpp"
+#include "mpicpp.h"
+
+
+namespace {
+  std::vector<std::string> fnames(std::string flist) {
+    std::ifstream is(flist);
+    std::istream_iterator<std::string> i_start(is), i_end;
+    return std::vector<std::string>(i_start, i_end);
+  }   
+
+  
+  std::string ifile(int mode, int rank, std::vector<std::string> ilist) {
+    if (ilist.empty()) return "";
+    if (mode == 0) return ilist[rank];
+    if (mode == 1) return ilist[rank];
+    if (mode == 2) return ilist[0];
+    return ilist[0];
+  }
+  
+  std::string ofile(int mode, int rank, std::vector<std::string> olist) {
+    if (mode == 0) return olist[rank];
+    if (mode == 1) return olist[0];
+    if (mode == 2) return olist[0];
+    return olist[rank];
+  }
+ 
+   std::pair<std::string, std::string> parseCompound(std::string_view iArg) {
+     std::string sArg(iArg);
+       auto foundEq = sArg.find('=');
+       auto foundComma = sArg.find(':');
+       auto found = foundEq < foundComma ? foundEq : foundComma;
+       if(found != std::string::npos) {
+         return std::pair(sArg.substr(0,found), sArg.substr(found+1));
+       }
+       return std::pair(sArg, std::string());
+               }
+
+  bool same_num_of_batches(int batch_size, int nranks, unsigned long long nEvents) {
+    auto q = nEvents/nranks;
+    auto rem = nEvents%nranks;
+    std::vector<int> event_ranges;
+    event_ranges.reserve(nranks);
+    auto start = 0;
+    auto end = 0;
+    for(auto i=0; i< nranks;++i) {
+      end = start + q + static_cast<int>(i<rem);
+      if (i == nranks-1) end = nEvents;
+      event_ranges.emplace_back((end-start)/batch_size + static_cast<int>(((end-start)%batch_size)!=0));
+      start = end;
+    }
+
+    auto result = std::adjacent_find( event_ranges.begin(), event_ranges.end(), std::not_equal_to<>() ) == event_ranges.end();
+    return result; 
+  }
+
+  std::vector<std::pair<long, long>> ranges(int mode, int nranks, unsigned long long nEvents) {
+    auto rem = nEvents%nranks;
+    if (rem != 0 && !same_num_of_batches(15, nranks, nEvents)) {
+        nEvents = nEvents + nranks - rem;
+        std::cout << "batch sizes not same!" << std::endl;
+    }
+    auto q = nEvents/nranks;
+    rem = nEvents%nranks;
+    std::vector<std::pair<long, long>> event_ranges;
+    event_ranges.reserve(nranks);
+    auto start = 0;
+    auto end = 0;
+    for(auto i=0; i< nranks;++i) {
+      end = start + q + static_cast<int>(i<rem);
+      if (i == nranks-1) end = nEvents;
+      event_ranges.emplace_back(start, end);
+      start = end;
+    }
+    return event_ranges;
+  }
+  
+}
+
+int main(int argc, char* argv[]) {
+  Mpi mpi(argc, argv); 
+  auto const my_rank =  mpi.rank();
+  auto const nranks = mpi.np();
+  using namespace cce::tf;
+
+  CLI::App app{"Mpi_threaded_IO"};
+  int mode; 
+  // assuming n ranks, here are different mode values and their meanings
+  // 0: n-n, i.e. n ranks reading n files and writing n files (1 input/output file per rank), should work for all output types
+  // 1: n-1, i.e. n ranks reading n files and writing 1 file (1 input file per rank, 1 output file for all ranks), valid only for writig HDF5 output
+  // 2: 1-1, valid for HDF5 output only in case of n ranks, and for all output formats if there is only 1 rank. 
+  // 3: 1-n , should work for all output types
+  std::string isource;
+  std::string ilist;
+  int jt;
+  bool useIMT;
+  int je;
+  double scale;
+  int nevents;
+  std::string outputerConfig;
+  std::string olist;
+  int batchSize;
+
+  app.add_option("-m, --mode", mode, "Operation mode")->required();
+  app.add_option("-s, --source", isource, "Input Source")->required();
+  app.add_option("--ilist", ilist, "Name of file with a listing of input file names to be read");
+  app.add_option("--jt", jt, "Number of threads")->required();
+  app.add_option("--useIMT", useIMT, "use IMT")->required();
+  app.add_option("--je", je, "Number of events per thread")->required();
+  app.add_option("--scale", scale, "Scale")->required();
+  app.add_option("-n, --nevents", nevents, "Total number of events to process across all MPI ranks")->required();
+  app.add_option("-o, --outputerconfig", outputerConfig, "Output Source")->required();
+  app.add_option("--olist", olist, "Name of file with a listing of output file names to be generated")->required();
+  app.parse(argc, argv);
+  
+  int parallelism = tbb::this_task_arena::max_concurrency();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, parallelism);
+
+  //Tell Root we want to be multi-threaded
+  if(useIMT) {
+    ROOT::EnableImplicitMT(parallelism);
+  } else {
+    ROOT::EnableThreadSafety();
+  }
+  //When threading, also have to keep ROOT from logging all TObjects into a list
+  TObject::SetObjectStat(false);
+  
+  //Have to avoid having Streamers modify themselves after they have been used
+  TVirtualStreamerInfo::Optimize(false);
+
+  std::vector<Lane> lanes;
+  unsigned int nLanes = je;
+
+  unsigned long long nEvents = nevents; 
+
+  std::vector<std::string> outputInfo = fnames(olist);
+  std::vector<std::string> sourceOptions = fnames(ilist);
+  auto ifilename = ifile(mode, my_rank, sourceOptions);
+  auto ofilename = ofile(mode, my_rank, outputInfo);
+
+  std::string outputType = outputerConfig; 
+  if (outputType == "TextDumpOutputer") ofilename = "";
+  auto outFactory = outputerFactoryGenerator(outputType, ofilename); 
+  auto sourceFactory = sourceFactoryGenerator(isource, ifilename);
+  auto ts = parseCompound(ofilename);
+  auto t = parseCompound(ts.second);
+  auto found = ts.second.find("batchSize=");
+  if (found != std::string::npos) std::cout << "found: " << found << std::endl; 
+  std::cout << "Output file options: "<< t.first << ", " << t.second << std::endl;
+  if (not sourceFactory) {
+    std::cout <<"unknown source type "<<isource<<std::endl;
+    return 1;
+  }
+ 
+ // checking operation modes to make sure we only run valid combos
+ //
+  switch (mode) {
+  case 0:
+   if (sourceOptions.size() != outputInfo.size() ) {
+    std::cout << "Number of Input and output files dont match\n";
+    return 1;
+  } else {
+    if (sourceOptions.size() != nranks) {
+      std::cout << "Number of ranks dont match input/output files\n";
+      return 1;
+    }
+  }
+  break;
+  case 1:
+    //only supported for HDFOutputer
+    if (!outputType.compare("PHDFBatchEventsOutputer")) {
+      std::cout << "Writing to a single file is only supported for HDF5\n";
+      return 1;
+    }
+    break;
+  case 2:
+    //only supported for HDFOutputer
+    std::cout << outputType << std::endl;
+    if (outputType.compare("PHDFBatchEventsOutputer")) {
+      std::cout << "Writing to a single file is only supported for HDF5\n";
+      return 1;
+    }
+    break;
+  default:
+  break;
+}
+
+  std::cout << my_rank <<" begin warmup"<<std::endl;
+  {
+    //warm up the system by processing 1 event 
+    tbb::task_arena arena(1);
+    auto out = outFactory(1, 1);
+    auto source =sourceFactory(1,1);
+    Lane lane(0, source.get(), 0);
+    out->setupForLane(0, lane.dataProducts());
+    auto pOut = out.get();
+    arena.execute([&lane,pOut]() {
+        tbb::task_group group;
+        std::atomic<long> ievt{0};
+	std::atomic<unsigned int> count{0};
+        group.run([&]() {
+            lane.processEventsAsync(ievt, group, *pOut, AtomicRefCounter(count));
+          });
+        group.wait();
+      });
+  }
+  //calculate first event index and last event index for this rank 
+  int firsteventIndex;
+  int lasteventIndex;
+  auto event_ranges = ranges(mode, nranks, nEvents);
+  std::tie(firsteventIndex, lasteventIndex) = event_ranges[my_rank];
+  auto out = outFactory(nLanes, lasteventIndex);
+  auto source = sourceFactory(nLanes, lasteventIndex);
+  lanes.reserve(nLanes);
+  for(unsigned int i = 0; i< nLanes; ++i) {
+    lanes.emplace_back(i, source.get(), scale);
+    out->setupForLane(i, lanes.back().dataProducts());
+  }
+
+  std::atomic<long> ievt = firsteventIndex;
+  
+  tbb::task_arena arena(parallelism);
+
+  decltype(std::chrono::high_resolution_clock::now()) start;
+  auto pOut = out.get();
+  arena.execute([&lanes, &ievt, pOut, &start, my_rank, nranks]() {
+    std::atomic<unsigned int> nLanesWaiting{ 0 };
+    std::vector<tbb::task_group> groups(lanes.size());
+    start = std::chrono::high_resolution_clock::now();
+    auto itGroup = groups.begin();
+    {
+      AtomicRefCounter laneCounter(nLanesWaiting);
+      for(auto& lane: lanes) {
+        auto& group = *itGroup;
+        group.run([&]() {lane.processEventsAsync(ievt,group, *pOut,laneCounter);});
+        ++itGroup;
+      }
+    }
+    do {
+      for(auto& group: groups) {
+	    group.wait();
+ } while(nLanesWaiting != 0);
+    } while(nLanesWaiting != 0);
+    //be sure all groups have fully finished
+    for(auto& group: groups) {
+      group.wait();
+    }
+  });
+  std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
+  //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
+  std::cout <<"----------"<<std::endl;
+  std::cout <<"Source "<<argv[1]<<"\n"
+            <<"Outputer "<<ofile<<"\n"
+	    <<"# threads "<<parallelism<<"\n"
+	    <<"# concurrent events "<<nLanes <<"\n"
+	    <<"time scale "<<scale<<"\n"
+	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
+  std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
+  std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
+  std::cout <<"----------"<<std::endl;
+
+  source->printSummary();
+  out->printSummary();
+  std::cout << my_rank <<" finished processing"<<std::endl;
+}

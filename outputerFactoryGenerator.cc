@@ -3,13 +3,13 @@
 #include "configKeyValuePairs.h"
 #include <iostream>
 
-std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int)>
+std::function<std::unique_ptr<cce::tf::OutputerBase>(unsigned int, int)>
 cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOptions) {
-  std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
+  std::function<std::unique_ptr<OutputerBase>(unsigned int, int)> outFactory;
 
   auto keyValues = cce::tf::configKeyValuePairs(iOptions);
-  outFactory = [type=std::string(iType), params=ConfigurationParameters(keyValues)](unsigned int iNLanes) {
-    auto maker = OutputerFactory::get()->create(type, iNLanes, params);
+  outFactory = [type=std::string(iType), params=ConfigurationParameters(keyValues)](unsigned int iNLanes, int nEvents) {
+    auto maker = OutputerFactory::get()->create(type, iNLanes, params, nEvents);
     if(not maker) {
       return maker;
     }
@@ -26,6 +26,5 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
 
     return maker;
   };
-
   return outFactory;
 }

@@ -1,4 +1,4 @@
-#include "HDFBatchEventsOutputer.h"
+#include "PHDFBatchEventsOutputer.h"
 #include "OutputerFactory.h"
 #include "ConfigurationParameters.h"
 #include "UnrolledSerializerWrapper.h"
@@ -10,6 +10,8 @@
 #include <cstring>
 #include <cmath>
 #include <set>
+
+#include "mpi.h"
 
 using namespace cce::tf;
 using namespace cce::tf::pds;
@@ -28,29 +30,38 @@ namespace {
   void 
   write_ds(hid_t gid, 
            std::string const& dsname, 
-           std::vector<T> const& data) {
+           std::vector<T> const& data,
+           MPI_Comm comm) {
     constexpr hsize_t ndims = 1;
     auto dset = hdf5::Dataset::open(gid, dsname.c_str()); 
     auto old_fspace = hdf5::Dataspace::get_space(dset);
-    hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};
+    hsize_t max_dims[ndims]; 
     hsize_t old_dims[ndims]; //our datasets are 1D
     H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
-    //now old_dims[0] has existing length
-    //we need to extend by the size of data
+    hsize_t data_size[ndims];
+    data_size[0] = data.size();
+    //Call to MPI_Scan followed by AllReduce
+    //AllReduce will let every rank know the max dim 
+    int partial_sum_size[ndims] = {0};
+    MPI_Scan(data_size, partial_sum_size, ndims, MPI_INT, MPI_SUM, comm);
+    int max_size[ndims] = {0};
+    MPI_Allreduce(partial_sum_size, max_size, ndims, MPI_INT, MPI_MAX, comm);
     hsize_t new_dims[ndims];
-    new_dims[0] = old_dims[0] + data.size();
+    new_dims[0] = old_dims[0] + max_size[0];
+    dset.set_extent(new_dims);
     hsize_t slab_size[ndims];
     slab_size[0] = data.size();
-    dset.set_extent(new_dims);
-    auto new_fspace = hdf5::Dataspace::get_space (dset);
-    new_fspace.select_hyperslab(old_dims, slab_size);
+    hsize_t slab_offset[ndims] = {old_dims[0] + partial_sum_size[0] - slab_size[0]};
+    auto new_fspace = hdf5::Dataspace::get_space(dset);
+    new_fspace.select_hyperslab(slab_offset, slab_size);
     auto mem_space = hdf5::Dataspace::create_simple(ndims, slab_size, max_dims);
-    dset.write<T>(mem_space, new_fspace, data); //H5Dwrite
+    dset.parallel_write<T>(mem_space, new_fspace, data); //H5Dwrite
   }
+
 }
 
-HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize) : 
-  file_(hdf5::File::create(iFileName.c_str())),
+PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize, int nEvents) : 
+  file_(hdf5::File::parallel_create(iFileName.c_str())),
   group_(hdf5::Group::create(file_, GNAME)),
   chunkSize_{iChunkSize},
   serializers_{std::size_t(iNLanes)},
@@ -58,6 +69,8 @@ HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, uns
   waitingEventsInBatch_(iNLanes),
   presentEventEntry_(0),
   batchSize_(iBatchSize),
+  nEvents_(nEvents),
+  firstEventID_(0),
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
   compressionChoice_{iChoice},
@@ -75,7 +88,7 @@ HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, uns
   }
 
 
-void HDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
+void PHDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
   switch(serialization_) {
   case pds::Serialization::kRoot:
@@ -87,25 +100,24 @@ void HDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<D
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-  if(iLaneIndex == 0) {
-    writeFileHeader(s); 
+  if(iLaneIndex == 0) { //and my rank == 0 
+    writeFileHeader(s);
   }
 }
 
-void HDFBatchEventsOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
+void PHDFBatchEventsOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
   auto& laneSerializers = serializers_[iLaneIndex];
   auto group = iCallback.group();
   laneSerializers[iDataProduct.index()].doWorkAsync(*group, iDataProduct.address(), std::move(iCallback));
 }
 
-void HDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
+void PHDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto start = std::chrono::high_resolution_clock::now();
   auto [offsets, buffer] = writeDataProductsToOutputBuffer(serializers_[iLaneIndex]);
-
+  
   auto eventIndex = presentEventEntry_++;
   auto batchIndex = (eventIndex/batchSize_) % eventBatches_.size();
-
-
+  
   auto& batchContainerPtr = eventBatches_[batchIndex];
   auto batchContainer = batchContainerPtr.load();
   if( nullptr == batchContainer ) {
@@ -117,21 +129,20 @@ void HDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifie
   }
 
   auto indexInBatch = eventIndex % (batchSize_);
-  //std::cout <<"indexInBatch "<<indexInBatch<<std::endl;
   (*batchContainer)[indexInBatch] = std::make_tuple(iEventID, std::move(offsets), std::move(buffer));
 
   assert(waitingEventsInBatch_[batchIndex].load() < batchSize_);
 
   auto waitingEvents = ++waitingEventsInBatch_[batchIndex];
-
   if(waitingEvents == batchSize_ ) {
-    const_cast<HDFBatchEventsOutputer*>(this)->finishBatchAsync(batchIndex, std::move(iCallback));
+    const_cast<PHDFBatchEventsOutputer*>(this)->finishBatchAsync(batchIndex, std::move(iCallback));
   }
+  if(waitingEvents == batchSize_ ) {
   auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   parallelTime_ += time.count();
+  }
 }
-
-void HDFBatchEventsOutputer::printSummary() const  {
+void PHDFBatchEventsOutputer::printSummary() const  {
   //make sure last batches are out
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -142,7 +153,7 @@ void HDFBatchEventsOutputer::printSummary() const  {
       TaskHolder th(group, make_functor_task([](){}));
       for( int index=0; index < waitingEventsInBatch_.size();++index) {
         if(0 != waitingEventsInBatch_[index].load()) {
-          const_cast<HDFBatchEventsOutputer*>(this)->finishBatchAsync(index, th);
+          const_cast<PHDFBatchEventsOutputer*>(this)->finishBatchAsync(index, th);
         }
       }
     }
@@ -151,14 +162,14 @@ void HDFBatchEventsOutputer::printSummary() const  {
   }
   auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
 
-  std::cout <<"HDFBatchEventsOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
+  std::cout <<"PHDFBatchEventsOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
     "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
   std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
 
   summarize_serializers(serializers_);
 }
 
-void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHolder iCallback) {
+void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHolder iCallback) {
 
   std::unique_ptr<std::vector<EventInfo>> batch(eventBatches_[iBatchIndex].exchange(nullptr));
   auto eventsInBatch = waitingEventsInBatch_[iBatchIndex].load();
@@ -173,10 +184,11 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
   // compressed size or the uncompressed size depending on the compression choice
 
   std::vector<char> batchBlob;
-
+  
   int index = 0;
   for(auto& [id, offsets, blob]: *batch) {
-    if(index++ == eventsInBatch) {
+    if (firstEvent_) firstEventID_ = id.event;
+    if(index++ == eventsInBatch || (id.event - firstEventID_) >= nEvents_+1) {
       //batch was smaller than usual. Can happen at end of job
       break;
     }
@@ -204,7 +216,7 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
   
   queue_.push(*iCallback.group(), [this, eventIDs=std::move(batchEventIDs), offsets = std::move(batchOffsets), buffer = std::move(bufferToWrite),  callback=std::move(iCallback)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      const_cast<HDFBatchEventsOutputer*>(this)->output(std::move(eventIDs), std::move(buffer), std::move(offsets));
+      const_cast<PHDFBatchEventsOutputer*>(this)->output(std::move(eventIDs), std::move(buffer), std::move(offsets));
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });
@@ -212,7 +224,7 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
 }
 
 void 
-HDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs, 
+PHDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs, 
                          std::vector<char> iBuffer,
                          std::vector<uint32_t> iOffsets ) {
   if (firstEvent_) {
@@ -232,15 +244,14 @@ HDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
   std::vector<unsigned long long> ids;
   ids.reserve(iEventIDs.size());
   std::transform(iEventIDs.begin(), iEventIDs.end(), std::back_inserter(ids), [](auto const&id) {return id.event;});
-  //std::cout <<" ids "<<ids.size()<<std::endl;
-  write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids);
-  //std::cout <<"wrote ids"<<std::endl;
-  write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer);
-  write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets); 
+  write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids, MPI_COMM_WORLD);
+  write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer, MPI_COMM_WORLD);
+  write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets, MPI_COMM_WORLD);
+       
 }
 
 void 
-HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
+PHDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   constexpr hsize_t ndims = 1;
   constexpr hsize_t dims[ndims] = {0};
   hsize_t chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
@@ -248,20 +259,20 @@ HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
   auto prop   = hdf5::Property::create();
   prop.set_chunk(ndims, chunk_dims);
-  hdf5::Dataset::create<int>(group_, EVENTS_DSNAME, space, prop);
-  hdf5::Dataset::create<char>(group_, PRODUCTS_DSNAME, space, prop);
-  hdf5::Dataset::create<int>(group_, OFFSETS_DSNAME, space, prop);
+  auto es = hdf5::Dataset::create<int>(group_, EVENTS_DSNAME, space, prop);
+  auto ps = hdf5::Dataset::create<char>(group_, PRODUCTS_DSNAME, space, prop);
+  auto os = hdf5::Dataset::create<int>(group_, OFFSETS_DSNAME, space, prop);
 
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
-  hdf5::Attribute::create<int>(group_, RUN_ANAME, scalar_space);
-  hdf5::Attribute::create<int>(group_, LUMISEC_ANAME, scalar_space);
-  hdf5::Attribute::create<int>(group_, COMPRESSION_LEVEL_ANAME, scalar_space);
-  hdf5::Attribute::create<int>(group_, COMPRESSION_CHOICE_ANAME, scalar_space);
+  auto a1 = hdf5::Attribute::create<int>(group_, RUN_ANAME, scalar_space);
+  auto a2 = hdf5::Attribute::create<int>(group_, LUMISEC_ANAME, scalar_space);
+  auto a3 = hdf5::Attribute::create<int>(group_, COMPRESSION_LEVEL_ANAME, scalar_space);
+  auto a4 = hdf5::Attribute::create<int>(group_, COMPRESSION_CHOICE_ANAME, scalar_space);
   constexpr hsize_t     str_dims[ndims] = {10};
   auto const attr_type = H5Tcopy (H5T_C_S1);
   H5Tset_size(attr_type, H5T_VARIABLE);
   auto const attr_space  = H5Screate(H5S_SCALAR);
-  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,COMPRESSION_ANAME, attr_space); 
+  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,COMPRESSION_ANAME, attr_space);
   for(auto const& s: iSerializers) {
     std::string const type(s.className());
     std::string const name(s.name());
@@ -270,7 +281,7 @@ HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   }
 }
 
-std::pair<std::vector<uint32_t>, std::vector<char>> HDFBatchEventsOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
+std::pair<std::vector<uint32_t>, std::vector<char>> PHDFBatchEventsOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
   //Calculate buffer size needed
   uint32_t bufferSize = 0;
   std::vector<uint32_t> offsets;
@@ -305,12 +316,12 @@ std::pair<std::vector<uint32_t>, std::vector<char>> HDFBatchEventsOutputer::writ
 namespace {
   class Maker : public OutputerMakerBase {
   public:
-    Maker(): OutputerMakerBase("HDFBatchEventsOutputer") {}
+    Maker(): OutputerMakerBase("PHDFBatchEventsOutputer") {}
     
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int nEvents) const final {
       auto fileName = params.get<std::string>("fileName");
       if(not fileName) {
-        std::cout<<" no file name given for HDFBatchEventsOutputer\n";
+        std::cout<<" no file name given for PHDFBatchEventsOutputer\n";
         return {};
       }
 
@@ -329,22 +340,21 @@ namespace {
         return {};
       }
       auto compressionChoiceName = params.get<std::string>("compressionChoice", "Events");
-      auto compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kEvents;
+      auto compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kEvents;
       if(compressionChoiceName == "Events") {
       }else if(compressionChoiceName == "Batch") {
-        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kBatch;
+        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kBatch;
       }else if(compressionChoiceName == "Both") {
-        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kBoth;
+        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kBoth;
       }else if(compressionChoiceName == "None") {
-        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kNone;
+        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kNone;
       } else {
         std::cout <<"Unknown compression choice "<<compressionChoiceName<<std::endl;
         return {};
       }
 
-      auto batchSize = params.get<int>("batchSize",1);
-
-      return std::make_unique<HDFBatchEventsOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, compressionChoice, *serialization, batchSize);
+      auto batchSize = params.get<int>("batchSize", 1);
+      return std::make_unique<PHDFBatchEventsOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, compressionChoice, *serialization, batchSize, nEvents);
     }
   };
 

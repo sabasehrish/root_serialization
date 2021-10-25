@@ -60,7 +60,7 @@ namespace {
     class TextDumperMaker : public OutputerMakerBase {
   public:
     TextDumperMaker(): OutputerMakerBase("TextDumpOutputer") {}
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
       bool perEvent = params.get<bool>("perEvent",true);
       bool summary = params.get<bool>("summary", false);
       return std::make_unique<TextDumpOutputer>(perEvent, summary);

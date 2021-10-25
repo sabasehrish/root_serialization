@@ -8,7 +8,7 @@
 
 
 namespace cce::tf {
-  using OutputerFactory = ComponentFactory<OutputerBase*(unsigned int, ConfigurationParameters const&)>;
+  using OutputerFactory = ComponentFactory<OutputerBase*(unsigned int, ConfigurationParameters const&, int)>;
   using OutputerMakerBase = OutputerFactory::CMakerBase;
 }
 

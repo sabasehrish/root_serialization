@@ -120,7 +120,7 @@ namespace {
   class Maker : public OutputerMakerBase {
   public:
     Maker(): OutputerMakerBase("RootOutputer") {}
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int) const final {
       auto result = parseRootConfig(params);
       if(not result) {
         return {};

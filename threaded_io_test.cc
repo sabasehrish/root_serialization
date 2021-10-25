@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<Lane> lanes;
 
-  std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
+  std::function<std::unique_ptr<OutputerBase>(unsigned int, int)> outFactory;
   {
     auto [outputType, outputInfo] = parseCompound(outputerConfig);
     outFactory = outputerFactoryGenerator(outputType, outputInfo);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
   {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
-    auto out = outFactory(1);
+    auto out = outFactory(1, 0);
     if(not out) {
       std::cout <<"failed to create outputer\n";
       return 1;
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
   }
   std::cout <<"finished warmup"<<std::endl;
 
-  auto out = outFactory(nLanes);
+  auto out = outFactory(nLanes, 0);
   auto source = sourceFactory(nLanes, nEvents);
   std::unique_ptr<WaiterBase> waiter;
   if(waiterFactory) {

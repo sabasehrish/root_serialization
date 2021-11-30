@@ -176,7 +176,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
       //append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
 #ifdef H5_TIMING_ENABLE
-      register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(int));
+      register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(size_t));
 #endif
 #ifdef H5_TIMING_ENABLE
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);

@@ -19,6 +19,9 @@
 #include "H5Timing.h"
 #include "multidataset_plugin.h"
 
+extern int max_batch_size;
+extern int total_n_events;
+
 namespace {
   std::pair<std::string, std::string> parseCompound(const char* iArg) {
     std::string sArg(iArg);
@@ -55,6 +58,13 @@ int main(int argc, char* argv[]) {
 #ifdef H5_TIMING_ENABLE
   init_timers();
 #endif
+  char *p = getenv("HEP_MAX_BATCH_SIZE");
+  if ( p != NULL ) {
+    max_batch_size = atoi(p);
+  } else {
+    max_batch_size = 2;
+  }
+
   init_multidataset();
   int parallelism = tbb::this_task_arena::max_concurrency();
   bool useIMT=false;
@@ -91,6 +101,7 @@ int main(int argc, char* argv[]) {
   unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
   if(argc > 5) {
     nEvents = atoi(argv[5]);
+    total_n_events = nEvents;
   }
 
 

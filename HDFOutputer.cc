@@ -9,7 +9,9 @@
 #include "multidataset_plugin.h"
 #include <hdf5_hl.h>
 
-constexpr int max_batch_size = 2; 
+int max_batch_size = 2;
+int total_n_events = -1;
+
 using namespace cce::tf;
 using product_t = std::vector<char>; 
 
@@ -153,7 +155,11 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-  if (batch_ == max_batch_size) {
+  if (total_n_events > 0) {
+    total_n_events--;
+  }
+
+  if (batch_ == max_batch_size || total_n_events == 0) {
     hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <hdf5.h>
 #define ENABLE_MULTIDATASET 0
-#define MULTIDATASET_DEFINE 0
+#define MULTIDATASET_DEFINE 1
 
 #if MULTIDATASET_DEFINE == 1
 typedef struct H5D_rw_multi_t

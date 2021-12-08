@@ -86,10 +86,51 @@ int register_memspace_recycle(hid_t msid) {
     return 0;
 }
 
-int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
+int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
+    int i;
     hsize_t dims[H5S_MAX_RANK];
     hsize_t mdims[H5S_MAX_RANK];
+    hsize_t start[H5S_MAX_RANK];
+    hsize_t end[H5S_MAX_RANK];
+    hsize_t data_size;
+    hsize_t zero = 0;
     size_t esize = H5Tget_size (mtype);
+
+    if (write) {
+        for ( i = 0; i < dataset_size; ++i ) {
+            if (0&&strcmp(name, multi_datasets[i].name) == 0) {
+                /* Extract data size from input memory space */
+                H5Sget_simple_extent_dims(msid, &data_size, mdims);
+                /* Reset dataspace for existing dataset */
+                H5Sget_simple_extent_dims(multi_datasets[i].dset_space_id, dims, mdims);
+                dims[0] += data_size;
+                H5Sget_select_bounds(multi_datasets[i].dset_space_id, start, end );
+                H5Sset_extent_simple( multi_datasets[i].dset_space_id, H5Sget_simple_extent_ndims(multi_datasets[i].dset_space_id), dims, dims );
+                /* Enlarge the end by the new data_size */
+                end[0] += data_size;
+                /* Add the new selection */
+                H5Sselect_hyperslab(multi_datasets[i].dset_space_id, H5S_SELECT_SET, start, NULL, end, NULL);
+                H5Sclose(dsid);
+
+                /* Reset the existing memory space directly to the current data size */
+                H5Sget_simple_extent_dims(multi_datasets[i].mem_space_id, dims, mdims);
+                dims[0] += data_size;
+                H5Sset_extent_simple( multi_datasets[i].mem_space_id, H5Sget_simple_extent_ndims(multi_datasets[i].mem_space_id), dims, dims );
+                H5Sselect_all( multi_datasets[i].mem_space_id );
+                H5Sclose(msid);
+
+                temp_mem[dataset_size] = (void*) malloc(esize * dims[0]);
+                memcpy(temp_mem[dataset_size], multi_datasets[dataset_size].u.wbuf, esize * (dims[0] - data_size) );
+                memcpy(temp_mem[dataset_size] + esize * (dims[0] - data_size), buf, esize * data_size );
+
+                free(multi_datasets[dataset_size].u.wbuf);
+                multi_datasets[dataset_size].u.wbuf = temp_mem[dataset_size];
+
+                return 0;
+            }
+        }
+    }
+
     H5Sget_simple_extent_dims (msid, dims, mdims);
     esize *= dims[0];
 
@@ -116,6 +157,7 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
     multi_datasets[dataset_size].dset_id = did;
     multi_datasets[dataset_size].dset_space_id = dsid;
     multi_datasets[dataset_size].mem_type_id = mtype;
+    strcpy(multi_datasets[dataset_size].name, name);
     if (write) {
         temp_mem[dataset_size] = (void*) malloc(esize);
         memcpy(temp_mem[dataset_size], buf, esize);
@@ -124,6 +166,10 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
         multi_datasets[dataset_size].u.rbuf = buf;
     }
     dataset_size++;
+
+    register_dataset_recycle(did);
+    register_dataspace_recycle(dsid);
+    register_memspace_recycle(msid);
     return 0;
 }
 
@@ -183,12 +229,18 @@ int flush_multidatasets() {
 
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
+    #if H5Timing == 1
+    increment_H5Dwrite();
+    #endif
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets);
 #else
 
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
     for ( i = 0; i < dataset_size; ++i ) {
         //MPI_Barrier(MPI_COMM_WORLD);
+        #if H5Timing == 1
+        increment_H5Dwrite();
+        #endif
         H5Dwrite (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, H5P_DEFAULT, multi_datasets[i].u.wbuf);
     }
 #endif

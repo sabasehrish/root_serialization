@@ -6,6 +6,8 @@ H5TimerArray *dataset_timers;
 H5TimerArray *dataset_sz_timers;
 H5TimerArray *dataset_read_timers;
 H5TimerArray *dataset_sz_read_timers;
+int H5Dwrite_count;
+int H5Dread_count;
 double total_start_time;
 double total_end_time;
 
@@ -34,6 +36,9 @@ int init_timers() {
 
     gettimeofday(&temp_time, NULL);
     total_start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
+
+    H5Dwrite_count = 0;
+    H5Dread_count = 0;
     return 0;
 }
 
@@ -105,6 +110,14 @@ int register_dataset_sz_read_timer_end(size_t data_size) {
     return 0;
 }
 
+int incremet_H5Dwrite() {
+    H5Dwrite_count++;
+}
+
+int incremet_H5Dread() {
+    H5Dread_count++;
+}
+
 int record_timer(H5TimerArray *timer, const char* filename) {
     FILE *stream;
     size_t i, total_mem_size;
@@ -129,6 +142,7 @@ int record_timer(H5TimerArray *timer, const char* filename) {
 }
 
 int output_results() {
+    printf("total H5Dwrite calls = %d, H5Dread calls = %d\n", H5Dwrite_count, H5Dread_count);
     if ( dataset_timers->size ) {
         record_timer(dataset_timers, "dataset_write_record.csv");
     }

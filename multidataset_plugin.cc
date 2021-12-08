@@ -108,9 +108,11 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 dims[0] += data_size;
                 H5Sget_select_bounds(multi_datasets[i].dset_space_id, start, end );
                 H5Sset_extent_simple( multi_datasets[i].dset_space_id, 1, dims, dims );
+                /* Reset the end size to slab size*/
+                end[0] = end[0] - start[0] + data_size;
                 /* Add the new selection */
                 H5Sselect_none(multi_datasets[i].dset_space_id);
-                H5Sselect_hyperslab(multi_datasets[i].dset_space_id, H5S_SELECT_SET, start, NULL, &data_size, NULL);
+                H5Sselect_hyperslab(multi_datasets[i].dset_space_id, H5S_SELECT_SET, start, NULL, end, NULL);
                 H5Sclose(dsid);
 
                 /* Reset the existing memory space directly to the current data size */

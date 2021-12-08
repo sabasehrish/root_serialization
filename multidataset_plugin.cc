@@ -94,7 +94,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     hsize_t start[H5S_MAX_RANK];
     hsize_t end[H5S_MAX_RANK];
     char *tmp_buf;
-    hsize_t data_size;
+    hsize_t data_size, total_data_size;
     hsize_t zero = 0;
     size_t esize = H5Tget_size (mtype);
 
@@ -106,8 +106,9 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 /* Reset dataspace for existing dataset */
                 H5Sget_simple_extent_dims(multi_datasets[i].dset_space_id, dims, mdims);
                 dims[0] += data_size;
+                total_data_size = dims[0];
                 H5Sget_select_bounds(multi_datasets[i].dset_space_id, start, end );
-                H5Sset_extent_simple( multi_datasets[i].dset_space_id, H5Sget_simple_extent_ndims(multi_datasets[i].dset_space_id), dims, dims );
+                H5Sset_extent_simple( multi_datasets[i].dset_space_id, 1, dims, dims );
                 /* Enlarge the end by the new data_size */
                 end[0] += data_size;
                 /* Add the new selection */
@@ -117,14 +118,14 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 /* Reset the existing memory space directly to the current data size */
                 H5Sget_simple_extent_dims(multi_datasets[i].mem_space_id, dims, mdims);
                 dims[0] += data_size;
-                H5Sset_extent_simple( multi_datasets[i].mem_space_id, H5Sget_simple_extent_ndims(multi_datasets[i].mem_space_id), dims, dims );
+                H5Sset_extent_simple( multi_datasets[i].mem_space_id, 1, dims, dims );
                 H5Sselect_all( multi_datasets[i].mem_space_id );
                 H5Sclose(msid);
 
                 tmp_buf = temp_mem[dataset_size];
-                temp_mem[dataset_size] = (char*) malloc(esize * dims[0]);
-                memcpy(temp_mem[dataset_size], tmp_buf, esize * (dims[0] - data_size) );
-                memcpy(temp_mem[dataset_size] + esize * (dims[0] - data_size), buf, esize * data_size );
+                temp_mem[dataset_size] = (char*) malloc(esize * total_data_size);
+                memcpy(temp_mem[dataset_size], tmp_buf, esize * (total_data_size - data_size) );
+                memcpy(temp_mem[dataset_size] + esize * (total_data_size - data_size), buf, esize * data_size );
 
                 free(tmp_buf);
                 multi_datasets[dataset_size].u.wbuf = temp_mem[dataset_size];

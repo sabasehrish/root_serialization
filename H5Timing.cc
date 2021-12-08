@@ -2,14 +2,14 @@
 
 #ifdef H5_TIMING_ENABLE
 
-H5TimerArray *dataset_timers;
-H5TimerArray *dataset_sz_timers;
-H5TimerArray *dataset_read_timers;
-H5TimerArray *dataset_sz_read_timers;
-int H5Dwrite_count;
-int H5Dread_count;
-double total_start_time;
-double total_end_time;
+static H5TimerArray *dataset_timers;
+static H5TimerArray *dataset_sz_timers;
+static H5TimerArray *dataset_read_timers;
+static H5TimerArray *dataset_sz_read_timers;
+static int H5Dwrite_count;
+static int H5Dread_count;
+static double total_start_time;
+static double total_end_time;
 
 int init_timers() {
     struct timeval temp_time;

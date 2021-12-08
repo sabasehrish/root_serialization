@@ -18,6 +18,7 @@ static int memspace_recycle_size_limit;
 hsize_t total_data_size;
 
 #define MEM_SIZE 2048
+#define MAX_DATASET 65536
 
 int init_multidataset() {
     dataset_size = 0;
@@ -173,6 +174,24 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     register_dataset_recycle(did);
     register_dataspace_recycle(dsid);
     register_memspace_recycle(msid);
+    return 0;
+}
+
+int check_write_status() {
+    if (dataset_size < MAX_DATASET) {
+        return 0;
+    }
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_start("flush_all");
+#endif
+    flush_multidatasets();
+    dataset_recycle_all();
+    dataspace_recycle_all();
+    memspace_recycle_all();
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_end(total_data_size);
+#endif
+
     return 0;
 }
 

@@ -33,4 +33,5 @@ int dataset_recycle_all();
 int dataspace_recycle_all();
 int memspace_recycle_all();
 int flush_multidatasets();
+int check_write_status();
 #endif

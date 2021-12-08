@@ -106,12 +106,13 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 /* Reset dataspace for existing dataset */
                 H5Sget_simple_extent_dims(multi_datasets[i].dset_space_id, dims, mdims);
                 dims[0] += data_size;
-                total_data_size = dims[0];
                 H5Sget_select_bounds(multi_datasets[i].dset_space_id, start, end );
                 H5Sset_extent_simple( multi_datasets[i].dset_space_id, 1, dims, dims );
                 /* Enlarge the end by the new data_size */
                 end[0] += data_size;
+                total_data_size = end[0] - start[0];
                 /* Add the new selection */
+                H5Sselect_none(multi_datasets[i].dset_space_id);
                 H5Sselect_hyperslab(multi_datasets[i].dset_space_id, H5S_SELECT_SET, start, NULL, end, NULL);
                 H5Sclose(dsid);
 

@@ -184,18 +184,18 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
 #endif
-
-#ifdef H5_TIMING_ENABLE
-        register_dataset_timer_start("flush_all");
-#endif
-        flush_multidatasets();
-        dataset_recycle_all();
-        dataspace_recycle_all();
-        memspace_recycle_all();
-#ifdef H5_TIMING_ENABLE
-        register_dataset_timer_end(total_data_size);
-#endif
     }
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_start("flush_all");
+#endif
+    flush_multidatasets();
+    dataset_recycle_all();
+    dataspace_recycle_all();
+    memspace_recycle_all();
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_end(total_data_size);
+#endif
+
     batch_ = 0;
     products_.clear();
     events_.clear();

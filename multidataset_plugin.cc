@@ -92,6 +92,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     hsize_t mdims[H5S_MAX_RANK];
     hsize_t start[H5S_MAX_RANK];
     hsize_t end[H5S_MAX_RANK];
+    char *tmp_buf;
     hsize_t data_size;
     hsize_t zero = 0;
     size_t esize = H5Tget_size (mtype);
@@ -119,11 +120,12 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 H5Sselect_all( multi_datasets[i].mem_space_id );
                 H5Sclose(msid);
 
+                tmp_buf = temp_mem[dataset_size];
                 temp_mem[dataset_size] = (void*) malloc(esize * dims[0]);
-                memcpy(temp_mem[dataset_size], multi_datasets[dataset_size].u.wbuf, esize * (dims[0] - data_size) );
+                memcpy(temp_mem[dataset_size], tmp_buf, esize * (dims[0] - data_size) );
                 memcpy(temp_mem[dataset_size] + esize * (dims[0] - data_size), buf, esize * data_size );
 
-                free(multi_datasets[dataset_size].u.wbuf);
+                free(tmp_buf);
                 multi_datasets[dataset_size].u.wbuf = temp_mem[dataset_size];
 
                 return 0;

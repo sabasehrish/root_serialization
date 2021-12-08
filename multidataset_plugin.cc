@@ -231,7 +231,7 @@ int flush_multidatasets() {
 
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
-    #if H5Timing == 1
+    #ifdef H5_TIMING_ENABLE
     increment_H5Dwrite();
     #endif
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets);

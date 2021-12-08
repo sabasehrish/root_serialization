@@ -110,12 +110,12 @@ int register_dataset_sz_read_timer_end(size_t data_size) {
     return 0;
 }
 
-int incremet_H5Dwrite() {
+int increment_H5Dwrite() {
     H5Dwrite_count++;
     return 0;
 }
 
-int incremet_H5Dread() {
+int increment_H5Dread() {
     H5Dread_count++;
     return 0;
 }

@@ -99,7 +99,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
 
     if (write) {
         for ( i = 0; i < dataset_size; ++i ) {
-            if (0&&strcmp(name, multi_datasets[i].name) == 0) {
+            if (strcmp(name, multi_datasets[i].name) == 0) {
                 /* Extract data size from input memory space */
                 H5Sget_simple_extent_dims(msid, &data_size, mdims);
                 /* Reset dataspace for existing dataset */

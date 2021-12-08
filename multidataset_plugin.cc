@@ -5,7 +5,7 @@ static H5D_rw_multi_t *multi_datasets;
 static hid_t *dataset_recycle;
 static hid_t *memspace_recycle;
 static hid_t *dataspace_recycle;
-static void** temp_mem;
+static char** temp_mem;
 
 static int dataset_size;
 static int dataset_size_limit;
@@ -92,7 +92,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     hsize_t mdims[H5S_MAX_RANK];
     hsize_t start[H5S_MAX_RANK];
     hsize_t end[H5S_MAX_RANK];
-    void *tmp_buf;
+    char *tmp_buf;
     hsize_t data_size;
     hsize_t zero = 0;
     size_t esize = H5Tget_size (mtype);
@@ -121,7 +121,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
                 H5Sclose(msid);
 
                 tmp_buf = temp_mem[dataset_size];
-                temp_mem[dataset_size] = (void*) malloc(esize * dims[0]);
+                temp_mem[dataset_size] = (char*) malloc(esize * dims[0]);
                 memcpy(temp_mem[dataset_size], tmp_buf, esize * (dims[0] - data_size) );
                 memcpy(temp_mem[dataset_size] + esize * (dims[0] - data_size), buf, esize * data_size );
 
@@ -144,13 +144,13 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
             free(multi_datasets);
             multi_datasets = temp;
 
-            void **new_memory = (void**) malloc(dataset_size_limit*sizeof(void*));
-            memcpy(new_memory, temp_mem, sizeof(void*) * dataset_size);
+            char **new_memory = (char**) malloc(dataset_size_limit*sizeof(char*));
+            memcpy(new_memory, temp_mem, sizeof(char*) * dataset_size);
             free(temp_mem);
             temp_mem = new_memory;
         } else {
             dataset_size_limit = MEM_SIZE;
-            temp_mem = (void**) malloc(sizeof(void*) * dataset_size_limit);
+            temp_mem = (char**) malloc(sizeof(char*) * dataset_size_limit);
             multi_datasets = (H5D_rw_multi_t*) malloc(dataset_size_limit*sizeof(H5D_rw_multi_t));
         }
     }
@@ -161,7 +161,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     multi_datasets[dataset_size].mem_type_id = mtype;
     strcpy(multi_datasets[dataset_size].name, name);
     if (write) {
-        temp_mem[dataset_size] = (void*) malloc(esize);
+        temp_mem[dataset_size] = (char*) malloc(esize);
         memcpy(temp_mem[dataset_size], buf, esize);
         multi_datasets[dataset_size].u.wbuf = temp_mem[dataset_size];
     } else {

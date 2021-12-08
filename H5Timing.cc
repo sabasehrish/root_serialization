@@ -112,10 +112,12 @@ int register_dataset_sz_read_timer_end(size_t data_size) {
 
 int incremet_H5Dwrite() {
     H5Dwrite_count++;
+    return 0;
 }
 
 int incremet_H5Dread() {
     H5Dread_count++;
+    return 0;
 }
 
 int record_timer(H5TimerArray *timer, const char* filename) {

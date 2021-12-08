@@ -92,7 +92,7 @@ int register_multidataset(const char *name, void *buf, hid_t did, hid_t dsid, hi
     hsize_t mdims[H5S_MAX_RANK];
     hsize_t start[H5S_MAX_RANK];
     hsize_t end[H5S_MAX_RANK];
-    char *tmp_buf;
+    void *tmp_buf;
     hsize_t data_size;
     hsize_t zero = 0;
     size_t esize = H5Tget_size (mtype);

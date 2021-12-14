@@ -165,8 +165,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_start(name.c_str());
 #endif
-      //write_ds<char>(gid, name, prods);
-      write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      write_ds<char>(gid, name, prods);
+      //write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
       //append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_end((size_t)prods.size());
@@ -175,8 +175,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_start(s.c_str());
 #endif
-      //write_ds<size_t>(gid, s, sizes);
-      write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      write_ds<size_t>(gid, s, sizes);
+      //write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
       //append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(size_t));

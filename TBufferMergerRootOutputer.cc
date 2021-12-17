@@ -36,9 +36,9 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     basketSize_{iConfig.basketSize_},
                     splitLevel_{iConfig.splitLevel_},
                     treeMaxVirtualSize_{iConfig.treeMaxVirtualSize_},
-                    autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush }
+                    autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush },
+                    concurrentWrite_{iConfig.concurrentWrite}
 {
-
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
@@ -59,7 +59,8 @@ void TBufferMergerRootOutputer::setupForLane(unsigned int iLaneIndex, std::vecto
   for(auto& dp : iDPs) {
     lane.branches_.push_back( lane.eventTree_->Branch(dp.name().c_str(), dp.classType()->GetName(), dp.address(), basketSize_) );
   }
-  lane.accumulatedTime_ = std::chrono::microseconds::zero();
+  lane.accumulatedFillTime_ = std::chrono::microseconds::zero();
+  lane.accumulatedWriteTime_ = std::chrono::microseconds::zero();
 
 }
 
@@ -71,12 +72,11 @@ void TBufferMergerRootOutputer::outputAsync(unsigned int iLaneIndex, EventIdenti
   auto group = iCallback.group();
 
   group->run([this, iLaneIndex, callback=std::move(iCallback)]()  {
-      const_cast<TBufferMergerRootOutputer*>(this)->write(iLaneIndex);
-      const_cast<cce::tf::TaskHolder&>(callback).doneWaiting();
+      const_cast<TBufferMergerRootOutputer*>(this)->write(iLaneIndex, std::move(callback));
     });
 }
 
-void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
+void TBufferMergerRootOutputer::write(unsigned int iLaneIndex, TaskHolder iCallback) {
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -92,16 +92,21 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
   // Isolate the fill operation so that IMT doesn't grab other large tasks
   // that could lead to stalling
   tbb::this_task_arena::isolate([&] { 
-      assert(lane.eventTree_); 
+      assert(lane.eventTree_);
       lane.nBytesWrittenSinceLastWrite_ +=lane.eventTree_->Fill();
       ++lane.nEventsSinceWrite_;
       if(autoFlush_ <0) {
 	//Flush based on number of bytes written to this buffer
 	if(lane.nBytesWrittenSinceLastWrite_ > -1*autoFlush_) {
-	  std::cout <<"lane "<< iLaneIndex<<" events since write "<<lane.nEventsSinceWrite_<<" "<<lane.nBytesWrittenSinceLastWrite_ << std::endl;
-	  lane.nBytesWrittenSinceLastWrite_ = 0;
-	  lane.nEventsSinceWrite_ = 0;
-	  lane.file_->Write();
+          if(concurrentWrite_) {
+            writeWhenBytesFull(iLaneIndex);
+          } else {
+            auto group = iCallback.group();
+            queue_.push(*group,[this, iLaneIndex, callback=std::move(iCallback)]() mutable {
+                writeWhenBytesFull(iLaneIndex);
+                callback.doneWaiting();
+            });
+          }
 	}
       } else {
 	//Flush based on total number of events filled across all  buffers
@@ -115,48 +120,82 @@ void TBufferMergerRootOutputer::write(unsigned int iLaneIndex) {
 	  }
 	}
 	if(lane.shouldWrite_) {
-	  lane.shouldWrite_=false;
-	  lane.file_->Write();
+          if(concurrentWrite_) {
+            writeWhenEnoughEvents(iLaneIndex);
+          } else {
+            auto group = iCallback.group();
+            queue_.push(*group, [this, iLaneIndex, callback=std::move(iCallback)]() mutable {
+                writeWhenEnoughEvents(iLaneIndex);
+                callback.doneWaiting();
+              });
+          }
 	}
       }
     });
-
-  lane.accumulatedTime_ += std::chrono::duration_cast<decltype(lane.accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+  lane.accumulatedFillTime_ += std::chrono::duration_cast<decltype(lane.accumulatedFillTime_)>(std::chrono::high_resolution_clock::now() - start);
 }
+
+void TBufferMergerRootOutputer::writeWhenBytesFull(unsigned int iLaneIndex) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto& lane = lanes_[iLaneIndex];
+  //std::cout <<"lane "<< iLaneIndex<<" events since write "<<lane.nEventsSinceWrite_<<" "<<lane.nBytesWrittenSinceLastWrite_ << std::endl;
+  lane.nBytesWrittenSinceLastWrite_ = 0;
+  lane.nEventsSinceWrite_ = 0;
+  lane.file_->Write();
+  lane.accumulatedWriteTime_ += std::chrono::duration_cast<decltype(lane.accumulatedWriteTime_)>(std::chrono::high_resolution_clock::now() - start);
+}
+void TBufferMergerRootOutputer::writeWhenEnoughEvents(unsigned int iLaneIndex) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto& lane = lanes_[iLaneIndex];
+  lane.shouldWrite_=false;
+  lane.file_->Write();
+  lane.accumulatedWriteTime_ += std::chrono::duration_cast<decltype(lane.accumulatedWriteTime_)>(std::chrono::high_resolution_clock::now() - start);
+}
+
   
 void TBufferMergerRootOutputer::printSummary() const {
 
   std::cout <<"end write"<<std::endl;
   auto start = std::chrono::high_resolution_clock::now();
 
-  tbb::task_group group;
-  for(auto& lane: lanes_) {
-    group.run([&lane]() {
-	std::cout <<" start lane"<<std::endl;
-	lane.file_->Write();
-	std::cout <<" finish lane"<<std::endl;
-      });
+  if(concurrentWrite_) {
+    tbb::task_group group;
+    for(auto& lane: lanes_) {
+      group.run([&lane]() {
+          lane.file_->Write();
+        });
+      group.wait();
+    }
+  } else {
+    for(auto& lane: lanes_) {
+      lane.file_->Write();
+    }
   }
-  group.wait();
-  auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+  auto writeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedWriteTime_)>(std::chrono::high_resolution_clock::now() - start);
 
   std::cout <<"file close"<<std::endl;
   start = std::chrono::high_resolution_clock::now();
   for(auto& lane: lanes_) {
-    std::cout <<" start next lane"<<std::endl;
+    //std::cout <<" start next lane"<<std::endl;
     lane.file_->Close();
   }
-  auto closeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
+  auto closeTime = std::chrono::duration_cast<decltype(lanes_[0].accumulatedWriteTime_)>(std::chrono::high_resolution_clock::now() - start);
 
-  decltype(lanes_[0].accumulatedTime_.count()) sum = 0;
+  decltype(lanes_[0].accumulatedFillTime_.count()) fillSum = 0;
   for(auto& l: lanes_) {
-    sum += l.accumulatedTime_.count();
+    fillSum += l.accumulatedFillTime_.count();
+  }
+
+  decltype(lanes_[0].accumulatedWriteTime_.count()) writeSum = 0;
+  for(auto& l: lanes_) {
+    writeSum += l.accumulatedWriteTime_.count();
   }
   
 
-  std::cout <<"TBufferMergerRootOutputer loop time: "<<sum<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer fill time: "<<fillSum<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer write time: "<<writeSum<<"us\n";
   std::cout <<"TBufferMergerRootOutputer end write time: "<<writeTime.count()<<"us\n";
   std::cout <<"TBufferMergerRootOutputer end close time: "<<closeTime.count()<<"us\n";
-  std::cout <<"TBufferMergerRootOutputer total time: "<<sum+writeTime.count()<<"us\n";
+  std::cout <<"TBufferMergerRootOutputer total time: "<<fillSum+writeSum+writeTime.count()<<"us\n";
 
 }

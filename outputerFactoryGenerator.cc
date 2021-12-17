@@ -30,6 +30,23 @@ namespace {
     config.autoFlush_ = iConfig.autoFlush_;
     return config;
   }
+  std::pair<bool, std::string> preParseTBufferMerger(std::string_view iOptions) {
+    std::string remainingOptions{iOptions};
+    auto pos = remainingOptions.find("concurrentWrite=");
+    bool set = true;
+    if(pos != std::string::npos) {
+      set = (remainingOptions[pos+16] == 'y' or remainingOptions[pos+16] == 'Y') ;
+      auto size = 17;
+      if(remainingOptions.size() > pos+17) {
+        auto npos = remainingOptions.find(pos+17,':');
+        if(npos != std::string::npos) {
+          size = npos - pos;
+        }
+      }
+      remainingOptions.replace(pos,size,"");
+    }
+    return std::make_pair(set, remainingOptions);
+  }
 
   std::optional<std::pair<std::string, RootConfig>> parseRootConfig(std::string_view iOptions) {
     std::string fileName{iOptions};
@@ -200,13 +217,15 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     
     outFactory = [fileName,config](unsigned int nLanes) { return std::make_unique<RootOutputer>(fileName, nLanes, config);};
   } else if(iType == "TBufferMergerRootOutputer") {
-    auto result = parseRootConfig(iOptions);
+    auto preParse = preParseTBufferMerger(iOptions);
+    auto result = parseRootConfig(preParse.second);
     if(not result) {
       return outFactory;
     }
     auto fileName = result->first;
     auto config = outputerConfig<TBufferMergerRootOutputer::Config>(result->second);
-    
+    config.concurrentWrite = preParse.first;
+
     outFactory = [fileName,config](unsigned int nLanes) { return std::make_unique<TBufferMergerRootOutputer>(fileName, nLanes, config);};
   } else if(iType == "SerializeOutputer") {
     bool verbose = false;

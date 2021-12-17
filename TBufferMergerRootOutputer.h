@@ -28,6 +28,7 @@ class TBufferMergerRootOutputer :public OutputerBase {
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=kDefaultAutoFlush; //This is ROOT's default value
+    bool concurrentWrite = false;
   };
 
   TBufferMergerRootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);
@@ -49,20 +50,25 @@ private:
     TTree* eventTree_;
     std::vector<TBranch*> branches_;
     std::vector<DataProductRetriever> const* retrievers_;
-    std::chrono::microseconds accumulatedTime_;
+    std::chrono::microseconds accumulatedFillTime_;
+    std::chrono::microseconds accumulatedWriteTime_;
     int nBytesWrittenSinceLastWrite_ = 0;
     int nEventsSinceWrite_ = 0;
     std::atomic<bool> shouldWrite_ = false;
   };
   
-  void write(unsigned int iLaneIndex);
+  void write(unsigned int iLaneIndex, TaskHolder iCallback);
+  void writeWhenBytesFull(unsigned int iLaneIndex);
+  void writeWhenEnoughEvents(unsigned int iLaneIndex);
   ROOT::Experimental::TBufferMerger buffer_;
+  SerialTaskQueue queue_;
   std::vector<PerLane> lanes_;
   const int basketSize_;
   const int splitLevel_;
   const int treeMaxVirtualSize_;
   const int autoFlush_;
   std::atomic<int> numberEventsSinceLastWrite_;
+  bool concurrentWrite_;
 };
 }
 #endif

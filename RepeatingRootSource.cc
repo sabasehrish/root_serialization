@@ -20,6 +20,10 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
   auto events = file_->Get<TTree>("Events");
   auto l = events->GetListOfBranches();
 
+  if(nUniqueEvents_ > events->GetEntries()) {
+    throw std::runtime_error("Number of events to repeat is greater than number of events in Events branch");
+  }
+
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
   const std::string eventIDBranchName{"EventID"}; 
   TBranch* eventIDBranch = nullptr;

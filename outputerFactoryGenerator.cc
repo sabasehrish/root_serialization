@@ -32,18 +32,20 @@ namespace {
   }
   std::pair<bool, std::string> preParseTBufferMerger(std::string_view iOptions) {
     std::string remainingOptions{iOptions};
-    auto pos = remainingOptions.find("concurrentWrite");
-    bool found = false;
+    auto pos = remainingOptions.find("concurrentWrite=");
+    bool set = true;
     if(pos != std::string::npos) {
-      found=true;
-      auto npos = remainingOptions.find(":concurrentWrite:");
-      if(npos != std::string::npos) {
-        remainingOptions.replace(npos,17,"");
-      } else {
-        remainingOptions.replace(pos,15,"");
+      set = (remainingOptions[pos+16] == 'y' or remainingOptions[pos+16] == 'Y') ;
+      auto size = 17;
+      if(remainingOptions.size() > pos+17) {
+        auto npos = remainingOptions.find(pos+17,':');
+        if(npos != std::string::npos) {
+          size = npos - pos;
+        }
       }
+      remainingOptions.replace(pos,size,"");
     }
-    return std::make_pair(found, remainingOptions);
+    return std::make_pair(set, remainingOptions);
   }
 
   std::optional<std::pair<std::string, RootConfig>> parseRootConfig(std::string_view iOptions) {

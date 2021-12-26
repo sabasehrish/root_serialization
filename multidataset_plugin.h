@@ -16,13 +16,24 @@ typedef struct H5D_rw_multi_t
     hid_t dset_space_id;    /* dataset selection dataspace ID */
     hid_t mem_type_id;      /* memory datatype ID */
     hid_t mem_space_id;     /* memory selection dataspace ID */
-    char name[256];
     union {
         void *rbuf;         /* pointer to read buffer */
         const void *wbuf;   /* pointer to write buffer */
     } u;
 } H5D_rw_multi_t;
 #endif
+
+typedef struct multidataset_array {
+    char name[256];
+    hid_t did;
+    hid_t dsid;
+    hid_t msid;
+    hid_t mtype;      /* memory datatype ID */
+    union {
+        void *rbuf;         /* pointer to read buffer */
+        const void *wbuf;   /* pointer to write buffer */
+    } u;
+} multidataset_array;
 
 int init_multidataset();
 int register_dataset_recycle(hid_t did);

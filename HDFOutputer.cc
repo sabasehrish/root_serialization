@@ -175,7 +175,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_start(name.c_str());
 #endif
-      if ( method == 1 ) 
+      if ( method == 1 ) {
         write_ds<char>(gid, name, prods);
       } else if (method == 0 ) {
         write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);

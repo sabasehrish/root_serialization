@@ -49,6 +49,7 @@ int append_dataset(hid_t gid, const char *name, char* data, size_t data_size, hi
 }
 
 int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+/*
   const hsize_t ndims = 1;
   hid_t did, dsid, msid;
   hsize_t max_dims[ndims]; //= {H5S_UNLIMITED};
@@ -56,7 +57,7 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   hsize_t new_dims[ndims];
   hsize_t slab_size[ndims];
 
-  did = H5Dopen2(gid, name, H5P_DEFAULT);
+  did = get_dataset_id(name, gid);
   dsid = H5Dget_space(did);
   H5Sget_simple_extent_dims(dsid, old_dims, max_dims);
   new_dims[0] = old_dims[0] + data_size;
@@ -69,6 +70,8 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   msid = H5Screate_simple(ndims, slab_size, max_dims);
 
   register_multidataset(name, data, did, dsid, msid, mtype, 1);
+*/
+  register_multidataset_request_append(name, gid, data, data_size, mtype);
 
   return 0;
 }
@@ -142,6 +145,13 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
   size_t total_data_size = 0;
 #endif
+  char *p = getenv("HEP_IO_TYPE");
+  int method = 0;
+
+  if ( p != NULL ) {
+    method = atoi(p);
+  }
+
   if(firstTime_) {
     writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
@@ -165,9 +175,13 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_start(name.c_str());
 #endif
-      write_ds<char>(gid, name, prods);
-      //write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
-      //append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      if ( method == 1 ) 
+        write_ds<char>(gid, name, prods);
+      } else if (method == 0 ) {
+        write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      } else {
+        append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      }
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_end((size_t)prods.size());
 #endif
@@ -175,9 +189,13 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_start(s.c_str());
 #endif
-      write_ds<size_t>(gid, s, sizes);
-      //write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
-      //append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      if (method == 1) {
+        write_ds<size_t>(gid, s, sizes);
+      } else if ( method == 0 ) {
+        write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      } else {
+        append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      }
 #ifdef H5_TIMING_ENABLE
       register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(size_t));
 #endif
@@ -188,16 +206,13 @@ HDFOutputer::output(EventIdentifier const& iEventID,
     batch_ = 0;
     products_.clear();
     events_.clear();
+    flush_multidatasets();
   }
-  check_write_status();
   if (total_n_events == 0) {
 #ifdef H5_TIMING_ENABLE
     register_dataset_timer_start("flush_all");
 #endif
     flush_multidatasets();
-    dataset_recycle_all();
-    dataspace_recycle_all();
-    memspace_recycle_all();
 #ifdef H5_TIMING_ENABLE
     register_dataset_timer_end(total_data_size);
 #endif

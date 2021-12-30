@@ -25,17 +25,20 @@ typedef struct H5D_rw_multi_t
 
 typedef struct multidataset_array {
     char name[256];
+    hsize_t *start;
+    hsize_t *end;
+    hsize_t last_end;
     hid_t did;
-    hid_t dsid;
-    hid_t msid;
     hid_t mtype;      /* memory datatype ID */
-    union {
-        void *rbuf;         /* pointer to read buffer */
-        const void *wbuf;   /* pointer to write buffer */
-    } u;
+    char **temp_mem;
+    int request_size;
+    int request_size_limit;
 } multidataset_array;
 
 int init_multidataset();
+int finalize_multidataset();
+//hid_t get_dataset_id(const char* name, hid_t gid);
+/*
 int register_dataset_recycle(hid_t did);
 int register_dataspace_recycle(hid_t dsid);
 int register_memspace_recycle(hid_t msid);
@@ -43,6 +46,8 @@ int register_multidataset(const char* name, void *buf, hid_t did, hid_t dsid, hi
 int dataset_recycle_all();
 int dataspace_recycle_all();
 int memspace_recycle_all();
+*/
+int register_multidataset_request_append(const char *name, hid_t gid, void *buf, hsize_t data_size, hid_t mtype);
 int flush_multidatasets();
-int check_write_status();
+//int check_write_status();
 #endif

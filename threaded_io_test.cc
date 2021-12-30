@@ -201,6 +201,8 @@ int main(int argc, char* argv[]) {
 #ifdef H5_TIMING_ENABLE
   finalize_timers();
 #endif
+  finalize_multidataset();
+
   source->printSummary();
   out->printSummary();
 }

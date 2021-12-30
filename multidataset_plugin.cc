@@ -203,7 +203,6 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
         multi_datasets[index].start = (hsize_t*) malloc(2 * sizeof(hsize_t) * multi_datasets[index].request_size_limit);
         multi_datasets[index].end = multi_datasets[index].start + multi_datasets[index].request_size_limit;
         multi_datasets[index].mtype = mtype;
-        multi_datasets[index].gid = gid;
 
         dataset_size++;
     }
@@ -472,11 +471,7 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
-/*
-        if (multi_datasets[i].did == -1) {
-            multi_datasets[i].did = H5Dopen2(multi_datasets[i].gid, multi_datasets[i].name, H5P_DEFAULT);
-        }
-*/
+
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].buf, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
         multi_datasets_temp[i].dset_id = multi_datasets[i].did;
         multi_datasets_temp[i].mem_type_id = multi_datasets[i].mtype;
@@ -506,11 +501,7 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
-/*
-        if (multi_datasets[i].did == -1) {
-            multi_datasets[i].did = H5Dopen2(multi_datasets[i].gid, multi_datasets[i].name, H5P_DEFAULT);
-        }
-*/
+
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
         multi_datasets[i].start = new_start;
         multi_datasets[i].end = new_end;

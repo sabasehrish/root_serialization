@@ -172,7 +172,7 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
     int index = -1;
 
     for ( i = 0; i < dataset_size; ++i ) {
-        if ( strcmp(name, ulti_datasets[i].name) == 0 ) {
+        if ( strcmp(name, multi_datasets[i].name) == 0 ) {
             index = i;
             break;
         }
@@ -233,7 +233,7 @@ int register_multidataset_request_append(const char *name, hid_t gid, void *buf,
     int index = -1;
     hsize_t start, end;
     for ( i = 0; i < dataset_size; ++i ) {
-        if ( strcmp(name, multidatasets[i].name) == 0 ) {
+        if ( strcmp(name, multi_datasets[i].name) == 0 ) {
             index = i;
             break;
         }

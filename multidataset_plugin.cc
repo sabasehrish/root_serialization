@@ -25,17 +25,19 @@ hsize_t total_data_size;
 int init_multidataset() {
     dataset_size = 0;
     dataset_size_limit = 0;
+/*
     dataspace_recycle_size = 0;
     dataspace_recycle_size_limit = 0;
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
     dataset_recycle_size_limit = 0;
     dataset_recycle_size = 0;
+*/
     return 0;
 }
 
 int finalize_multidataset() {
-    int i;
+    int i, j;
 
     for ( i = 0; i < dataset_size; ++i ) {
         if ( multi_datasets[i].request_size ) {
@@ -157,7 +159,6 @@ static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start
     max_dims[0] = H5S_UNLIMITED;
     msid = H5Screate_simple(ndims, &total_data_size, max_dims);
 
-    *did_ptr = did;
     *dsid_ptr = dsid;
     *msid_ptr = msid;
     return 0;
@@ -264,7 +265,7 @@ static int merge_requests(hsize_t *start, hsize_t *end, char** buf, hsize_t **ne
         }
     }
     *new_start = (hsize_t*) malloc(sizeof(hsize_t) * merged_requests * 2);
-    *new_end = new_start + merged_requests;
+    *new_end = new_start[0] + merged_requests;
 
     index = 0;
     new_start[0][0] = start[0];
@@ -288,7 +289,7 @@ static int merge_requests(hsize_t *start, hsize_t *end, char** buf, hsize_t **ne
         new_end[0][index] = end[i];
     }
     free(start);
-    *request_size_ptr = merged_request;
+    *request_size_ptr = merged_requests;
     return 0;
 }
 

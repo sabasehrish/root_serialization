@@ -172,7 +172,7 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
     int index = -1;
 
     for ( i = 0; i < dataset_size; ++i ) {
-        if ( strcmp(name, multidataset_array[i].name) == 0 ) {
+        if ( strcmp(name, ulti_datasets[i].name) == 0 ) {
             index = i;
             break;
         }
@@ -233,7 +233,7 @@ int register_multidataset_request_append(const char *name, hid_t gid, void *buf,
     int index = -1;
     hsize_t start, end;
     for ( i = 0; i < dataset_size; ++i ) {
-        if ( strcmp(name, multidataset_array[i].name) == 0 ) {
+        if ( strcmp(name, multidatasets[i].name) == 0 ) {
             index = i;
             break;
         }
@@ -460,7 +460,7 @@ int flush_multidatasets() {
     H5D_rw_multi_t *multi_datasets_temp;
     hsize_t *new_start, *new_end;
     hid_t msid, dsid;
-    char **temp_buf = (char**) malloc(sizeof(char*) * data_size);
+    char **temp_buf = (char**) malloc(sizeof(char*) * dataset_size);
 
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
@@ -508,7 +508,7 @@ int flush_multidatasets() {
         if (multi_datasets[i].did == -1) {
             multi_datasets[i].did = H5Dopen2(multi_datasets[i].gid, multi_datasets[i].name, H5P_DEFAULT);
         }
-        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].buf, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
+        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
         multi_datasets[i].start = new_start;
         multi_datasets[i].end = new_end;
         wrap_hdf5_spaces(multi_datasets[i].name, multi_datasets[i].request_size, multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].gid, multi_datasets[i].did, &dsid, &msid);

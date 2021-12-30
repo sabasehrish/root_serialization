@@ -206,7 +206,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
     batch_ = 0;
     products_.clear();
     events_.clear();
-    //flush_multidatasets();
+    flush_multidatasets();
   }
   if (total_n_events == 0) {
 #ifdef H5_TIMING_ENABLE

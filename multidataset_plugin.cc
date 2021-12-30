@@ -124,7 +124,7 @@ static hid_t get_dataset_id(const char* name, hid_t gid) {
     return multi_datasets[i].did;
 }
 
-static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start, hsize_t *end, hid_t gid, hid_t did, hid_t* dsid_ptr, hid_t *msid_ptr) {
+static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start, hsize_t *end, hid_t did, hid_t* dsid_ptr, hid_t *msid_ptr) {
     const hsize_t ndims = 1;
     hsize_t old_dims[ndims]; //our datasets are 1D
     hsize_t new_dims[ndims];
@@ -132,8 +132,6 @@ static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start
     hsize_t max_offset, data_size, total_data_size;
     hid_t dsid, msid;
     int i;
-
-    did = get_dataset_id(name, gid);
 
     dsid = H5Dget_space(did);
     H5Sget_simple_extent_dims(dsid, old_dims, max_dims);
@@ -198,7 +196,7 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
         }
         index = dataset_size;
         strcpy(multi_datasets[index].name, name);
-        multi_datasets[index].did = -1;
+        multi_datasets[index].did = H5Dopen2(gid, name, H5P_DEFAULT);
         multi_datasets[index].request_size_limit = MEM_SIZE;
         multi_datasets[index].request_size = 0;
         multi_datasets[index].temp_mem = (char**) malloc(sizeof(char**) * multi_datasets[index].request_size_limit);
@@ -474,9 +472,11 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
+/*
         if (multi_datasets[i].did == -1) {
             multi_datasets[i].did = H5Dopen2(multi_datasets[i].gid, multi_datasets[i].name, H5P_DEFAULT);
         }
+*/
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].buf, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
         multi_datasets_temp[i].dset_id = multi_datasets[i].did;
         multi_datasets_temp[i].mem_type_id = multi_datasets[i].mtype;
@@ -484,7 +484,7 @@ int flush_multidatasets() {
 
         multi_datasets[i].start = new_start;
         multi_datasets[i].end = new_end;
-        wrap_hdf5_spaces(multi_datasets[i].name, multi_datasets[i].request_size, multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].gid, multi_datasets[i].did, &(multi_datasets_temp[i].dset_space_id), &(multi_datasets_temp[i].mem_space_id));
+        wrap_hdf5_spaces(multi_datasets[i].name, multi_datasets[i].request_size, multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].did, &(multi_datasets_temp[i].dset_space_id), &(multi_datasets_temp[i].mem_space_id));
     }
 
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets_temp);
@@ -493,6 +493,7 @@ int flush_multidatasets() {
         H5Sclose(multi_datasets_temp[i].dset_space_id);
         H5Sclose(multi_datasets_temp[i].mem_space_id);
         H5Dclose(multi_datasets[i].did);
+        free(multi_datasets[i].start);
         multi_datasets[i].did = -1;
         free(temp_buf[i]);
     }
@@ -505,13 +506,15 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
+/*
         if (multi_datasets[i].did == -1) {
             multi_datasets[i].did = H5Dopen2(multi_datasets[i].gid, multi_datasets[i].name, H5P_DEFAULT);
         }
+*/
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &(multi_datasets[i].request_size));
         multi_datasets[i].start = new_start;
         multi_datasets[i].end = new_end;
-        wrap_hdf5_spaces(multi_datasets[i].name, multi_datasets[i].request_size, multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].gid, multi_datasets[i].did, &dsid, &msid);
+        wrap_hdf5_spaces(multi_datasets[i].name, multi_datasets[i].request_size, multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;
 
         H5Dwrite (multi_datasets[i].did, multi_datasets[i].mtype, msid, dsid, H5P_DEFAULT, temp_buf[i]);
@@ -521,8 +524,12 @@ int flush_multidatasets() {
         H5Dclose(multi_datasets[i].did);
         multi_datasets[i].did = -1;
         free(temp_buf[i]);
+        free(multi_datasets[i].start);
     }
 #endif
+
+    dataset_size = 0;
+
     free(temp_buf);
     return 0;
 }

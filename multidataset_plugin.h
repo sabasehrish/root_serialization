@@ -29,7 +29,6 @@ typedef struct multidataset_array {
     hsize_t *end;
     hsize_t last_end;
     hid_t did;
-    hid_t gid;
     hid_t mtype;      /* memory datatype ID */
     char **temp_mem;
     int request_size;

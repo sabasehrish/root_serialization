@@ -519,8 +519,6 @@ int flush_multidatasets() {
     }
 #endif
 
-    dataset_size = 0;
-
     free(temp_buf);
     return 0;
 }

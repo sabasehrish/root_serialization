@@ -269,7 +269,7 @@ static int merge_requests(hsize_t *start, hsize_t *end, char** buf, hsize_t **ne
     new_end[0][0] = end[0];
 
 
-    *new_buf = (char*) malloc(sizeof(char) * total_data_size);
+    *new_buf = (char*) malloc(esize * total_data_size);
     ptr = *new_buf;
     memcpy(ptr, buf[0], (end[0] - start[0]) * esize);
     ptr += (end[0] - start[0]) * esize;

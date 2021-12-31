@@ -285,7 +285,6 @@ static int merge_requests(hsize_t *start, hsize_t *end, char** buf, hsize_t **ne
         }
         new_end[0][index] = end[i];
     }
-    free(start);
     *request_size_ptr = merged_requests;
     return 0;
 }

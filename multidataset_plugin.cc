@@ -214,6 +214,9 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
         memcpy(temp_offset, multi_datasets[index].start, sizeof(hsize_t) * multi_datasets[index].request_size_limit * 2);
         multi_datasets[index].request_size_limit *= 2;
     }
+    if (multi_datasets[index].did) {
+        multi_datasets[index].did = H5Dopen2(gid, name, H5P_DEFAULT);
+    }
     multi_datasets[index].start[multi_datasets[index].request_size] = start;
     multi_datasets[index].end[multi_datasets[index].request_size] = end;
     multi_datasets[index].temp_mem[multi_datasets[index].request_size] = (char*) malloc(esize);

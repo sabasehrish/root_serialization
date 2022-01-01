@@ -2,10 +2,11 @@
 
 
 static multidataset_array *multi_datasets;
+/*
 static hid_t *dataset_recycle;
 static hid_t *memspace_recycle;
 static hid_t *dataspace_recycle;
-
+*/
 static int dataset_size;
 static int dataset_size_limit;
 
@@ -165,9 +166,9 @@ static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start
 int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_t start, hsize_t end, hid_t mtype) {
     size_t esize = H5Tget_size (mtype) * (end - start);
     hsize_t *temp_offset;
-    char **temp_mem;
     int i;
     int index = -1;
+    char** temp_mem;
 
     for ( i = 0; i < dataset_size; ++i ) {
         if ( strcmp(name, multi_datasets[i].name) == 0 ) {
@@ -184,13 +185,8 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
                 free(multi_datasets);
                 multi_datasets = temp;
 
-                char **new_memory = (char**) malloc(dataset_size_limit*sizeof(char*));
-                memcpy(new_memory, temp_mem, sizeof(char*) * dataset_size);
-                free(temp_mem);
-                temp_mem = new_memory;
             } else {
                 dataset_size_limit = MEM_SIZE;
-                temp_mem = (char**) malloc(sizeof(char*) * dataset_size_limit);
                 multi_datasets = (multidataset_array*) malloc(dataset_size_limit*sizeof(multidataset_array));
             }
         }
@@ -208,11 +204,20 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
     }
 
     if (multi_datasets[index].request_size_limit == multi_datasets[index].request_size) {
-        temp_mem = (char**) malloc(sizeof(char*) * multi_datasets[index].request_size_limit * 2);
-        temp_offset = (hsize_t*) malloc(sizeof(hsize_t) * multi_datasets[index].request_size_limit * 4);
-        memcpy(temp_mem, multi_datasets[index].temp_mem, sizeof(char*) * multi_datasets[index].request_size_limit);
-        memcpy(temp_offset, multi_datasets[index].start, sizeof(hsize_t) * multi_datasets[index].request_size_limit * 2);
         multi_datasets[index].request_size_limit *= 2;
+        temp_mem = (char**) malloc(sizeof(char*) * multi_datasets[index].request_size_limit);
+        temp_offset = (hsize_t*) malloc(sizeof(hsize_t) * multi_datasets[index].request_size_limit * 2);
+        memcpy(temp_mem, multi_datasets[index].temp_mem, sizeof(char*) * multi_datasets[index].request_size);
+        memcpy(temp_offset, multi_datasets[index].start, sizeof(hsize_t) * multi_datasets[index].request_size);
+        memcpy(temp_offset + multi_datasets[index].request_size_limit, multi_datasets[index].end, sizeof(hsize_t) * multi_datasets[index].request_size);
+
+        free(multi_datasets[index].temp_mem);
+        free(multi_datasets[index].start);
+
+        multi_datasets[index].temp_mem = temp_mem;
+        multi_datasets[index].start = temp_offset;
+        multi_datasets[index].end = temp_offset + multi_datasets[index].request_size_limit;
+
     }
     if (multi_datasets[index].did) {
         multi_datasets[index].did = H5Dopen2(gid, name, H5P_DEFAULT);
@@ -469,6 +474,10 @@ int flush_multidatasets() {
     multi_datasets_temp = (H5D_rw_multi_t*) malloc(sizeof(H5D_rw_multi_t) * dataset_size);
 
     for ( i = 0; i < dataset_size; ++i ) {
+        if (multi_datasets[i].did == -1) {
+            continue;
+        }
+
         //MPI_Barrier(MPI_COMM_WORLD);
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
@@ -485,6 +494,9 @@ int flush_multidatasets() {
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets_temp);
 
     for ( i = 0; i < dataset_size; ++i ) {
+        if (multi_datasets[i].did == -1) {
+            continue;
+        }
         H5Sclose(multi_datasets_temp[i].dset_space_id);
         H5Sclose(multi_datasets_temp[i].mem_space_id);
         H5Dclose(multi_datasets[i].did);
@@ -500,7 +512,9 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
-
+        if (multi_datasets[i].did == -1) {
+            continue;
+        }
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_start, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;

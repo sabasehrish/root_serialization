@@ -247,9 +247,8 @@ int register_multidataset_request_append(const char *name, hid_t gid, void *buf,
     return 0;
 }
 
-static int merge_requests(hsize_t *start, hsize_t *end, char** buf, hsize_t **new_start, hsize_t **new_end, char** new_buf, hid_t mtype, int *request_size_ptr) {
+static int merge_requests(hsize_t *start, hsize_t *end, int request_size, char** buf, hsize_t **new_start, hsize_t **new_end, char** new_buf, hid_t mtype, int *request_size_ptr) {
     int i, index;
-    int request_size = *request_size_ptr;
     int merged_requests = request_size;
     char* ptr;
     size_t esize = H5Tget_size (mtype);
@@ -472,7 +471,7 @@ int flush_multidatasets() {
         increment_H5Dwrite();
         #endif
 
-        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].buf, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
+        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].buf, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
         multi_datasets_temp[i].dset_id = multi_datasets[i].did;
         multi_datasets_temp[i].mem_type_id = multi_datasets[i].mtype;
         multi_datasets_temp[i].u.wbuf = temp_buf[i];
@@ -499,7 +498,7 @@ int flush_multidatasets() {
         increment_H5Dwrite();
         #endif
 
-        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
+        merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_start, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;
 

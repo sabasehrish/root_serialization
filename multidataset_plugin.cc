@@ -149,11 +149,14 @@ static int wrap_hdf5_spaces(const char *name, int total_requests, hsize_t *start
         H5Sclose(dsid);
         dsid = H5Dget_space(did);
     }
-    total_data_size = 0;
-    for ( i = 0; i < total_requests; ++i ) {
+
+    data_size = end[0] - start[0];
+    H5Sselect_hyperslab(dsid, H5S_SELECT_SET, start, NULL, &data_size, NULL);
+    total_data_size = data_size;
+    for ( i = 1; i < total_requests; ++i ) {
         data_size = end[i] - start[i];
         total_data_size += data_size;
-        H5Sselect_hyperslab(dsid, H5S_SELECT_SET, start + i, NULL, &data_size, NULL);
+        H5Sselect_hyperslab(dsid, H5S_SELECT_OR, start + i, NULL, &data_size, NULL);
     }
     max_dims[0] = H5S_UNLIMITED;
     msid = H5Screate_simple(ndims, &total_data_size, max_dims);
@@ -508,13 +511,12 @@ int flush_multidatasets() {
 #else
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
     for ( i = 0; i < dataset_size; ++i ) {
-        //MPI_Barrier(MPI_COMM_WORLD);
-        #ifdef H5_TIMING_ENABLE
-        increment_H5Dwrite();
-        #endif
         if (multi_datasets[i].did == -1) {
             continue;
         }
+        #ifdef H5_TIMING_ENABLE
+        increment_H5Dwrite();
+        #endif
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_start, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;

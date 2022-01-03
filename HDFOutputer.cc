@@ -214,16 +214,6 @@ HDFOutputer::output(EventIdentifier const& iEventID,
     register_dataset_timer_end(total_data_size);
 #endif
   }
-  if (total_n_events == 0) {
-#ifdef H5_TIMING_ENABLE
-    register_dataset_timer_start("flush_all");
-#endif
-    flush_multidatasets();
-#ifdef H5_TIMING_ENABLE
-    register_dataset_timer_end(total_data_size);
-#endif
-  }
-
 }
 
 void 

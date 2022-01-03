@@ -518,7 +518,7 @@ int flush_multidatasets() {
         increment_H5Dwrite();
         #endif
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
-        wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_start, multi_datasets[i].did, &dsid, &msid);
+        wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_end, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;
 
         H5Dwrite (multi_datasets[i].did, multi_datasets[i].mtype, msid, dsid, H5P_DEFAULT, temp_buf[i]);

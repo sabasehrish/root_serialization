@@ -222,7 +222,7 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
         multi_datasets[index].end = temp_offset + multi_datasets[index].request_size_limit;
 
     }
-    if (multi_datasets[index].did) {
+    if (multi_datasets[index].did == -1) {
         multi_datasets[index].did = H5Dopen2(gid, name, H5P_DEFAULT);
     }
     multi_datasets[index].start[multi_datasets[index].request_size] = start;

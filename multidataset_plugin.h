@@ -24,7 +24,7 @@ typedef struct H5D_rw_multi_t
 #endif
 
 typedef struct multidataset_array {
-    char name[256];
+    char *name;
     hsize_t *start;
     hsize_t *end;
     hsize_t last_end;

@@ -41,12 +41,14 @@ int finalize_multidataset() {
     int i, j;
 
     for ( i = 0; i < dataset_size; ++i ) {
-        if ( multi_datasets[i].request_size ) {
-            free(multi_datasets[i].start);
-            for ( j = 0; j < multi_datasets[i].request_size; ++j ) {
-                free(multi_datasets[i].temp_mem[j]);
-            }
-            free(multi_datasets[i].temp_mem);
+        free(multi_datasets[i].name);
+        free(multi_datasets[i].start);
+        for ( j = 0; j < multi_datasets[i].request_size; ++j ) {
+            free(multi_datasets[i].temp_mem[j]);
+        }
+        free(multi_datasets[i].temp_mem);
+        if (multi_datasets[i].did != -1) {
+            H5Dclose(multi_datasets[i].did);
         }
     }
     free(multi_datasets);
@@ -194,7 +196,7 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
             }
         }
         index = dataset_size;
-        strcpy(multi_datasets[index].name, name);
+        multi_datasets[index].name = strdup(name);
         multi_datasets[index].did = H5Dopen2(gid, name, H5P_DEFAULT);
         multi_datasets[index].request_size_limit = MEM_SIZE;
         multi_datasets[index].request_size = 0;

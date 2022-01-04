@@ -470,6 +470,9 @@ int flush_multidatasets() {
     int new_request_size;
     hid_t msid, dsid;
     char **temp_buf = (char**) malloc(sizeof(char*) * dataset_size);
+#ifdef H5_TIMING_ENABLE
+    struct timeval end_time, start_time;
+#endif
 
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
@@ -523,7 +526,14 @@ int flush_multidatasets() {
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_end, multi_datasets[i].did, &dsid, &msid);
         multi_datasets[i].request_size = 0;
 
+#ifdef H5_TIMING_ENABLE
+        gettimeofday(&start_time, NULL);
+#endif
         H5Dwrite (multi_datasets[i].did, multi_datasets[i].mtype, msid, dsid, H5P_DEFAULT, temp_buf[i]);
+#ifdef H5_TIMING_ENABLE
+        gettimeofday(&end_time, NULL);
+        H5Dwrite += (end_time.tv_usec + end_time.tv_sec * 1000000) - (start_time.tv_usec + start_time.tv_sec * 1000000);
+#endif
 
         H5Sclose(dsid);
         H5Sclose(msid);

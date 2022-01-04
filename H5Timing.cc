@@ -8,6 +8,8 @@ static H5TimerArray *dataset_read_timers;
 static H5TimerArray *dataset_sz_read_timers;
 static int H5Dwrite_count;
 static int H5Dread_count;
+static double H5Dwrite_time;
+static double H5Dread_time;
 static double total_start_time;
 static double total_end_time;
 
@@ -39,6 +41,9 @@ int init_timers() {
 
     H5Dwrite_count = 0;
     H5Dread_count = 0;
+
+    H5Dwrite_time = .0;
+    H5Dread_time = .0;
     return 0;
 }
 
@@ -167,7 +172,7 @@ int finalize_timers() {
 
     gettimeofday(&temp_time, NULL);
     total_end_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
-    printf("total program time is %lf\n", (total_end_time - total_start_time) / 1000000);
+    printf("total program time is %lf, H5Dwrite time = %lf, H5Dread time = %lf\n", (total_end_time - total_start_time) / 1000000, H5Dwrite_time, H5Dread_time);
 
     for ( i = 0 ; i < dataset_timers->size; ++i ) {
         free(dataset_timers->timer_array[i].name);

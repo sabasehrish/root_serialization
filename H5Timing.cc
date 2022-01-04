@@ -8,6 +8,8 @@ static H5TimerArray *dataset_read_timers;
 static H5TimerArray *dataset_sz_read_timers;
 static int H5Dwrite_count;
 static int H5Dread_count;
+static double wrap_requests_time;
+static double merge_requests_time;
 static double H5Dwrite_time;
 static double H5Dread_time;
 static double total_start_time;
@@ -75,6 +77,34 @@ static int check_timer_size(H5TimerArray *timers) {
     timers->timer_array[timers->size].end = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0; \
     timers->timer_array[timers->size].data_size = data_size; \
     timers->size++; \
+}
+
+int register_merge_requests_timer_start(double *start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
+    return 0;
+}
+
+int register_merge_requests_timer_end(double start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    merge_requests_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
+    return 0;
+}
+
+int register_wrap_requests_timer_start(double *start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
+    return 0;
+}
+
+int register_wrap_requests_timer_end(double start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    wrap_requests_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
+    return 0;
 }
 
 int register_H5Dwrite_timer_start(double *start_time) {
@@ -187,6 +217,7 @@ int finalize_timers() {
     gettimeofday(&temp_time, NULL);
     total_end_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
     printf("total program time is %lf, H5Dwrite time = %lf, H5Dread time = %lf\n", (total_end_time - total_start_time) / 1000000, H5Dwrite_time, H5Dread_time);
+    printf("merge requests time = %lf, wrap requests time = %lf\n", merge_requests_time, wrap_requests_time);
 
     for ( i = 0 ; i < dataset_timers->size; ++i ) {
         free(dataset_timers->timer_array[i].name);

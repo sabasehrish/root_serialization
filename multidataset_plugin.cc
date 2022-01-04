@@ -522,8 +522,22 @@ int flush_multidatasets() {
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
         #endif
+#ifdef H5_TIMING_ENABLE
+        register_merge_requests_timer_start(&start_time);
+#endif
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
+#ifdef H5_TIMING_ENABLE
+        register_merge_requests_timer_end(start_time);
+#endif
+
+#ifdef H5_TIMING_ENABLE
+        register_wrap_requests_timer_start(&start_time);
+#endif
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_end, multi_datasets[i].did, &dsid, &msid);
+#ifdef H5_TIMING_ENABLE
+        register_wrap_requests_timer_end(start_time);
+#endif
+
         multi_datasets[i].request_size = 0;
 
 #ifdef H5_TIMING_ENABLE

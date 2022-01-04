@@ -23,6 +23,10 @@ typedef struct{
 } H5TimerArray;
 
 int init_timers();
+int register_merge_requests_timer_start(double *start_time);
+int register_merge_requests_timer_end(double start_time);
+int register_wrap_requests_timer_start(double *start_time);
+int register_wrap_requests_timer_end(double start_time);
 int register_H5Dwrite_timer_start(double *start_time);
 int register_H5Dwrite_timer_end(double start_time);
 int register_dataset_timer_start(const char *name);

@@ -77,6 +77,20 @@ static int check_timer_size(H5TimerArray *timers) {
     timers->size++; \
 }
 
+int register_H5Dwrite_timer_start(double *start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
+    return 0;
+}
+
+int register_H5Dwrite_timer_end(double start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    H5Dwrite_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
+    return 0;
+}
+
 int register_dataset_timer_start(const char *name) {
     TIMER_START(dataset_timers);
     return 0;

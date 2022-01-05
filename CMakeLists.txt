@@ -85,6 +85,7 @@ target_link_libraries(threaded_io_test
                               sequence_classes_dict
                               zstd::libzstd_shared
 			      stdc++
+                              hdf5_hl
                               hdf5)
 
 add_subdirectory(cms)

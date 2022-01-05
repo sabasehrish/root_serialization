@@ -214,7 +214,7 @@ int finalize_timers() {
     gettimeofday(&temp_time, NULL);
     total_end_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
     printf("total program time is %lf, H5Dwrite time = %lf, H5Dread time = %lf\n", (total_end_time - total_start_time) / 1000000, H5Dwrite_time, H5Dread_time);
-    printf("merge requests time = %lf, wrap requests time = %lf\n", merge_requests_time, wrap_requests_time);
+    printf("merge requests time = %lf, wrap requests time = %lf, H5Dclose = %lf\n", merge_requests_time, wrap_requests_time, H5Dclose_time);
 
     for ( i = 0 ; i < dataset_timers->size; ++i ) {
         free(dataset_timers->timer_array[i].name);

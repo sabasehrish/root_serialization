@@ -8,6 +8,7 @@ static H5TimerArray *dataset_read_timers;
 static H5TimerArray *dataset_sz_read_timers;
 static int H5Dwrite_count;
 static int H5Dread_count;
+static double H5Dclose_time;
 static double wrap_requests_time;
 static double merge_requests_time;
 static double H5Dwrite_time;
@@ -46,6 +47,10 @@ int init_timers() {
 
     H5Dwrite_time = .0;
     H5Dread_time = .0;
+    wrap_requests_time = .0;
+    merge_requests_time = .0;
+    H5Dclose_time = .0;
+
     return 0;
 }
 
@@ -79,45 +84,37 @@ static int check_timer_size(H5TimerArray *timers) {
     timers->size++; \
 }
 
-int register_merge_requests_timer_start(double *start_time) {
+int register_timer_start(double *start_time) {
     struct timeval temp_time;
     gettimeofday(&temp_time, NULL);
     *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
+    return 0;
+}
+
+int register_H5Dclose_timer_end(double start_time) {
+    struct timeval temp_time;
+    gettimeofday(&temp_time, NULL);
+    H5Dclose_time += (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
     return 0;
 }
 
 int register_merge_requests_timer_end(double start_time) {
     struct timeval temp_time;
     gettimeofday(&temp_time, NULL);
-    merge_requests_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
+    merge_requests_time += (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
     return 0;
 }
-
-int register_wrap_requests_timer_start(double *start_time) {
-    struct timeval temp_time;
-    gettimeofday(&temp_time, NULL);
-    *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
-    return 0;
-}
-
 int register_wrap_requests_timer_end(double start_time) {
     struct timeval temp_time;
     gettimeofday(&temp_time, NULL);
-    wrap_requests_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
-    return 0;
-}
-
-int register_H5Dwrite_timer_start(double *start_time) {
-    struct timeval temp_time;
-    gettimeofday(&temp_time, NULL);
-    *start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000);
+    wrap_requests_time += (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
     return 0;
 }
 
 int register_H5Dwrite_timer_end(double start_time) {
     struct timeval temp_time;
     gettimeofday(&temp_time, NULL);
-    H5Dwrite_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
+    H5Dwrite_time += (temp_time.tv_usec + temp_time.tv_sec * 1000000) - start_time;
     return 0;
 }
 

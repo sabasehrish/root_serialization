@@ -523,7 +523,7 @@ int flush_multidatasets() {
         increment_H5Dwrite();
         #endif
 #ifdef H5_TIMING_ENABLE
-        register_merge_requests_timer_start(&start_time);
+        register_timer_start(&start_time);
 #endif
         merge_requests(multi_datasets[i].start, multi_datasets[i].end, multi_datasets[i].request_size, multi_datasets[i].temp_mem, &new_start, &new_end, &(temp_buf[i]), multi_datasets[i].mtype, &new_request_size);
 #ifdef H5_TIMING_ENABLE
@@ -531,7 +531,7 @@ int flush_multidatasets() {
 #endif
 
 #ifdef H5_TIMING_ENABLE
-        register_wrap_requests_timer_start(&start_time);
+        register_timer_start(&start_time);
 #endif
         wrap_hdf5_spaces(multi_datasets[i].name, new_request_size, new_start, new_end, multi_datasets[i].did, &dsid, &msid);
 #ifdef H5_TIMING_ENABLE
@@ -541,7 +541,7 @@ int flush_multidatasets() {
         multi_datasets[i].request_size = 0;
 
 #ifdef H5_TIMING_ENABLE
-        register_H5Dwrite_timer_start(&start_time);
+        register_timer_start(&start_time);
 #endif
         H5Dwrite (multi_datasets[i].did, multi_datasets[i].mtype, msid, dsid, H5P_DEFAULT, temp_buf[i]);
 #ifdef H5_TIMING_ENABLE
@@ -550,7 +550,13 @@ int flush_multidatasets() {
 
         H5Sclose(dsid);
         H5Sclose(msid);
+#ifdef H5_TIMING_ENABLE
+        register_timer_start(&start_time);
+#endif
         H5Dclose(multi_datasets[i].did);
+#ifdef H5_TIMING_ENABLE
+        register_H5Dclose_timer_end(start_time);
+#endif
         multi_datasets[i].did = -1;
         free(temp_buf[i]);
     }

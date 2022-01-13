@@ -22,7 +22,7 @@ using product_t = std::vector<char>;
 namespace cce::tf {
   class HDFOutputer : public OutputerBase {
     public:
-    HDFOutputer(std::string const& iFileName, unsigned int iNLanes);
+    HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize);
     HDFOutputer(HDFOutputer&&) = default;
     HDFOutputer(HDFOutputer const&) = default;
     ~HDFOutputer();
@@ -46,6 +46,7 @@ std::pair<product_t, std::vector<size_t>> get_prods_and_sizes(std::vector<produc
 private:
   hdf5::File file_;
   mutable SerialTaskQueue queue_;
+  int maxBatchSize_;
   std::vector<std::pair<std::string, uint32_t>> dataProductIndices_;
   mutable std::vector<std::vector<SerializerWrapper>> serializers_;
   bool firstTime_ = true;

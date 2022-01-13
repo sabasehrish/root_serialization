@@ -209,6 +209,17 @@ Writes the _event_ data products into a PDS file. Specify both the name of the O
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 PDSOutputer=test.pds
 ```
 
+#### HDFOutputer
+Writes the _event_ data products into a HDF file. Specify both the name of the Outputer and the file to write as well as the number of events to _batch_ together when writing::
+- batchSize: number of events to batch together before writing out to the file. Default is 2.
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 HDFOutputer=test.hdf
+```
+or
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 HDFOutputer=test.hdf:batchSize=10
+```
+
 ## unroll_test
 
 The _unroll_test_ executable is meant to allow testing of the unrolled serialization process and allow comparison of object serialization sizes with respect to ROOT's standard serialization. The executable takes the following command line arguments

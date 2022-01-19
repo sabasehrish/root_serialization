@@ -142,6 +142,36 @@ namespace {
     return std::make_pair(fileName,config);
   }
 
+  struct HDFConfig {
+    int maxBatchSize=1;
+  };
+
+  std::optional<std::pair<std::string, HDFConfig>> parseHDFConfig(std::string_view iOptions) {
+    std::string fileName{iOptions};
+    HDFConfig config;
+    auto pos = fileName.find(':');
+    if(pos != std::string::npos) {
+      auto remainingOptions = fileName.substr(pos+1);
+      fileName = fileName.substr(0,pos);
+
+      auto keyValues = cce::tf::configKeyValuePairs(remainingOptions);
+      int foundOptions = 0;
+      auto itFound = keyValues.find("batchSize");
+      if(itFound != keyValues.end()) {
+	config.maxBatchSize = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      if(foundOptions != keyValues.size()) {
+	std::cout <<"Unknown options for HDFOutputer "<<remainingOptions<<std::endl;
+	for(auto const& kv: keyValues) {
+	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
+	}
+	return std::nullopt;
+      }
+    }
+    return std::make_pair(fileName,config);
+  }
+
   struct TextDumpConfig {
     bool perEvent=true;
     bool summary=false;
@@ -249,8 +279,11 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     }
     outFactory = [useProductReady](unsigned int) { return std::make_unique<DummyOutputer>(useProductReady);};
   } else if(iType == "HDFOutputer") {
+    auto result = parseHDFConfig(iOptions);
+    auto fileName = result->first;
     std::string outputInfo{iOptions};
-    outFactory = [outputInfo](unsigned int nLanes) { return std::make_unique<HDFOutputer>(outputInfo, nLanes);};
+    auto config = result->second;
+    outFactory = [fileName, config](unsigned int nLanes) { return std::make_unique<HDFOutputer>(fileName, nLanes, config.maxBatchSize);};
   } else if(iType == "TextDumpOutputer") {
     auto result = parseTextDumpConfig(iOptions);
     if(not result) {

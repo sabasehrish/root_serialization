@@ -6,7 +6,6 @@
 #include <cmath>
 #include <set>
 
-constexpr int max_batch_size = 2; 
 using namespace cce::tf;
 using product_t = std::vector<char>; 
 
@@ -36,8 +35,9 @@ namespace {
   }
 }
 
-HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes) : 
+HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize) : 
   file_(hdf5::File::create(iFileName.c_str())),
+  maxBatchSize_{iBatchSize},
   serializers_{std::size_t(iNLanes)},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
@@ -52,9 +52,9 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-   products_.reserve(iDPs.size() * max_batch_size);
-   events_.reserve(max_batch_size);
-   offsets_.reserve(max_batch_size);
+   products_.reserve(iDPs.size() * maxBatchSize_);
+   events_.reserve(maxBatchSize_);
+   offsets_.reserve(maxBatchSize_);
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -112,7 +112,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-  if (batch_ == max_batch_size) {
+  if (batch_ == maxBatchSize_) {
     hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();

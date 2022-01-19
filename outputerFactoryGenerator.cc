@@ -143,7 +143,7 @@ namespace {
   }
 
   struct HDFConfig {
-    int maxBatchSize=2;
+    int maxBatchSize=1;
   };
 
   std::optional<std::pair<std::string, HDFConfig>> parseHDFConfig(std::string_view iOptions) {

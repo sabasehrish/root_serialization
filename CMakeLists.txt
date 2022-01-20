@@ -63,6 +63,7 @@ add_executable(threaded_io_test
   UnrolledDeserializer.cc
   UnrolledSerializer.cc
   common_unrolling.cc
+  ConfigurationParameters.cc
   OutputerFactory.cc
   outputerFactoryGenerator.cc
   pds_reading.cc
@@ -114,6 +115,7 @@ add_test(NAME SerializeOutputerTest COMMAND threaded_io_test EmptySource 1 1 0 1
 add_test(NAME SerializeOutputerVerboseTest COMMAND threaded_io_test EmptySource 1 1 0 10 SerializeOutputer=verbose)
 add_test(NAME PDSOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 PDSOutputer=test_empty.pds)
 add_test(NAME TestProductsPDS COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 PDSOutputer=test_prod.pds; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedPDSSource=test_prod.pds 1 1 0 10 TestProductsOutputer")
+add_test(NAME PDSOutputerAllOptionsEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 PDSOutputer=test_empty.pds:compressionLevel=8:compressionAlgorithm=LZ4:serializationAlgorithm=Unrolled)
 add_test(NAME TestProductsPDSUnrolled COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 PDSOutputer=test_prod_unroll.pds:serializationAlgorithm=Unrolled; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedPDSSource=test_prod_unroll.pds 1 1 0 10 TestProductsOutputer")
 add_test(NAME RootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root)
 add_test(NAME RootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootOutputer=test_empty.root:splitLevel=1)

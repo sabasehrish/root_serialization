@@ -2,8 +2,8 @@
 
 namespace cce::tf {
 
-  std::map<std::string,std::string> configKeyValuePairs(std::string_view iToParse) {
-    std::map<std::string,std::string> keyValues;
+  ConfigKeyValueMap configKeyValuePairs(std::string_view iToParse) {
+    ConfigKeyValueMap keyValues;
     std::string::size_type start=0;
     std::string::size_type pos;
     do {

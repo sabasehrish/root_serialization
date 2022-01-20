@@ -98,38 +98,6 @@ namespace {
     return std::make_pair(fileName,config);
   }
 
-  /*
-  struct HDFConfig {
-    int maxBatchSize=1;
-  };
-
-  std::optional<std::pair<std::string, HDFConfig>> parseHDFConfig(std::string_view iOptions) {
-    std::string fileName{iOptions};
-    HDFConfig config;
-    auto pos = fileName.find(':');
-    if(pos != std::string::npos) {
-      auto remainingOptions = fileName.substr(pos+1);
-      fileName = fileName.substr(0,pos);
-
-      auto keyValues = cce::tf::configKeyValuePairs(remainingOptions);
-      int foundOptions = 0;
-      auto itFound = keyValues.find("batchSize");
-      if(itFound != keyValues.end()) {
-	config.maxBatchSize = std::stoul(itFound->second);
-	++foundOptions;
-      }
-      if(foundOptions != keyValues.size()) {
-	std::cout <<"Unknown options for HDFOutputer "<<remainingOptions<<std::endl;
-	for(auto const& kv: keyValues) {
-	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
-	}
-	return std::nullopt;
-      }
-    }
-    return std::make_pair(fileName,config);
-  }
-  */
-
   struct TextDumpConfig {
     bool perEvent=true;
     bool summary=false;
@@ -169,7 +137,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
 
     std::string fileName{iOptions};
     auto pos = fileName.find(':');
-    std::map<std::string, std::string> keyValues;
+    ConfigKeyValueMap keyValues;
     if(pos != std::string::npos) {
       auto remainingOptions = fileName.substr(pos+1);
       fileName = fileName.substr(0,pos);
@@ -178,7 +146,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     }
     keyValues["fileName"] = fileName;
 
-    outFactory = [keyValues](unsigned int nLanes) { return OutputerFactory::get()->create("PDSOutputer", nLanes, keyValues); };
+    outFactory = [params = ConfigurationParameters(keyValues)](unsigned int nLanes) { return OutputerFactory::get()->create("PDSOutputer", nLanes, params); };
     return outFactory;
   } else if(iType == "RootOutputer") {
     auto result = parseRootConfig(iOptions);
@@ -225,7 +193,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
 
     std::string fileName{iOptions};
     auto pos = fileName.find(':');
-    std::map<std::string, std::string> keyValues;
+    ConfigKeyValueMap keyValues;
     if(pos != std::string::npos) {
       auto remainingOptions = fileName.substr(pos+1);
       fileName = fileName.substr(0,pos);
@@ -234,7 +202,7 @@ cce::tf::outputerFactoryGenerator(std::string_view iType, std::string_view iOpti
     }
     keyValues["fileName"] = fileName;
 
-    outFactory = [keyValues](unsigned int nLanes) { return OutputerFactory::get()->create("HDFOutputer", nLanes, keyValues); };
+    outFactory = [params=ConfigurationParameters(keyValues)](unsigned int nLanes) { return OutputerFactory::get()->create("HDFOutputer", nLanes, params); };
     return outFactory;
   } else if(iType == "TextDumpOutputer") {
     auto result = parseTextDumpConfig(iOptions);

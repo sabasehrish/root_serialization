@@ -5,7 +5,8 @@
 #include <string_view>
 namespace cce::tf {
 
-  std::map<std::string,std::string> configKeyValuePairs(std::string_view iToParse);
+  using ConfigKeyValueMap = std::map<std::string, std::string, std::less<>>;
+  ConfigKeyValueMap configKeyValuePairs(std::string_view iToParse);
 }
 
 #endif

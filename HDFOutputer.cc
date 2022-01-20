@@ -1,5 +1,6 @@
 #include "HDFOutputer.h"
 #include "OutputerFactory.h"
+#include "ConfigurationParameters.h"
 #include "summarize_serializers.h"
 #include "lz4.h"
 #include <memory>
@@ -168,30 +169,25 @@ namespace {
   public:
     HDFMaker(): OutputerMakerBase("HDFOutputer") {}
     
-    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, std::map<std::string, std::string> const& keyValues) const final {
-      int foundOptions = 0;
-      auto itFound = keyValues.find("fileName");
-      if(itFound == keyValues.end()) {
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+      auto fileName = params.get<std::string>("fileName");
+      if(not fileName) {
         std::cout<<" no file name given for HDFOutputer\n";
-        return std::unique_ptr<OutputerBase>();
+        return {};
       }
-      auto fileName = itFound->second;
-      ++foundOptions;
 
-      int batchSize = 1;
-      itFound = keyValues.find("batchSize");
-      if(itFound != keyValues.end()) {
-	batchSize = std::stoul(itFound->second);
-	++foundOptions;
+      auto batchSize = params.get<int>("batchSize", 1);
+
+      auto unusedOptions = params.unusedKeys();
+      if(not unusedOptions.empty()) {
+        std::cout <<"Unused options in HDFOutputer\n";
+        for(auto const& key: unusedOptions) {
+          std::cout <<"  '"<<key<<"'"<<std::endl;
+        }
+        return {};
       }
-      if(foundOptions != keyValues.size()) {
-	std::cout <<"Unknown options for HDFOutputer \n";
-	for(auto const& kv: keyValues) {
-	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
-	}
-	return {};
-      }
-      return std::make_unique<HDFOutputer>(fileName, iNLanes, batchSize);
+
+      return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize);
     }
   };
 

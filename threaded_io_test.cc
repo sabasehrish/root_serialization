@@ -110,15 +110,19 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::cout <<"begin warmup"<<std::endl;
   {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
     auto out = outFactory(1);
+    if(not out) {
+      std::cout <<"failed to create outputer\n";
+      return 1;
+    }
     auto source =sourceFactory(1,1);
     Lane lane(0, source.get(), 0);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
+    std::cout <<"begin warmup"<<std::endl;
     arena.execute([&lane,pOut]() {
         tbb::task_group group;
         std::atomic<long> ievt{0};

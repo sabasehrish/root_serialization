@@ -44,12 +44,15 @@ target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
 
 add_executable(threaded_io_test
   DeserializeStrategy.cc
+  DummyOutputer.cc
+  SerializeOutputer.cc
   HDFOutputer.cc
   HDFSource.cc
   Lane.cc
   PDSOutputer.cc
   PDSSource.cc
   RepeatingRootSource.cc
+  RootOutputerConfig.cc
   RootOutputer.cc
   RootSource.cc
   SerialRootSource.cc

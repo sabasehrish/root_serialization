@@ -1,5 +1,6 @@
 #include "TestProductsOutputer.h"
 #include "DataProductRetriever.h"
+#include "OutputerFactory.h"
 
 #include <vector>
 #include <iostream>
@@ -63,4 +64,16 @@ void TestProductsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier 
 
 void TestProductsOutputer::printSummary() const {
   std::cout <<"\nOutputer time: N/A"<<std::endl;
+}
+
+namespace {
+    class TestProductsMaker : public OutputerMakerBase {
+  public:
+    TestProductsMaker(): OutputerMakerBase("TestProductsOutputer") {}
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+      return std::make_unique<TestProductsOutputer>(iNLanes);
+    }
+    };
+
+  TestProductsMaker s_maker;
 }

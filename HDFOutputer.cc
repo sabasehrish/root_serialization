@@ -178,15 +178,6 @@ namespace {
 
       auto batchSize = params.get<int>("batchSize", 1);
 
-      auto unusedOptions = params.unusedKeys();
-      if(not unusedOptions.empty()) {
-        std::cout <<"Unused options in HDFOutputer\n";
-        for(auto const& key: unusedOptions) {
-          std::cout <<"  '"<<key<<"'"<<std::endl;
-        }
-        return {};
-      }
-
       return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize);
     }
   };

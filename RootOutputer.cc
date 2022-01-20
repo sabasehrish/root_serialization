@@ -1,7 +1,8 @@
-
 #include <iostream>
 
 #include "RootOutputer.h"
+#include "RootOutputerConfig.h"
+#include "OutputerFactory.h"
 
 #include "TTree.h"
 #include "TBranch.h"
@@ -101,4 +102,20 @@ void RootOutputer::write(unsigned int iLaneIndex, EventIdentifier const& iEventI
   
 void RootOutputer::printSummary() const {
   std::cout <<"RootOutputer total time: "<<accumulatedTime_.count()<<"us\n";
+}
+
+namespace {
+  class Maker : public OutputerMakerBase {
+  public:
+    Maker(): OutputerMakerBase("RootOutputer") {}
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+      auto result = parseRootConfig(params);
+      if(not result) {
+        return {};
+      }
+      return std::make_unique<RootOutputer>(result->first,iNLanes, outputerConfig<RootOutputer::Config>(result->second));
+    }
+    };
+
+  Maker s_maker;
 }

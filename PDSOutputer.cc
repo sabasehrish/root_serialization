@@ -330,16 +330,6 @@ namespace {
         return {};
       }
       
-      auto unusedOptions = params.unusedKeys();
-      if(not unusedOptions.empty()) {
-        std::cout <<"Unused options in PDSOutputer\n";
-        for(auto const& key: unusedOptions) {
-          std::cout <<"  '"<<key<<"'"<<std::endl;
-        }
-        return {};
-      }
-
-      
       return std::make_unique<PDSOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization);
     }
     

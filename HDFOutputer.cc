@@ -1,6 +1,8 @@
 #include "HDFOutputer.h"
+#include "OutputerFactory.h"
 #include "summarize_serializers.h"
 #include "lz4.h"
+#include <memory>
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -161,5 +163,37 @@ HDFOutputer::writeFileHeader(EventIdentifier const& iEventID,
   }
 }
 
+namespace {
+  class HDFMaker : public OutputerMakerBase {
+  public:
+    HDFMaker(): OutputerMakerBase("HDFOutputer") {}
+    
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, std::map<std::string, std::string> const& keyValues) const final {
+      int foundOptions = 0;
+      auto itFound = keyValues.find("fileName");
+      if(itFound == keyValues.end()) {
+        std::cout<<" no file name given for HDFOutputer\n";
+        return std::unique_ptr<OutputerBase>();
+      }
+      auto fileName = itFound->second;
+      ++foundOptions;
 
+      int batchSize = 1;
+      itFound = keyValues.find("batchSize");
+      if(itFound != keyValues.end()) {
+	batchSize = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      if(foundOptions != keyValues.size()) {
+	std::cout <<"Unknown options for HDFOutputer \n";
+	for(auto const& kv: keyValues) {
+	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
+	}
+	return {};
+      }
+      return std::make_unique<HDFOutputer>(fileName, iNLanes, batchSize);
+    }
+  };
 
+  HDFMaker s_maker;
+}

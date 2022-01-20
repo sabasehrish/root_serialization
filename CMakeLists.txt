@@ -63,6 +63,7 @@ add_executable(threaded_io_test
   UnrolledDeserializer.cc
   UnrolledSerializer.cc
   common_unrolling.cc
+  OutputerFactory.cc
   outputerFactoryGenerator.cc
   pds_reading.cc
   sourceFactoryGenerator.cc

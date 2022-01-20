@@ -1,4 +1,5 @@
 #include "PDSOutputer.h"
+#include "OutputerFactory.h"
 #include "UnrolledSerializerWrapper.h"
 #include "SerializerWrapper.h"
 #include "summarize_serializers.h"
@@ -284,3 +285,85 @@ std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding,
   cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
   return cBuffer;
 }
+
+namespace {
+
+  struct PDSConfig {
+    int compressionLevel_=18;
+    std::string compressionAlgorithm_="ZSTD";
+    std::string serializationAlgorithm_="ROOT";
+  };
+
+  class PDSMaker : public OutputerMakerBase {
+  public:
+    PDSMaker(): OutputerMakerBase("PDSOutputer") {}
+
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, std::map<std::string, std::string> const& keyValues) const final {
+      int foundOptions = 0;
+      auto itFound =keyValues.find("fileName");
+      if(itFound == keyValues.end()) {
+        std::cout <<"missing file name for PDSOutputer"<<std::endl;
+        return std::unique_ptr<OutputerBase>();
+      }
+      ++foundOptions;
+      auto fileName = itFound->second;
+
+      PDSConfig config;
+
+      itFound = keyValues.find("compressionLevel");
+      if(itFound != keyValues.end()) {
+	config.compressionLevel_ = std::stoul(itFound->second);
+	++foundOptions;
+      }
+      itFound = keyValues.find("compressionAlgorithm");
+      if(itFound != keyValues.end()) {
+	config.compressionAlgorithm_ = itFound->second;
+	++foundOptions;
+      }
+      itFound = keyValues.find("serializationAlgorithm");
+      if(itFound != keyValues.end()) {
+        config.serializationAlgorithm_ = itFound->second;
+        ++foundOptions;
+      }
+      if(foundOptions != keyValues.size()) {
+	std::cout <<"Unknown options for PDSOutputer \n";
+	for(auto const& kv: keyValues) {
+	  std::cout <<kv.first<<" "<<kv.second<<std::endl;
+	}
+	return std::unique_ptr<OutputerBase>();
+      }
+
+      PDSOutputer::Compression compression = PDSOutputer::Compression::kZSTD;
+      auto const& compressionName = config.compressionAlgorithm_;
+      if(compressionName == "" or compressionName =="None") {
+        compression = PDSOutputer::Compression::kNone;
+      } else if (compressionName == "LZ4") {
+        compression = PDSOutputer::Compression::kLZ4;
+      } else if (compressionName == "ZSTD") {
+      compression = PDSOutputer::Compression::kZSTD;
+      } else {
+        std::cout <<"unknown compression "<<compressionName<<std::endl;
+        return {};
+      }
+      auto compressionLevel = config.compressionLevel_;
+      PDSOutputer::Serialization serialization = PDSOutputer::Serialization::kRoot;
+      auto const& serializationName = config.serializationAlgorithm_;
+      if(serializationName == "" or serializationName=="ROOT") {
+        serialization = PDSOutputer::Serialization::kRoot;
+      } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
+        serialization = PDSOutputer::Serialization::kRootUnrolled;
+      } else {
+        std::cout <<"unknown serialization "<<serializationName<<std::endl;
+        return {};
+      }
+      
+      
+      return std::make_unique<PDSOutputer>(fileName,iNLanes, compression, compressionLevel, serialization);
+    }
+    
+  };
+
+  PDSMaker s_maker;
+}
+
+

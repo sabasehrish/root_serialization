@@ -35,6 +35,7 @@ configure_file(ThreadedIOTestConfig.h.in ThreadedIOTestConfig.h)
 
 #make the library for testing
 add_library(configKeys configKeyValuePairs.cc)
+add_library(configParams ConfigurationParameters.cc)
 
 #make the library holding the root dictionaries
 REFLEX_GENERATE_DICTIONARY(G__sequence_classes SequenceFinderForBuiltins.h SELECTION classes_def.xml)

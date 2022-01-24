@@ -1,4 +1,6 @@
 #include "PDSOutputer.h"
+#include "OutputerFactory.h"
+#include "ConfigurationParameters.h"
 #include "UnrolledSerializerWrapper.h"
 #include "SerializerWrapper.h"
 #include "summarize_serializers.h"
@@ -284,3 +286,56 @@ std::vector<uint32_t> PDSOutputer::zstdCompressBuffer(unsigned int iLeadPadding,
   cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
   return cBuffer;
 }
+
+namespace {
+
+  class PDSMaker : public OutputerMakerBase {
+  public:
+    PDSMaker(): OutputerMakerBase("PDSOutputer") {}
+
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+
+      auto fileName = params.get<std::string>("fileName");
+      if(not fileName) {
+        std::cout <<"no file name given for PDSOutputer\n";
+        return {};
+      }
+
+      int compressionLevel = params.get<int>("compressionLevel", 18);
+
+      auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
+      auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
+
+      PDSOutputer::Compression compression = PDSOutputer::Compression::kZSTD;
+
+      if(compressionName == "" or compressionName =="None") {
+        compression = PDSOutputer::Compression::kNone;
+      } else if (compressionName == "LZ4") {
+        compression = PDSOutputer::Compression::kLZ4;
+      } else if (compressionName == "ZSTD") {
+      compression = PDSOutputer::Compression::kZSTD;
+      } else {
+        std::cout <<"unknown compression "<<compressionName<<std::endl;
+        return {};
+      }
+
+      PDSOutputer::Serialization serialization = PDSOutputer::Serialization::kRoot;
+
+      if(serializationName == "" or serializationName=="ROOT") {
+        serialization = PDSOutputer::Serialization::kRoot;
+      } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
+        serialization = PDSOutputer::Serialization::kRootUnrolled;
+      } else {
+        std::cout <<"unknown serialization "<<serializationName<<std::endl;
+        return {};
+      }
+      
+      return std::make_unique<PDSOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization);
+    }
+    
+  };
+
+  PDSMaker s_maker;
+}
+
+

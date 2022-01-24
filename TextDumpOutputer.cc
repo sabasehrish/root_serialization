@@ -1,4 +1,6 @@
 #include "TextDumpOutputer.h"
+#include "OutputerFactory.h"
+#include "ConfigurationParameters.h"
 #include "DataProductRetriever.h"
 #include <iostream>
 
@@ -53,3 +55,17 @@ void TextDumpOutputer::printSummary() const {
   }
 }
 
+
+namespace {
+    class TextDumperMaker : public OutputerMakerBase {
+  public:
+    TextDumperMaker(): OutputerMakerBase("TextDumpOutputer") {}
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+      bool perEvent = params.get<bool>("perEvent",true);
+      bool summary = params.get<bool>("summary", false);
+      return std::make_unique<TextDumpOutputer>(perEvent, summary);
+    }
+    };
+
+  TextDumperMaker s_maker;
+}

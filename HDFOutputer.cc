@@ -1,6 +1,9 @@
 #include "HDFOutputer.h"
+#include "OutputerFactory.h"
+#include "ConfigurationParameters.h"
 #include "summarize_serializers.h"
 #include "lz4.h"
+#include <memory>
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -161,5 +164,23 @@ HDFOutputer::writeFileHeader(EventIdentifier const& iEventID,
   }
 }
 
+namespace {
+  class HDFMaker : public OutputerMakerBase {
+  public:
+    HDFMaker(): OutputerMakerBase("HDFOutputer") {}
+    
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+      auto fileName = params.get<std::string>("fileName");
+      if(not fileName) {
+        std::cout<<" no file name given for HDFOutputer\n";
+        return {};
+      }
 
+      auto batchSize = params.get<int>("batchSize", 1);
 
+      return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize);
+    }
+  };
+
+  HDFMaker s_maker;
+}

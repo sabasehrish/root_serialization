@@ -2,6 +2,8 @@
 #include <iostream>
 
 #include "TBufferMergerRootOutputer.h"
+#include "OutputerFactory.h"
+#include "RootOutputerConfig.h"
 
 #include "TTree.h"
 #include "TBranch.h"
@@ -198,4 +200,26 @@ void TBufferMergerRootOutputer::printSummary() const {
   std::cout <<"TBufferMergerRootOutputer end close time: "<<closeTime.count()<<"us\n";
   std::cout <<"TBufferMergerRootOutputer total time: "<<fillSum+writeSum+writeTime.count()<<"us\n";
 
+}
+
+namespace {
+  class Maker : public OutputerMakerBase {
+  public:
+    Maker(): OutputerMakerBase("TBufferMergerRootOutputer") {}
+    std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
+
+      bool concurrentWrite = params.get<bool>("concurrentWrite",true);
+
+      auto result = parseRootConfig(params);
+      if(not result) {
+        return {};
+      }
+      auto config = outputerConfig<TBufferMergerRootOutputer::Config>(result->second);
+      config.concurrentWrite = concurrentWrite;
+
+      return std::make_unique<TBufferMergerRootOutputer>(result->first,iNLanes, config);
+    }
+    };
+
+  Maker s_maker;
 }

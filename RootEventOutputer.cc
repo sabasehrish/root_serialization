@@ -40,8 +40,6 @@ RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int 
 }
 
 RootEventOutputer::~RootEventOutputer() {
-  file_.Write();
-  file_.Close();
 }
 
 
@@ -82,6 +80,18 @@ void RootEventOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier con
 void RootEventOutputer::printSummary() const  {
   std::cout <<"RootEventOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
     "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
+
+  auto start = std::chrono::high_resolution_clock::now();
+  file_.Write();
+  auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+
+  start = std::chrono::high_resolution_clock::now();
+  file_.Close();
+  auto closeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+
+  std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
+  std::cout << "  end of job file close time: "<<closeTime.count()<<"us\n";
+                                                                                         
   summarize_serializers(serializers_);
 }
 

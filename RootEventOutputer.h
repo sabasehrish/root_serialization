@@ -50,7 +50,7 @@ class RootEventOutputer :public OutputerBase {
   std::vector<uint32_t> noCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
 
 private:
-  TFile file_;
+  mutable TFile file_;
 
   TTree* eventsTree_;
 

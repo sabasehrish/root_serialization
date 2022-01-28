@@ -192,20 +192,18 @@ std::vector<uint32_t> RootEventOutputer::writeDataProductsToOutputBuffer(Seriali
     assert(buffer.size() == bufferIndex);
   }
   int cSize;
-  std::vector<uint32_t> cBuffer = compressBuffer(2, 1, buffer, cSize);
+  std::vector<uint32_t> cBuffer = compressBuffer(1, 0, buffer, cSize);
 
   //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
   //std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
   uint32_t const recordSize = bytesToWords(cSize)+1;
-  cBuffer[0] = recordSize;
   //Record the actual number of bytes used in the last word of the compression buffer in the lowest
   // 2 bits of the word
-  cBuffer[1] = buffer.size()*4 + (cSize % 4);
-  if(cBuffer.size() != recordSize+2) {
-    std::cout <<"BAD BUFFER SIZE: want: "<<recordSize+2<<" got "<<cBuffer.size()<<std::endl;
+  cBuffer[0] = buffer.size()*4 + (cSize % 4);
+  if(cBuffer.size() != recordSize+1) {
+    std::cout <<"BAD BUFFER SIZE: want: "<<recordSize+1<<" got "<<cBuffer.size()<<std::endl;
   }
-  assert(cBuffer.size() == recordSize+2);
-  cBuffer[recordSize+1]=recordSize;
+  assert(cBuffer.size() == recordSize+1);
   return cBuffer;
 }
 

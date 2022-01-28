@@ -183,7 +183,6 @@ void SharedRootEventSource::readEventAsync(unsigned int iLane, long iEventIndex,
           //}
         }
 
-        buffer.erase(buffer.begin());
         auto group = optTask.group();
         group->run([this, buffer=std::move(buffer), task = optTask.releaseToTaskHolder(), iLane]() {
             auto& laneInfo = this->laneInfos_[iLane];

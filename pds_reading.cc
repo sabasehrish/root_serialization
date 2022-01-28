@@ -190,7 +190,7 @@ bool pds::readCompressedEventBuffer(std::istream&file, EventIdentifier& iEventID
 
 
 std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, std::vector<uint32_t> const& buffer) {
-  int32_t bufferSize = buffer.size()-1; //The last word of the buffer is a crosscheck and not part of the data.
+  int32_t bufferSize = buffer.size();
   //lower 2 bits are the number of bytes used in the last word of the compressed sized
   int32_t uncompressedBufferSize = buffer[0]/4;
   int32_t bytesInLastWord = buffer[0] % 4;
@@ -205,7 +205,7 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
     ZSTD_decompress(uBuffer.data(), uncompressedBufferSize*4, &(*(buffer.begin()+1)), compressedBufferSizeInBytes);
   } else if(Compression::kNone == compression) {
     assert(buffer.size() == uBuffer.size()+2);
-    std::copy(buffer.begin()+1, buffer.begin()+buffer.size()-1, uBuffer.begin());
+    std::copy(buffer.begin()+1, buffer.begin()+buffer.size(), uBuffer.begin());
   }
   return uBuffer;
 }

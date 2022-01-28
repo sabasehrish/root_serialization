@@ -12,16 +12,15 @@
 #include "EventIdentifier.h"
 #include "SerializeStrategy.h"
 #include "DataProductRetriever.h"
+#include "pds_writer.h"
 
 #include "SerialTaskQueue.h"
 
 namespace cce::tf {
 class RootEventOutputer :public OutputerBase {
  public:
-  enum class Compression {kNone, kLZ4, kZSTD};
-  enum class Serialization {kRoot, kRootUnrolled};
- RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
-                   Serialization iSerialization, int autoFlush, int maxVirtualSize );
+  RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, pds::Compression iCompression, int iCompressionLevel, 
+                    pds::Serialization iSerialization, int autoFlush, int maxVirtualSize );
  ~RootEventOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
@@ -43,11 +42,7 @@ class RootEventOutputer :public OutputerBase {
 
   std::vector<uint32_t> writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const;
 
-  std::vector<uint32_t> compressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
-
-  std::vector<uint32_t> lz4CompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
-  std::vector<uint32_t> zstdCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
-  std::vector<uint32_t> noCompressBuffer(unsigned int iReserveFirstNWords, unsigned int iPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const;
+  std::pair<std::vector<uint32_t>, int> compressBuffer(std::vector<uint32_t> const& iBuffer) const;
 
 private:
   mutable TFile file_;
@@ -58,9 +53,9 @@ private:
   mutable std::vector<SerializeStrategy> serializers_;
   mutable std::vector<uint32_t> eventBlob_;
   EventIdentifier eventID_;
-  Compression compression_;
+  pds::Compression compression_;
   int compressionLevel_;
-  Serialization serialization_;
+  pds::Serialization serialization_;
   bool firstTime_ = true;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

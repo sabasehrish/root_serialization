@@ -13,7 +13,7 @@
 using namespace cce::tf;
 
 RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
-                                     Serialization iSerialization ): 
+                                     Serialization iSerialization, int autoFlush, int maxVirtualSize ): 
   file_(iFileName.c_str(), "recreate", "", 0),
   serializers_{std::size_t(iNLanes)},
   compression_{iCompression},
@@ -27,6 +27,16 @@ RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int 
 
     eventsTree_->Branch("blob", &eventBlob_);
     eventsTree_->Branch("EventID", &eventID_, "run/i:lumi/i:event/l");
+
+    //Turn off auto save
+    eventsTree_->SetAutoSave(std::numeric_limits<Long64_t>::max());
+    if(-1 != autoFlush) {
+      eventsTree_->SetAutoFlush(autoFlush);
+    }
+
+    if(maxVirtualSize >= 0) {
+      eventsTree_->SetMaxVirtualSize(static_cast<Long64_t>(maxVirtualSize));
+    }
 }
 
 RootEventOutputer::~RootEventOutputer() {
@@ -235,9 +245,9 @@ std::vector<uint32_t> RootEventOutputer::zstdCompressBuffer(unsigned int iLeadPa
 
 namespace {
 
-  class PDSMaker : public OutputerMakerBase {
+  class Maker : public OutputerMakerBase {
   public:
-    PDSMaker(): OutputerMakerBase("RootEventOutputer") {}
+    Maker(): OutputerMakerBase("RootEventOutputer") {}
 
     std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
 
@@ -275,13 +285,16 @@ namespace {
         std::cout <<"unknown serialization "<<serializationName<<std::endl;
         return {};
       }
+
+      auto treeMaxVirtualSize =  params.get<int>("treeMaxVirtualSize", -1);
+      auto autoFlush = params.get<int>("autoFlush", -1);
       
-      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization);
+      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization, autoFlush, treeMaxVirtualSize);
     }
     
   };
 
-  PDSMaker s_maker;
+  Maker s_maker;
 }
 
 

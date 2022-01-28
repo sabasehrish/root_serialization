@@ -21,7 +21,7 @@ class RootEventOutputer :public OutputerBase {
   enum class Compression {kNone, kLZ4, kZSTD};
   enum class Serialization {kRoot, kRootUnrolled};
  RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
-                   Serialization iSerialization );
+                   Serialization iSerialization, int autoFlush, int maxVirtualSize );
  ~RootEventOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;

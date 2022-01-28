@@ -270,7 +270,7 @@ std::vector<uint32_t> PDSOutputer::lz4CompressBuffer(unsigned int iLeadPadding, 
 
 std::vector<uint32_t> PDSOutputer::noCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
   auto const bound = iBuffer.size()*4;
-  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
+  std::vector<uint32_t> cBuffer(iBuffer.size()+iLeadPadding+iTrailingPadding, uint32_t(0));
   cSize = bound;
   std::copy(iBuffer.begin(), iBuffer.end(), cBuffer.begin()+iLeadPadding);
   return cBuffer;

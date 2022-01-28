@@ -11,6 +11,7 @@
 #include <set>
 
 using namespace cce::tf;
+using namespace cce::tf::pds;
 
 RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
                                      Serialization iSerialization, int autoFlush, int maxVirtualSize ): 
@@ -191,8 +192,9 @@ std::vector<uint32_t> RootEventOutputer::writeDataProductsToOutputBuffer(Seriali
     }
     assert(buffer.size() == bufferIndex);
   }
-  int cSize;
-  std::vector<uint32_t> cBuffer = compressBuffer(1, 0, buffer, cSize);
+
+  //will prepend one extra space at the beginning
+  auto [cBuffer, cSize] = compressBuffer(buffer);
 
   //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
   //std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
@@ -207,48 +209,8 @@ std::vector<uint32_t> RootEventOutputer::writeDataProductsToOutputBuffer(Seriali
   return cBuffer;
 }
 
-std::vector<uint32_t> RootEventOutputer::compressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& oCompressedSize) const {
-  switch(compression_) {
-  case Compression::kLZ4 : {
-      return lz4CompressBuffer(iLeadPadding,iTrailingPadding, iBuffer, oCompressedSize);
-    }    
-  case Compression::kNone : {
-      return noCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
-    } 
-  case Compression::kZSTD : {
-      return zstdCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
-    }
-  default:
-    return noCompressBuffer(iLeadPadding, iTrailingPadding, iBuffer, oCompressedSize);
-  };
-}
-
-
-std::vector<uint32_t> RootEventOutputer::lz4CompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
-  auto const bound = LZ4_compressBound(iBuffer.size()*4);
-  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
-  cSize = LZ4_compress_default(reinterpret_cast<char const*>(&(*iBuffer.begin())), reinterpret_cast<char*>(&(*(cBuffer.begin()+iLeadPadding))), iBuffer.size()*4, bound);
-  cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
-  return cBuffer;
-}
-
-std::vector<uint32_t> RootEventOutputer::noCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
-  auto const bound = iBuffer.size()*4;
-  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
-  cSize = bound;
-  std::copy(iBuffer.begin(), iBuffer.end(), cBuffer.begin()+iLeadPadding);
-  return cBuffer;
-}
-
-std::vector<uint32_t> RootEventOutputer::zstdCompressBuffer(unsigned int iLeadPadding, unsigned int iTrailingPadding, std::vector<uint32_t> const& iBuffer, int& cSize) const {
-  auto const bound = ZSTD_compressBound(iBuffer.size()*4);
-  std::vector<uint32_t> cBuffer(bytesToWords(size_t(bound))+iLeadPadding+iTrailingPadding, 0);
-  cSize = ZSTD_compress(&(*(cBuffer.begin()+iLeadPadding)), bound, &(*iBuffer.begin()),  iBuffer.size()*4, compressionLevel_);
-  if(ZSTD_isError(cSize)) {
-    std::cout <<"ERROR in comparession "<<ZSTD_getErrorName(cSize)<<std::endl;
-  }
-  cBuffer.resize(bytesToWords(cSize)+iLeadPadding+iTrailingPadding);
-  return cBuffer;
+std::pair<std::vector<uint32_t>, int> RootEventOutputer::compressBuffer(std::vector<uint32_t> const& iBuffer) const {
+  return pds::compressBuffer(1, 0, compression_, compressionLevel_, iBuffer);
 }
 
 namespace {
@@ -270,25 +232,25 @@ namespace {
       auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
       auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
 
-      RootEventOutputer::Compression compression = RootEventOutputer::Compression::kZSTD;
+      pds::Compression compression = pds::Compression::kZSTD;
 
       if(compressionName == "" or compressionName =="None") {
-        compression = RootEventOutputer::Compression::kNone;
+        compression = pds::Compression::kNone;
       } else if (compressionName == "LZ4") {
-        compression = RootEventOutputer::Compression::kLZ4;
+        compression = pds::Compression::kLZ4;
       } else if (compressionName == "ZSTD") {
-      compression = RootEventOutputer::Compression::kZSTD;
+      compression = pds::Compression::kZSTD;
       } else {
         std::cout <<"unknown compression "<<compressionName<<std::endl;
         return {};
       }
 
-      RootEventOutputer::Serialization serialization = RootEventOutputer::Serialization::kRoot;
+      pds::Serialization serialization = pds::Serialization::kRoot;
 
       if(serializationName == "" or serializationName=="ROOT") {
-        serialization = RootEventOutputer::Serialization::kRoot;
+        serialization = pds::Serialization::kRoot;
       } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
-        serialization = RootEventOutputer::Serialization::kRootUnrolled;
+        serialization = pds::Serialization::kRootUnrolled;
       } else {
         std::cout <<"unknown serialization "<<serializationName<<std::endl;
         return {};

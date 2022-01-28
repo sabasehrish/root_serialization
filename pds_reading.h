@@ -8,6 +8,8 @@
 #include "EventIdentifier.h"
 #include "DataProductRetriever.h"
 
+#include "pds_common.h"
+
 namespace cce::tf::pds {
 
   uint32_t readword(std::istream& iFile);
@@ -28,9 +30,6 @@ namespace cce::tf::pds {
     uint32_t index_;
   };
   
-  enum class Compression {kNone, kLZ4, kZSTD};
-  enum class Serialization {kRoot, kRootUnrolled};
-
   std::vector<ProductInfo> readFileHeader(std::istream&, Compression&, Serialization&);
 
   constexpr size_t kEventHeaderSizeInWords = 5;

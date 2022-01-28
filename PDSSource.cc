@@ -28,6 +28,8 @@ bool PDSSource::readEventContent() {
   if(not readCompressedEventBuffer(file_, eventID_, buffer)) {
     return false;
   }
+  //last entry in buffer is a crosscheck on its size
+  buffer.pop_back();
   std::vector<uint32_t> uBuffer = uncompressEventBuffer(compression_, buffer);
   deserializeDataProducts(uBuffer.begin(), uBuffer.end(), dataProducts_, deserializers_);
 

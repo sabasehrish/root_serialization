@@ -80,6 +80,8 @@ void SharedPDSSource::readEventAsync(unsigned int iLane, long iEventIndex,  Opti
       std::vector<uint32_t> buffer;
       
       if(pds::readCompressedEventBuffer(file_, this->laneInfos_[iLane].eventID_, buffer)) {
+        //last entry in buffer is just a crosscheck on its size
+        buffer.pop_back();
         auto group = optTask.group();
         group->run([this, buffer=std::move(buffer), task = optTask.releaseToTaskHolder(), iLane]() {
             auto& laneInfo = this->laneInfos_[iLane];

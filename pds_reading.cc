@@ -190,7 +190,7 @@ bool pds::readCompressedEventBuffer(std::istream&file, EventIdentifier& iEventID
 
 
 std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, std::vector<uint32_t> const& buffer) {
-  int32_t bufferSize = buffer.size()-1; //The last word of the buffer is a crosscheck and not part of the data.
+  int32_t bufferSize = buffer.size();
   //lower 2 bits are the number of bytes used in the last word of the compressed sized
   int32_t uncompressedBufferSize = buffer[0]/4;
   int32_t bytesInLastWord = buffer[0] % 4;
@@ -205,7 +205,7 @@ std::vector<uint32_t> pds::uncompressEventBuffer(pds::Compression compression, s
     ZSTD_decompress(uBuffer.data(), uncompressedBufferSize*4, &(*(buffer.begin()+1)), compressedBufferSizeInBytes);
   } else if(Compression::kNone == compression) {
     assert(buffer.size() == uBuffer.size()+2);
-    std::copy(buffer.begin()+1, buffer.begin()+buffer.size()-2, uBuffer.begin());
+    std::copy(buffer.begin()+1, buffer.begin()+buffer.size(), uBuffer.begin());
   }
   return uBuffer;
 }
@@ -215,14 +215,16 @@ void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std
   while(it < itEnd) {
     auto productIndex = *(it++);
     auto storedSize = *(it++);
+    //std::cout <<" deserialize "<<productIndex<<" "<<storedSize<<std::endl;
 
     //std::cout <<dataProducts[productIndex].name()<<" "<<dataProducts[productIndex].classType()->GetName()<<std::endl;
     //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
     auto readSize = deserializers[productIndex].deserialize(reinterpret_cast<char const*>(&*it), storedSize*4, *dataProducts[productIndex].address());
     dataProducts[productIndex].setSize(readSize);
-  //std::cout <<" size "<<bufferFile.Length()<<"\n";
+    //std::cout <<" readSize "<<readSize<<"\n";
 
     it = it+storedSize;
+    //std::cout <<itEnd - it<<std::endl;
   }
   assert(it==itEnd);
 }

@@ -135,28 +135,7 @@ void RootEventOutputer::writeMetaData(SerializeStrategy const& iSerializers) {
   int objectSerializationUsed = static_cast<std::underlying_type_t<Serialization>>(serialization_);
 
 
-  std::string compression;
-  {
-    //Compression type used
-    // note want exactly 4 bytes so sometimes skip trailing \0
-    switch(compression_) {
-    case Compression::kNone:
-      {
-        compression = "None";
-	break;
-      }
-    case Compression::kLZ4:
-      {
-        compression = "LZ4";
-	break;
-      }
-    case Compression::kZSTD:
-      {
-        compression = "ZSTD";
-	break;
-      }
-    }
-  }
+  std::string compression = pds::name(compression_);
 
   TTree* meta = new TTree("Meta", "File meta data", 0, &file_);
   meta->Branch("DataProducts",&typeAndNames, 0, 0);
@@ -232,26 +211,14 @@ namespace {
       auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
       auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
 
-      pds::Compression compression = pds::Compression::kZSTD;
-
-      if(compressionName == "" or compressionName =="None") {
-        compression = pds::Compression::kNone;
-      } else if (compressionName == "LZ4") {
-        compression = pds::Compression::kLZ4;
-      } else if (compressionName == "ZSTD") {
-      compression = pds::Compression::kZSTD;
-      } else {
+      auto compression = pds::toCompression(compressionName);
+      if(not compression) {
         std::cout <<"unknown compression "<<compressionName<<std::endl;
         return {};
       }
 
-      pds::Serialization serialization = pds::Serialization::kRoot;
-
-      if(serializationName == "" or serializationName=="ROOT") {
-        serialization = pds::Serialization::kRoot;
-      } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
-        serialization = pds::Serialization::kRootUnrolled;
-      } else {
+      auto serialization = pds::toSerialization(serializationName);
+      if(not serialization) {
         std::cout <<"unknown serialization "<<serializationName<<std::endl;
         return {};
       }
@@ -259,7 +226,7 @@ namespace {
       auto treeMaxVirtualSize =  params.get<int>("treeMaxVirtualSize", -1);
       auto autoFlush = params.get<int>("autoFlush", -1);
       
-      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization, autoFlush, treeMaxVirtualSize);
+      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, *compression, compressionLevel, *serialization, autoFlush, treeMaxVirtualSize);
     }
     
   };

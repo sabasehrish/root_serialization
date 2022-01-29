@@ -158,23 +158,7 @@ void PDSOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   {
     //Compression type used
     // note want exactly 4 bytes so sometimes skip trailing \0
-    switch(compression_) {
-    case Compression::kNone:
-      {
-	file_.write("None",4);
-	break;
-      }
-    case Compression::kLZ4:
-      {
-	file_.write("LZ4",4);
-	break;
-      }
-    case Compression::kZSTD:
-      {
-	file_.write("ZSTD",4);
-	break;
-      }
-    }
+    file_.write(pds::name(compression_), 4);
   }
   
   //The size of the header buffer in words (excluding first 3 words)
@@ -266,31 +250,19 @@ namespace {
       auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
       auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
 
-      pds::Compression compression = pds::Compression::kZSTD;
-
-      if(compressionName == "" or compressionName =="None") {
-        compression = pds::Compression::kNone;
-      } else if (compressionName == "LZ4") {
-        compression = pds::Compression::kLZ4;
-      } else if (compressionName == "ZSTD") {
-      compression = pds::Compression::kZSTD;
-      } else {
+      auto compression = pds::toCompression(compressionName);
+      if(not compression) {
         std::cout <<"unknown compression "<<compressionName<<std::endl;
         return {};
       }
 
-      pds::Serialization serialization = pds::Serialization::kRoot;
-
-      if(serializationName == "" or serializationName=="ROOT") {
-        serialization = pds::Serialization::kRoot;
-      } else if(serializationName == "ROOTUnrolled" or serializationName=="Unrolled") {
-        serialization = pds::Serialization::kRootUnrolled;
-      } else {
+      auto serialization = pds::toSerialization(serializationName);
+      if(not serialization) {
         std::cout <<"unknown serialization "<<serializationName<<std::endl;
         return {};
       }
       
-      return std::make_unique<PDSOutputer>(*fileName,iNLanes, compression, compressionLevel, serialization);
+      return std::make_unique<PDSOutputer>(*fileName,iNLanes, *compression, compressionLevel, *serialization);
     }
     
   };

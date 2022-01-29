@@ -75,6 +75,7 @@ add_executable(threaded_io_test
   outputerFactoryGenerator.cc
   pds_reading.cc
   pds_writer.cc
+  pds_common.cc
   SourceFactory.cc
   sourceFactoryGenerator.cc
   threaded_io_test.cc)

@@ -30,6 +30,11 @@ SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long
     std::cout <<"no 'blob' TBranch in 'Events' TTree in file "<<iName<<std::endl;
     throw std::runtime_error("no 'blob' TBranch");
   }
+  offsetsBranch_ = eventsTree_->GetBranch("offsets");
+  if( not offsetsBranch_) {
+    std::cout <<"no 'offsets' TBranch in 'Events' TTree in file "<<iName<<std::endl;
+    throw std::runtime_error("no 'offsets' TBranch");
+  }
 
   idBranch_ = eventsTree_->GetBranch("EventID");
   if(not idBranch_) {
@@ -169,33 +174,41 @@ void SharedRootEventSource::readEventAsync(unsigned int iLane, long iEventIndex,
   queue_.push(*iTask.group(), [iLane, optTask = std::move(iTask), this, iEventIndex]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
       if(iEventIndex < eventsTree_->GetEntries()) {
-        std::vector<uint32_t> buffer;
+        std::vector<char> buffer;
         auto pBuffer = &buffer;
         eventsBranch_->SetAddress(&pBuffer);
+
+        std::vector<uint32_t> offsets;
+        auto pOffset = &offsets;
+        offsetsBranch_->SetAddress(&pOffset);
         idBranch_->SetAddress(&this->laneInfos_[iLane].eventID_);
         eventsTree_->GetEntry(iEventIndex);
         {
-          auto const& id = this->laneInfos_[iLane].eventID_;
+          //auto const& id = this->laneInfos_[iLane].eventID_;
+          //std::cout <<"event entry "<<iEventIndex<<std::endl;
           //std::cout <<"ID "<<id.run<<" "<<id.lumi<<" "<<id.event<<std::endl;
           //std::cout <<"buffer size "<<buffer.size()<<std::endl;
+          //std::cout <<"offset size "<<offsets.size()<<std::endl;
           //for(auto b: buffer) {
           //  std::cout <<"  "<<b<<std::endl;
           //}
         }
 
         auto group = optTask.group();
-        group->run([this, buffer=std::move(buffer), task = optTask.releaseToTaskHolder(), iLane]() {
+        group->run([this, buffer=std::move(buffer), offsets = std::move(offsets), task = optTask.releaseToTaskHolder(), iLane]() {
             auto& laneInfo = this->laneInfos_[iLane];
 
             auto start = std::chrono::high_resolution_clock::now();
-            std::vector<uint32_t> uBuffer = pds::uncompressEventBuffer(this->compression_, buffer);
-            //std::cout <<"uncompressed buffer size "<<uBuffer.size() <<std::endl;
+            std::vector<char> uBuffer = pds::uncompressBuffer(this->compression_, buffer, offsets.back());
+            std::cout <<"uncompressed buffer size "<<uBuffer.size() <<std::endl;
             laneInfo.decompressTime_ += 
               std::chrono::duration_cast<decltype(laneInfo.decompressTime_)>(std::chrono::high_resolution_clock::now() - start);
             
             start = std::chrono::high_resolution_clock::now();
             //uBuffer.pop_back();
-            pds::deserializeDataProducts(uBuffer.begin(), uBuffer.end(), laneInfo.dataProducts_, laneInfo.deserializers_);
+            pds::deserializeDataProducts(&(*uBuffer.begin()), &(*uBuffer.end()), 
+                                         offsets.begin(), offsets.end(),
+                                         laneInfo.dataProducts_, laneInfo.deserializers_);
             laneInfo.deserializeTime_ += 
               std::chrono::duration_cast<decltype(laneInfo.deserializeTime_)>(std::chrono::high_resolution_clock::now() - start);
           });

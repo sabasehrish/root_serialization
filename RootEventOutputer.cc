@@ -26,6 +26,7 @@ RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int 
     //gDebug = 3;
     eventsTree_ = new TTree("Events", "", 0, &file_);
 
+    eventsTree_->Branch("offsets", &dataProductOffsets_);
     eventsTree_->Branch("blob", &eventBlob_);
     eventsTree_->Branch("EventID", &eventID_, "run/i:lumi/i:event/l");
 
@@ -53,6 +54,7 @@ void RootEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataPr
     {   s = SerializeStrategy::make<SerializeProxy<UnrolledSerializerWrapper>>(); break; }
   }
   s.reserve(iDPs.size());
+  dataProductOffsets_.resize(iDPs.size()+1,0);
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
@@ -66,11 +68,10 @@ void RootEventOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRe
 
 void RootEventOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto start = std::chrono::high_resolution_clock::now();
-  auto tempBuffer = std::make_unique<std::vector<uint32_t>>(writeDataProductsToOutputBuffer(serializers_[iLaneIndex]));
-  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer=std::move(tempBuffer)]() mutable {
+  auto [offsets, buffer] = writeDataProductsToOutputBuffer(serializers_[iLaneIndex]);
+  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer = std::move(buffer), offsets = std::move(offsets)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      const_cast<RootEventOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],*buffer);
-      buffer.reset();
+      const_cast<RootEventOutputer*>(this)->output(iEventID, serializers_[iLaneIndex],std::move(buffer), std::move(offsets));
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });
@@ -98,7 +99,7 @@ void RootEventOutputer::printSummary() const  {
 
 
 
-void RootEventOutputer::output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<uint32_t>const& iBuffer) {
+void RootEventOutputer::output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<char> iBuffer, std::vector<uint32_t> iOffsets) {
   if(firstTime_) {
     writeMetaData(iSerializers);
     firstTime_ = false;
@@ -107,9 +108,9 @@ void RootEventOutputer::output(EventIdentifier const& iEventID, SerializeStrateg
   
   //std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
   
-  //writeEventID(iEventID);
   eventID_ = iEventID;
   eventBlob_ = std::move(iBuffer);
+  dataProductOffsets_ = std::move(iOffsets);
   //std::cout <<"Event "<<eventID_.run<<" "<<eventID_.lumi<<" "<<eventID_.event<<std::endl;
   //std::cout <<"buffer size "<<eventBlob_.size();
   //for(auto b: eventBlob_) {
@@ -146,50 +147,40 @@ void RootEventOutputer::writeMetaData(SerializeStrategy const& iSerializers) {
 
 }
 
-std::vector<uint32_t> RootEventOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
+std::pair<std::vector<uint32_t>, std::vector<char>> RootEventOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
   //Calculate buffer size needed
   uint32_t bufferSize = 0;
+  std::vector<uint32_t> offsets;
+  offsets.reserve(iSerializers.size()+1);
   for(auto const& s: iSerializers) {
-    bufferSize +=1+1;
     auto const blobSize = s.blob().size();
-    bufferSize += bytesToWords(blobSize); //handles padding
+    offsets.push_back(bufferSize);
+    bufferSize += blobSize;
   }
+  offsets.push_back(bufferSize);
+
   //initialize with 0
-  std::vector<uint32_t> buffer(size_t(bufferSize), 0);
+  std::vector<char> buffer(bufferSize, 0);
   
   {
-    uint32_t bufferIndex = 0;
-    uint32_t dataProductIndex = 0;
+    uint32_t index = 0;
     for(auto const& s: iSerializers) {
       //std::cout <<"  write: "<<s.name()<<std::endl;
-      buffer[bufferIndex++]=dataProductIndex++;
-      auto const blobSize = s.blob().size();
-      uint32_t sizeInWords = bytesToWords(blobSize);
-      buffer[bufferIndex++]=sizeInWords;
-      std::copy(s.blob().begin(), s.blob().end(), reinterpret_cast<char*>( &(*(buffer.begin()+bufferIndex)) ) );
-      bufferIndex += sizeInWords;
+      auto offset = offsets[index++];
+      std::copy(s.blob().begin(), s.blob().end(), buffer.begin()+offset );
     }
-    assert(buffer.size() == bufferIndex);
+    assert(buffer.size() == offset[index]);
   }
 
-  //will prepend one extra space at the beginning
-  auto [cBuffer, cSize] = compressBuffer(buffer);
+  auto cBuffer  = compressBuffer(buffer);
 
-  //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()*4<<std::endl;
-  //std::cout <<"compressed "<<(buffer.size()*4)/float(cSize)<<std::endl;
-  uint32_t const recordSize = bytesToWords(cSize)+1;
-  //Record the actual number of bytes used in the last word of the compression buffer in the lowest
-  // 2 bits of the word
-  cBuffer[0] = buffer.size()*4 + (cSize % 4);
-  if(cBuffer.size() != recordSize+1) {
-    std::cout <<"BAD BUFFER SIZE: want: "<<recordSize+1<<" got "<<cBuffer.size()<<std::endl;
-  }
-  assert(cBuffer.size() == recordSize+1);
-  return cBuffer;
+  //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()<<std::endl;
+  //std::cout <<"compressed "<<(buffer.size())/float(cSize)<<std::endl;
+  return {offsets,cBuffer};
 }
 
-std::pair<std::vector<uint32_t>, int> RootEventOutputer::compressBuffer(std::vector<uint32_t> const& iBuffer) const {
-  return pds::compressBuffer(1, 0, compression_, compressionLevel_, iBuffer);
+std::vector<char> RootEventOutputer::compressBuffer(std::vector<char> const& iBuffer) const {
+  return pds::compressBuffer(0, 0, compression_, compressionLevel_, iBuffer);
 }
 
 namespace {

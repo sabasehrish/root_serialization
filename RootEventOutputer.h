@@ -33,16 +33,12 @@ class RootEventOutputer :public OutputerBase {
   void printSummary() const final;
 
  private:
-  static inline size_t bytesToWords(size_t nBytes) {
-    return nBytes/4 + ( (nBytes % 4) == 0 ? 0 : 1);
-  }
-
-  void output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<uint32_t> const& iBuffer);
+  void output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<char>  iBuffer, std::vector<uint32_t> iOffset);
   void writeMetaData(SerializeStrategy const& iSerializers);
 
-  std::vector<uint32_t> writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const;
+  std::pair<std::vector<uint32_t>,std::vector<char>> writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const;
 
-  std::pair<std::vector<uint32_t>, int> compressBuffer(std::vector<uint32_t> const& iBuffer) const;
+  std::vector<char> compressBuffer(std::vector<char> const& iBuffer) const;
 
 private:
   mutable TFile file_;
@@ -51,7 +47,8 @@ private:
 
   mutable SerialTaskQueue queue_;
   mutable std::vector<SerializeStrategy> serializers_;
-  mutable std::vector<uint32_t> eventBlob_;
+  mutable std::vector<uint32_t> dataProductOffsets_;
+  mutable std::vector<char> eventBlob_;
   EventIdentifier eventID_;
   pds::Compression compression_;
   int compressionLevel_;

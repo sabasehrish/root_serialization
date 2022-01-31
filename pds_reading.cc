@@ -42,6 +42,7 @@ Preamble readPreamble(std::istream& iFile) {
 }
 
 using buffer_iterator = std::vector<std::uint32_t>::const_iterator;
+using table_iterator = std::vector<std::uint32_t>::const_iterator;
 
 std::vector<std::string> readStringsArray(buffer_iterator& itBuffer, buffer_iterator itEnd) {
   assert(itBuffer!=itEnd);
@@ -225,6 +226,49 @@ void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std
 
     it = it+storedSize;
     //std::cout <<itEnd - it<<std::endl;
+  }
+  assert(it==itEnd);
+}
+
+
+std::vector<char> pds::uncompressBuffer(pds::Compression compression, std::vector<char> const& buffer, uint32_t uncompressedBufferSize) {
+  std::vector<char> uBuffer(size_t(uncompressedBufferSize), 0);
+  if(Compression::kLZ4 == compression) {
+    LZ4_decompress_safe(&(*(buffer.begin())), uBuffer.data(),
+                        buffer.size(),
+                        uncompressedBufferSize*4);
+  } else if(Compression::kZSTD == compression) {
+    ZSTD_decompress(uBuffer.data(), uncompressedBufferSize, &(*(buffer.begin())), buffer.size());
+  } else if(Compression::kNone == compression) {
+    assert(buffer.size() == uBuffer.size());
+    std::copy(buffer.begin(), buffer.begin()+buffer.size(), uBuffer.begin());
+  }
+  return uBuffer;
+}
+
+void pds::deserializeDataProducts(const char* it, const char* itEnd, 
+                                  table_iterator itTable, table_iterator itTableEnd,
+                                  std::vector<DataProductRetriever>& dataProducts, DeserializeStrategy const& deserializers) {
+
+  auto itBegin = it;
+  uint32_t productIndex = 0;
+  while(it < itEnd and itTable != itTableEnd) {
+    auto start = *itTable;
+    auto next = *(++itTable);
+    auto storedSize = next - start;
+    if( storedSize != 0) {
+      //std::cout <<" deserialize "<<productIndex<<" "<<storedSize<<std::endl;
+
+      //std::cout <<dataProducts[productIndex].name()<<" "<<dataProducts[productIndex].classType()->GetName()<<std::endl;
+      //std::cout <<"storedSize "<<storedSize<<" "<<storedSize*4<<std::endl;
+      auto readSize = deserializers[productIndex].deserialize(it, storedSize, *dataProducts[productIndex].address());
+      dataProducts[productIndex].setSize(readSize);
+      //std::cout <<" readSize "<<readSize<<"\n";
+
+      it = itBegin + next;
+      //std::cout <<itEnd - it<<std::endl;
+    }
+    ++productIndex;
   }
   assert(it==itEnd);
 }

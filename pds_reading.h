@@ -38,6 +38,11 @@ namespace cce::tf::pds {
   std::vector<uint32_t> uncompressEventBuffer(pds::Compression, std::vector<uint32_t> const& buffer);
   void deserializeDataProducts(std::vector<uint32_t>::const_iterator, std::vector<uint32_t>::const_iterator, std::vector<DataProductRetriever>&, DeserializeStrategy const&);
 
+  std::vector<char> uncompressBuffer(pds::Compression, std::vector<char> const& buffer, uint32_t uncompressedSize);
+  void deserializeDataProducts(const char* iBufferBegin, const char* iBufferEnd, 
+                               std::vector<uint32_t>::const_iterator itTableBegin, std::vector<uint32_t>::const_iterator itTableEnd, 
+                               std::vector<DataProductRetriever>&, DeserializeStrategy const&);
+
 }
 
 #endif

@@ -5,6 +5,7 @@
 #include <memory>
 #include <chrono>
 #include <iostream>
+#include <utility>
 
 #include "TFile.h"
 #include "TTree.h"
@@ -47,7 +48,6 @@ namespace cce::tf {
   std::unique_ptr<TFile> file_;
   TTree* eventsTree_;
   TBranch* eventsBranch_;
-  TBranch* offsetsBranch_;
   TBranch* idBranch_;
   SerialTaskQueue queue_;
 

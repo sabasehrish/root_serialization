@@ -47,8 +47,7 @@ private:
 
   mutable SerialTaskQueue queue_;
   mutable std::vector<SerializeStrategy> serializers_;
-  mutable std::vector<uint32_t> dataProductOffsets_;
-  mutable std::vector<char> eventBlob_;
+  mutable std::pair<std::vector<uint32_t>, std::vector<char>> offsetsAndBlob_;
   EventIdentifier eventID_;
   pds::Compression compression_;
   int compressionLevel_;

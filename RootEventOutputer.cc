@@ -26,8 +26,7 @@ RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int 
     //gDebug = 3;
     eventsTree_ = new TTree("Events", "", 0, &file_);
 
-    eventsTree_->Branch("offsets", &dataProductOffsets_);
-    eventsTree_->Branch("blob", &eventBlob_);
+    eventsTree_->Branch("offsetsAndBlob", &offsetsAndBlob_);
     eventsTree_->Branch("EventID", &eventID_, "run/i:lumi/i:event/l");
 
     //Turn off auto save
@@ -54,7 +53,7 @@ void RootEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataPr
     {   s = SerializeStrategy::make<SerializeProxy<UnrolledSerializerWrapper>>(); break; }
   }
   s.reserve(iDPs.size());
-  dataProductOffsets_.resize(iDPs.size()+1,0);
+  offsetsAndBlob_.first.resize(iDPs.size()+1,0);
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
@@ -109,8 +108,8 @@ void RootEventOutputer::output(EventIdentifier const& iEventID, SerializeStrateg
   //std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;
   
   eventID_ = iEventID;
-  eventBlob_ = std::move(iBuffer);
-  dataProductOffsets_ = std::move(iOffsets);
+  offsetsAndBlob_.first = std::move(iOffsets);
+  offsetsAndBlob_.second = std::move(iBuffer);
   //std::cout <<"Event "<<eventID_.run<<" "<<eventID_.lumi<<" "<<eventID_.event<<std::endl;
   //std::cout <<"buffer size "<<eventBlob_.size();
   //for(auto b: eventBlob_) {

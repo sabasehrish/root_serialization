@@ -57,6 +57,11 @@ void RootEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataPr
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
+
+  if(iLaneIndex == 0) {
+    writeMetaData(s);
+  }
+
 }
 
 void RootEventOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -99,10 +104,6 @@ void RootEventOutputer::printSummary() const  {
 
 
 void RootEventOutputer::output(EventIdentifier const& iEventID, SerializeStrategy const& iSerializers, std::vector<char> iBuffer, std::vector<uint32_t> iOffsets) {
-  if(firstTime_) {
-    writeMetaData(iSerializers);
-    firstTime_ = false;
-  }
   //using namespace std::string_literals;
   
   //std::cout <<"   run:"s+std::to_string(iEventID.run)+" lumi:"s+std::to_string(iEventID.lumi)+" event:"s+std::to_string(iEventID.event)+"\n"<<std::flush;

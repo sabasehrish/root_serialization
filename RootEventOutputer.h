@@ -52,7 +52,6 @@ private:
   pds::Compression compression_;
   int compressionLevel_;
   pds::Serialization serialization_;
-  bool firstTime_ = true;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
 };

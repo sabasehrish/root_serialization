@@ -14,8 +14,9 @@ using namespace cce::tf;
 using namespace cce::tf::pds;
 
 RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, Compression iCompression, int iCompressionLevel, 
-                                     Serialization iSerialization, int autoFlush, int maxVirtualSize ): 
-  file_(iFileName.c_str(), "recreate", "", 0),
+                                     Serialization iSerialization, int autoFlush, int maxVirtualSize,
+                                     std::string const& iTFileCompression, int iTFileCompressionLevel): 
+  file_(iFileName.c_str(), "recreate", "", iTFileCompressionLevel),
   serializers_{std::size_t(iNLanes)},
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
@@ -23,6 +24,23 @@ RootEventOutputer::RootEventOutputer(std::string const& iFileName, unsigned int 
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
   {
+
+  if(not iTFileCompression.empty()) {
+    if(iTFileCompression == "ZLIB") {
+      file_.SetCompressionAlgorithm(ROOT::kZLIB);
+    } else if(iTFileCompression == "LZMA") {
+      file_.SetCompressionAlgorithm(ROOT::kLZMA);
+    } else if(iTFileCompression == "LZ4") {
+      file_.SetCompressionAlgorithm(ROOT::kLZ4);
+    } else if(iTFileCompression == "ZSTD") {
+      file_.SetCompressionAlgorithm(ROOT::kZSTD);
+    }else {
+      std::cout <<"unknown compression algorithm "<<iTFileCompression<<std::endl;
+      abort();
+    }
+  }
+
+
     //gDebug = 3;
     eventsTree_ = new TTree("Events", "", 0, &file_);
 
@@ -216,8 +234,11 @@ namespace {
 
       auto treeMaxVirtualSize =  params.get<int>("treeMaxVirtualSize", -1);
       auto autoFlush = params.get<int>("autoFlush", -1);
+
+      auto fileLevelCompression = params.get<std::string>("tfileCompressionAlgorithm", "");
+      auto fileLevelCompressionLevel = params.get<int>("tfileCompressionLevel",0);
       
-      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, *compression, compressionLevel, *serialization, autoFlush, treeMaxVirtualSize);
+      return std::make_unique<RootEventOutputer>(*fileName,iNLanes, *compression, compressionLevel, *serialization, autoFlush, treeMaxVirtualSize, fileLevelCompression, fileLevelCompressionLevel);
     }
     
   };

@@ -20,7 +20,8 @@ namespace cce::tf {
 class RootEventOutputer :public OutputerBase {
  public:
   RootEventOutputer(std::string const& iFileName, unsigned int iNLanes, pds::Compression iCompression, int iCompressionLevel, 
-                    pds::Serialization iSerialization, int autoFlush, int maxVirtualSize );
+                    pds::Serialization iSerialization, int autoFlush, int maxVirtualSize,
+                    std::string const& iTFileCompression, int iTFileCompressionLevel);
  ~RootEventOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;

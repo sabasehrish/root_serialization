@@ -43,6 +43,13 @@ REFLEX_GENERATE_DICTIONARY(G__sequence_classes SequenceFinderForBuiltins.h SELEC
 add_library(sequence_classes_dict SHARED G__sequence_classes.cxx)
 target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
 
+
+#make the library holding the root dictionaries for RootBatchEvents
+REFLEX_GENERATE_DICTIONARY(G__batchevents_classes EventIdentifiers.h SELECTION batchevents_def.xml)
+
+add_library(batchevents_classes_dict SHARED G__batchevents_classes.cxx)
+target_link_libraries(batchevents_classes_dict PUBLIC ROOT::RIO ROOT::Net)
+
 add_executable(threaded_io_test
   DeserializeStrategy.cc
   EmptySource.cc
@@ -60,6 +67,7 @@ add_executable(threaded_io_test
   SerialRootSource.cc
   RootEventOutputer.cc
   SharedRootEventSource.cc
+  RootBatchEventsOutputer.cc
   SerialTaskQueue.cc
   SerializeStrategy.cc
   SharedPDSSource.cc
@@ -92,6 +100,7 @@ target_link_libraries(threaded_io_test
                               Threads::Threads
                               configKeys
                               sequence_classes_dict
+                              batchevents_classes_dict
                               zstd::libzstd_shared
                               hdf5)
 
@@ -141,6 +150,9 @@ add_test(NAME TestProductsRootEvent COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}
 add_test(NAME RootEventOutputerAllOptionsEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootEventOutputer=test_empty.eroot:compressionLevel=8:compressionAlgorithm=LZ4:serializationAlgorithm=Unrolled)
 add_test(NAME TestProductsRootEventUnrolled COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootEventOutputer=test_prod_unroll.eroot:serializationAlgorithm=Unrolled; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootEventSource=test_prod_unroll.eroot 1 1 0 10 TestProductsOutputer")
 
+add_test(NAME RootBatchEventsOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootBatchEventsOutputer=test_empty.broot)
+add_test(NAME TestProductsRootBatchEvents COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot")
+#add_test(NAME TestProductsRootBatchEvents COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootBatchEventsSource=test_prod.eroot 1 1 0 10 TestProductsOutputer")
 
 add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root)
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)

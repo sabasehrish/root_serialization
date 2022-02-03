@@ -1,0 +1,4 @@
+<lcgdict>
+  <class name="cce::tf::EventIdentifier" ClassVersion="3"/>
+  <class name="std::vector<cce::tf::EventIdentifier>"/>
+</lcgdict>

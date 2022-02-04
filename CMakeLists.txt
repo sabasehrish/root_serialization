@@ -68,6 +68,7 @@ add_executable(threaded_io_test
   RootEventOutputer.cc
   SharedRootEventSource.cc
   RootBatchEventsOutputer.cc
+  SharedRootBatchEventsSource.cc
   SerialTaskQueue.cc
   SerializeStrategy.cc
   SharedPDSSource.cc
@@ -151,8 +152,8 @@ add_test(NAME RootEventOutputerAllOptionsEmptyTest COMMAND threaded_io_test Empt
 add_test(NAME TestProductsRootEventUnrolled COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootEventOutputer=test_prod_unroll.eroot:serializationAlgorithm=Unrolled; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootEventSource=test_prod_unroll.eroot 1 1 0 10 TestProductsOutputer")
 
 add_test(NAME RootBatchEventsOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 RootBatchEventsOutputer=test_empty.broot)
-add_test(NAME TestProductsRootBatchEvents COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot")
-#add_test(NAME TestProductsRootBatchEvents COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootBatchEventsSource=test_prod.eroot 1 1 0 10 TestProductsOutputer")
+add_test(NAME TestProductsRootBatchEvents COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootBatchEventsSource=test_prod.broot 1 1 0 10 TestProductsOutputer")
+add_test(NAME TestProductsRootBatchEventsBatchSize COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 RootBatchEventsOutputer=test_prod.broot:batchSize=4; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test SharedRootBatchEventsSource=test_prod.broot 1 1 0 10 TestProductsOutputer")
 
 add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root)
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)

@@ -141,26 +141,28 @@ void RootBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifi
 void RootBatchEventsOutputer::printSummary() const  {
   //make sure last batches are out
 
-  tbb::task_group group;
-  
+  auto start = std::chrono::high_resolution_clock::now();
   {
-    TaskHolder th(group, make_functor_task([](){}));
-    for( int index=0; index < waitingEventsInBatch_.size();++index) {
-      if(0 != waitingEventsInBatch_[index].load()) {
-        const_cast<RootBatchEventsOutputer*>(this)->finishBatchAsync(index, th);
+    tbb::task_group group;
+    
+    {
+      TaskHolder th(group, make_functor_task([](){}));
+      for( int index=0; index < waitingEventsInBatch_.size();++index) {
+        if(0 != waitingEventsInBatch_[index].load()) {
+          const_cast<RootBatchEventsOutputer*>(this)->finishBatchAsync(index, th);
+        }
       }
     }
+    
+    group.wait();
   }
-
-  group.wait();
+  file_.Write();
+  auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
 
 
   std::cout <<"RootBatchEventsOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
     "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
 
-  auto start = std::chrono::high_resolution_clock::now();
-  file_.Write();
-  auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
 
   start = std::chrono::high_resolution_clock::now();
   file_.Close();

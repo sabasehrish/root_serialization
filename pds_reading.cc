@@ -2,6 +2,7 @@
 #include <cassert>
 #include <array>
 #include <algorithm>
+#include <iostream>
 
 #include "lz4.h"
 #include "zstd.h"
@@ -234,9 +235,17 @@ void pds::deserializeDataProducts(buffer_iterator it, buffer_iterator itEnd, std
 std::vector<char> pds::uncompressBuffer(pds::Compression compression, std::vector<char> const& buffer, uint32_t uncompressedBufferSize) {
   std::vector<char> uBuffer(size_t(uncompressedBufferSize), 0);
   if(Compression::kLZ4 == compression) {
-    LZ4_decompress_safe(&(*(buffer.begin())), uBuffer.data(),
-                        buffer.size(),
-                        uncompressedBufferSize*4);
+    auto size = LZ4_decompress_safe(&(*(buffer.begin())), uBuffer.data(),
+                                    buffer.size(),
+                                    uncompressedBufferSize);
+    if(size != uncompressedBufferSize) {
+      if(size > 0) {
+        std::cout <<" LZ4_decompress_safe decompressed less bytes ("<<size<<") than expected ("<<uncompressedBufferSize<<")"<<std::endl;
+      } else {
+        throw std::runtime_error("LZ4_decompress_safe failed to decompress");
+      }
+    }
+    assert(size == uncompressedBufferSize);
   } else if(Compression::kZSTD == compression) {
     ZSTD_decompress(uBuffer.data(), uncompressedBufferSize, &(*(buffer.begin())), buffer.size());
   } else if(Compression::kNone == compression) {

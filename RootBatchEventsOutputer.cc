@@ -276,7 +276,7 @@ std::pair<std::vector<uint32_t>, std::vector<char>> RootBatchEventsOutputer::wri
       auto offset = offsets[index++];
       std::copy(s.blob().begin(), s.blob().end(), buffer.begin()+offset );
     }
-    assert(buffer.size() == offset[index]);
+    assert(buffer.size() == offsets[index]);
   }
 
   //std::cout <<"compressed "<<cSize<<" uncompressed "<<buffer.size()<<std::endl;

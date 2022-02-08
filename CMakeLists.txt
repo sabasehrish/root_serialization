@@ -23,7 +23,7 @@ list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
 
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 find_package(TBB REQUIRED)
@@ -93,7 +93,6 @@ target_link_libraries(threaded_io_test
                               ROOT::RIO
                               ROOT::Tree
                               TBB::tbb
-                              stdc++
                               Threads::Threads
                               configKeys
                               sequence_classes_dict
@@ -115,7 +114,6 @@ target_link_libraries(unroll_test
                               ROOT::RIO
                               ROOT::Tree
                               TBB::tbb
-                              stdc++
                               cms_dict
                               sequence_classes_dict
                               test_classes_dict)

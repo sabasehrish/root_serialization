@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cmath>
 #include <set>
+#include <hdf5_hl.h>
 #include "H5Timing.h"
 #include "multidataset_plugin.h"
 

@@ -8,6 +8,8 @@
 #include <cstring>
 #include <cmath>
 #include <set>
+#include "H5Timing.h"
+#include "multidataset_plugin.h"
 
 int max_batch_size = 2;
 int hdf_method = -1;

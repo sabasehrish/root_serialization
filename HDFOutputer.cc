@@ -9,6 +9,10 @@
 #include <cmath>
 #include <set>
 
+int max_batch_size = 2;
+int hdf_method = -1;
+int total_n_events = -1;
+
 using namespace cce::tf;
 using product_t = std::vector<char>; 
 
@@ -121,7 +125,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   size_t total_data_size = 0;
 #endif
   char *p = getenv("HEP_IO_TYPE");
-  int method = 0;
+  int method = hdf_method;
 
   if ( p != NULL ) {
     method = atoi(p);

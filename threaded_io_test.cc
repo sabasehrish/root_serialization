@@ -17,6 +17,10 @@
 #include "tbb/global_control.h"
 #include "tbb/task_arena.h"
 
+extern int max_batch_size;
+extern int hdf_method;
+extern int total_n_events;
+
 namespace {
   std::pair<std::string, std::string> parseCompound(const char* iArg) {
     std::string sArg(iArg);
@@ -51,6 +55,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  init_multidataset();
   int parallelism = tbb::this_task_arena::max_concurrency();
   bool useIMT=false;
   if(argc > 2) {
@@ -86,12 +91,12 @@ int main(int argc, char* argv[]) {
   unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
   if(argc > 5) {
     nEvents = atoi(argv[5]);
+    total_n_events = nEvents;
   }
-
 
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
   std::string outputerName = "DummyOutputer";
-  if(argc == 7) {
+  if(argc > 6) {
     outputerName = argv[6];
     auto [outputType, outputInfo] = parseCompound(argv[6]);
     outFactory = outputerFactoryGenerator(outputType, outputInfo);
@@ -101,6 +106,25 @@ int main(int argc, char* argv[]) {
     }
   } else {
     outFactory = outputerFactoryGenerator(outputerName, "");
+  }
+  char *p = getenv("HEP_MAX_BATCH_SIZE");
+  if ( p != NULL ) {
+    max_batch_size = atoi(p);
+  } else {
+    max_batch_size = 2;
+  }
+  p = getenv("HEP_IO_TYPE");
+  if ( p != NULL ) {
+    hdf_method = atoi(p);
+  } else {
+    hdf_method = 1;
+  }
+
+  if(argc > 7) {
+    max_batch_size = atoi(argv[7]);
+  }
+  if(argc > 8) {
+    hdf_method = atoi(argv[8]);
   }
 
   auto [sourceType, sourceOptions] = parseCompound(argv[1]);

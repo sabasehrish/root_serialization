@@ -217,6 +217,11 @@ int main(int argc, char* argv[]) {
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
 
+#ifdef H5_TIMING_ENABLE
+  finalize_timers();
+#endif
+  finalize_multidataset();
+
   source->printSummary();
   out->printSummary();
 }

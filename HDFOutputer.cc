@@ -38,6 +38,18 @@ namespace {
   }
 }
 
+int append_dataset(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+  hid_t did = H5Dopen2(gid, name, H5P_DEFAULT);
+  H5DOappend( did, H5P_DEFAULT, 0, data_size, mtype, data);
+  H5Dclose(did);
+  return 0;
+}
+
+int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+  register_multidataset_request_append(name, gid, data, data_size, mtype);
+  return 0;
+}
+
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize) : 
   file_(hdf5::File::create(iFileName.c_str())),
   maxBatchSize_{iBatchSize},
@@ -105,6 +117,16 @@ get_prods_and_sizes(std::vector<product_t> & input,
 void 
 HDFOutputer::output(EventIdentifier const& iEventID, 
                     std::vector<SerializerWrapper> const& iSerializers) {
+#ifdef H5_TIMING_ENABLE
+  size_t total_data_size = 0;
+#endif
+  char *p = getenv("HEP_IO_TYPE");
+  int method = 0;
+
+  if ( p != NULL ) {
+    method = atoi(p);
+  }
+
   if(firstTime_) {
     writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
@@ -115,19 +137,57 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-  if (batch_ == maxBatchSize_) {
+  if (total_n_events > 0) {
+    total_n_events--;
+  }
+
+  if (batch_ == max_batch_size || total_n_events == 0) {
     hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
     write_ds<int>(gid, "Event_IDs", events_);
     auto const dpi_size = dataProductIndices_.size();
     for(auto & [name, index]: dataProductIndices_) {
       auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
-      write_ds<char>(gid, name, prods);
+#ifdef H5_TIMING_ENABLE
+      register_dataset_timer_start(name.c_str());
+#endif
+      if ( method == 1 ) {
+        write_ds<char>(gid, name, prods);
+      } else if (method == 0 ) {
+        write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      } else {
+        append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      }
+#ifdef H5_TIMING_ENABLE
+      register_dataset_timer_end((size_t)prods.size());
+#endif
       auto s = name+"_sz";
-      write_ds<size_t>(gid, s, sizes);
+#ifdef H5_TIMING_ENABLE
+      register_dataset_sz_timer_start(s.c_str());
+#endif
+      if (method == 1) {
+        write_ds<size_t>(gid, s, sizes);
+      } else if ( method == 0 ) {
+        write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      } else {
+        append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      }
+#ifdef H5_TIMING_ENABLE
+      register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(size_t));
+#endif
+#ifdef H5_TIMING_ENABLE
+      total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
+#endif
     }
     batch_ = 0;
     products_.clear();
     events_.clear();
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_start("flush_all");
+#endif
+    flush_multidatasets();
+#ifdef H5_TIMING_ENABLE
+    register_dataset_timer_end(total_data_size);
+#endif
   }
 }
 

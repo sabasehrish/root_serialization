@@ -51,9 +51,9 @@ namespace {
 int main(int argc, char* argv[]) {
   using namespace cce::tf;
 
-  if(not (argc > 1 and argc < 8) ) {
-    std::cout <<"1 to 6 arguments required\n"
-                "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
+  if(not (argc > 1 and argc < 10) ) {
+    std::cout <<"1 to 9 arguments required\n"
+                "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>] [<max batch size>] [<I/O type>: 1 is default, 0 is aggregation, 2 is HDF5 optimized]\n";
     return 1;
   }
 

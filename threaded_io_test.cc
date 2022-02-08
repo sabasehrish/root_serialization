@@ -57,6 +57,10 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+#ifdef H5_TIMING_ENABLE
+  init_timers();
+#endif
+
   init_multidataset();
   int parallelism = tbb::this_task_arena::max_concurrency();
   bool useIMT=false;
@@ -217,10 +221,10 @@ int main(int argc, char* argv[]) {
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
 
+  finalize_multidataset();
 #ifdef H5_TIMING_ENABLE
   finalize_timers();
 #endif
-  finalize_multidataset();
 
   source->printSummary();
   out->printSummary();

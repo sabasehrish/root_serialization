@@ -1,4 +1,4 @@
-#include "SharedRootEventSource.h"
+#include "SharedRootBatchEventsSource.h"
 #include "SourceFactory.h"
 #include "Deserializer.h"
 #include "UnrolledDeserializer.h"
@@ -7,9 +7,11 @@
 
 using namespace cce::tf;
 
-SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long long iNEvents, std::string const& iName) :
-                 SharedSourceBase(iNEvents),
-                 file_{TFile::Open(iName.c_str())},
+SharedRootBatchEventsSource::SharedRootBatchEventsSource(unsigned int iNLanes, unsigned long long iNEvents, std::string const& iName) :
+  SharedSourceBase(iNEvents),
+  file_{TFile::Open(iName.c_str())},
+  pEventIDs_(&eventIDs_),
+  pOffsetsAndBuffer_(&offsetsAndBuffer_),
   readTime_{std::chrono::microseconds::zero()}
 {
 
@@ -26,15 +28,17 @@ SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long
     throw std::runtime_error("no Events TTree");
   }
   eventsBranch_ = eventsTree_->GetBranch("offsetsAndBlob");
+  eventsBranch_->SetAddress(&pOffsetsAndBuffer_);
   if( not eventsBranch_) {
     std::cout <<"no 'offsetsAndBlob' TBranch in 'Events' TTree in file "<<iName<<std::endl;
     throw std::runtime_error("no 'offsetsAndBlob' TBranch");
   }
 
-  idBranch_ = eventsTree_->GetBranch("EventID");
+  idBranch_ = eventsTree_->GetBranch("EventIDs");
+  idBranch_->SetAddress(&pEventIDs_);
   if(not idBranch_) {
-    std::cout <<"no 'EventID' TBranch in 'Events' TTree in file "<<iName<<std::endl;
-    throw std::runtime_error("no 'EventID' TBranch");
+    std::cout <<"no 'EventIDs' TBranch in 'Events' TTree in file "<<iName<<std::endl;
+    throw std::runtime_error("no 'EventIDs' TBranch");
   }
    
   auto meta = file_->Get<TTree>("Meta");
@@ -115,7 +119,7 @@ SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long
 
 }
 
-SharedRootEventSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo, DeserializeStrategy deserialize):
+SharedRootBatchEventsSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& productInfo, DeserializeStrategy deserialize):
   deserializers_{std::move(deserialize)},
   decompressTime_{std::chrono::microseconds::zero()},
   deserializeTime_{std::chrono::microseconds::zero()}
@@ -139,7 +143,7 @@ SharedRootEventSource::LaneInfo::LaneInfo(std::vector<pds::ProductInfo> const& p
   }
 }
 
-SharedRootEventSource::LaneInfo::~LaneInfo() {
+SharedRootBatchEventsSource::LaneInfo::~LaneInfo() {
   auto it = dataProducts_.begin();
   for( void * b: dataBuffers_) {
     it->classType()->Destructor(b);
@@ -147,53 +151,81 @@ SharedRootEventSource::LaneInfo::~LaneInfo() {
   }
 }
 
-size_t SharedRootEventSource::numberOfDataProducts() const {
+size_t SharedRootBatchEventsSource::numberOfDataProducts() const {
   return laneInfos_[0].dataProducts_.size();
 }
 
-std::vector<DataProductRetriever>& SharedRootEventSource::dataProducts(unsigned int iLane, long iEventIndex) {
+std::vector<DataProductRetriever>& SharedRootBatchEventsSource::dataProducts(unsigned int iLane, long iEventIndex) {
   return laneInfos_[iLane].dataProducts_;
 }
 
-EventIdentifier SharedRootEventSource::eventIdentifier(unsigned int iLane, long iEventIndex) {
+EventIdentifier SharedRootBatchEventsSource::eventIdentifier(unsigned int iLane, long iEventIndex) {
   return laneInfos_[iLane].eventID_;
 }
 
-void SharedRootEventSource::readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder iTask) {
-  queue_.push(*iTask.group(), [iLane, optTask = std::move(iTask), this, iEventIndex]() mutable {
+void SharedRootBatchEventsSource::readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder iTask) {
+  //NOTE: if need future scaling performance, could move decompression out of the queue
+  // and then have multiple buffers for data read from ROOT.
+  queue_.push(*iTask.group(), [iLane, optTask = std::move(iTask), this]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      if(iEventIndex < eventsTree_->GetEntries()) {
-        std::pair<std::vector<uint32_t>, std::vector<char>> offsetsAndBuffer;
-        auto pBuffer = &offsetsAndBuffer;
-        eventsBranch_->SetAddress(&pBuffer);
+      if(nextEntry_ < eventsTree_->GetEntries() or (cachedEventIndex_ < eventIDs_.size())) {
+        if(cachedEventIndex_ == eventIDs_.size()) {
+          //need to read ahead
+          eventsTree_->GetEntry(nextEntry_++);
 
-        idBranch_->SetAddress(&this->laneInfos_[iLane].eventID_);
-        eventsTree_->GetEntry(iEventIndex);
-        {
-          //auto const& id = this->laneInfos_[iLane].eventID_;
-          //std::cout <<"event entry "<<iEventIndex<<std::endl;
-          //std::cout <<"ID "<<id.run<<" "<<id.lumi<<" "<<id.event<<std::endl;
-          //std::cout <<"buffer size "<<buffer.size()<<std::endl;
-          //std::cout <<"offset size "<<offsets.size()<<std::endl;
+          auto start = std::chrono::high_resolution_clock::now();
+          //determine uncompressed size
+          const auto entriesInOffset = laneInfos_[iLane].dataProducts_.size()+1;
+          unsigned int summedSizes=0;
+          for(int index = 0; index < eventIDs_.size(); ++index) {
+            //the last entry in the offsets is the uncompressed size for that event
+            summedSizes += offsetsAndBuffer_.first[(index+1)*entriesInOffset-1];
+          }
+          uncompressedBuffer_ = pds::uncompressBuffer(this->compression_, offsetsAndBuffer_.second, summedSizes);
+          //std::cout <<"compressed buffer size "<<offsetsAndBuffer_.second.size() <<std::endl;
+          //std::cout <<"uncompressed buffer size "<<uncompressedBuffer_.size() <<std::endl;
+          offsetsAndBuffer_.second = std::vector<char>(); //free memory
+          laneInfos_[iLane].decompressTime_ += 
+            std::chrono::duration_cast<decltype(laneInfos_[iLane].decompressTime_)>(std::chrono::high_resolution_clock::now() - start);
+
+          cachedEventIndex_ = 0;
+        }
+        laneInfos_[iLane].eventID_ = eventIDs_[cachedEventIndex_];
+        
+        const auto entriesInOffset = laneInfos_[iLane].dataProducts_.size()+1;
+        const unsigned int indexIntoOffsets = cachedEventIndex_*entriesInOffset;
+        std::vector<uint32_t> offsets(offsetsAndBuffer_.first.begin()+indexIntoOffsets,
+                                      offsetsAndBuffer_.first.begin()+indexIntoOffsets+entriesInOffset);
+
+        unsigned int beginOffsetInBuffer = 0;
+        for(int index = 1; index <= cachedEventIndex_; ++index) {
+          beginOffsetInBuffer += offsetsAndBuffer_.first[index*entriesInOffset-1];
+        }
+        unsigned int endOffsetInBuffer = beginOffsetInBuffer + offsets.back();
+
+        std::vector<char> uBuffer(uncompressedBuffer_.begin()+beginOffsetInBuffer,
+                                  uncompressedBuffer_.begin()+endOffsetInBuffer);
+
+        ++cachedEventIndex_;
+        /*{
+           auto const& id = this->laneInfos_[iLane].eventID_;
+          std::cout <<"event entry "<<nextEntry_-1<<" cache index "<<cachedEventIndex_-1<<std::endl;
+          std::cout <<"ID "<<id.run<<" "<<id.lumi<<" "<<id.event<<std::endl;
+          std::cout <<"ubuffer size "<<uBuffer.size()<<std::endl;
+          std::cout <<"offset size "<<offsets.size()<<std::endl;
           //for(auto b: buffer) {
           //  std::cout <<"  "<<b<<std::endl;
           //}
-        }
+          }*/
 
         auto group = optTask.group();
-        group->run([this, offsetsAndBuffer=std::move(offsetsAndBuffer), task = optTask.releaseToTaskHolder(), iLane]() {
+        group->run([this, offsets=std::move(offsets), uBuffer = std::move(uBuffer), task = optTask.releaseToTaskHolder(), iLane]() {
             auto& laneInfo = this->laneInfos_[iLane];
 
             auto start = std::chrono::high_resolution_clock::now();
-            std::vector<char> uBuffer = pds::uncompressBuffer(this->compression_, offsetsAndBuffer.second, offsetsAndBuffer.first.back());
-            std::cout <<"uncompressed buffer size "<<uBuffer.size() <<std::endl;
-            laneInfo.decompressTime_ += 
-              std::chrono::duration_cast<decltype(laneInfo.decompressTime_)>(std::chrono::high_resolution_clock::now() - start);
-            
-            start = std::chrono::high_resolution_clock::now();
             //uBuffer.pop_back();
             pds::deserializeDataProducts(uBuffer.data(), uBuffer.data()+uBuffer.size(), 
-                                         offsetsAndBuffer.first.begin(), offsetsAndBuffer.first.end(),
+                                         offsets.begin(), offsets.end(),
                                          laneInfo.dataProducts_, laneInfo.deserializers_);
             laneInfo.deserializeTime_ += 
               std::chrono::duration_cast<decltype(laneInfo.deserializeTime_)>(std::chrono::high_resolution_clock::now() - start);
@@ -203,18 +235,18 @@ void SharedRootEventSource::readEventAsync(unsigned int iLane, long iEventIndex,
     });
 }
 
-void SharedRootEventSource::printSummary() const {
+void SharedRootBatchEventsSource::printSummary() const {
   std::cout <<"\nSource:\n"
     "   read time: "<<readTime().count()<<"us\n"
     "   decompress time: "<<decompressTime().count()<<"us\n"
     "   deserialize time: "<<deserializeTime().count()<<"us\n"<<std::endl;
 };
 
-std::chrono::microseconds SharedRootEventSource::readTime() const {
+std::chrono::microseconds SharedRootBatchEventsSource::readTime() const {
   return readTime_;
 }
 
-std::chrono::microseconds SharedRootEventSource::decompressTime() const {
+std::chrono::microseconds SharedRootBatchEventsSource::decompressTime() const {
   auto time = std::chrono::microseconds::zero();
   for(auto const& l : laneInfos_) {
     time += l.decompressTime_;
@@ -222,7 +254,7 @@ std::chrono::microseconds SharedRootEventSource::decompressTime() const {
   return time;
 }
 
-std::chrono::microseconds SharedRootEventSource::deserializeTime() const {
+std::chrono::microseconds SharedRootBatchEventsSource::deserializeTime() const {
   auto time = std::chrono::microseconds::zero();
   for(auto const& l : laneInfos_) {
     time += l.deserializeTime_;
@@ -234,14 +266,14 @@ std::chrono::microseconds SharedRootEventSource::deserializeTime() const {
 namespace {
     class Maker : public SourceMakerBase {
   public:
-    Maker(): SourceMakerBase("SharedRootEventSource") {}
+    Maker(): SourceMakerBase("SharedRootBatchEventsSource") {}
       std::unique_ptr<SharedSourceBase> create(unsigned int iNLanes, unsigned long long iNEvents, ConfigurationParameters const& params) const final {
         auto fileName = params.get<std::string>("fileName");
         if(not fileName) {
           std::cout <<"no file name given\n";
           return {};
         }
-        return std::make_unique<SharedRootEventSource>(iNLanes, iNEvents, *fileName);
+        return std::make_unique<SharedRootBatchEventsSource>(iNLanes, iNEvents, *fileName);
     }
     };
 

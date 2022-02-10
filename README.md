@@ -141,6 +141,18 @@ Reads a _packed data streams_ format file. The Source is shared between the conc
 > threaded_io_test SharedPDSSource=test.pds 1 1 0 10
 ```
 
+#### SharedRootEventSource
+Reads a ROOT file which only has 2 TBranches in the `Events` TTree. One branch holds the EventIdentifier. The other holds a (possibly pre-compressed) buffer of all the pre-object serialized data products in the event and a vector of offsets into that buffer for the beginning of each data products serialization. The Source is shared between the concurrent Events. Reads from the file are serialized for thread-safety and decompressing the Event happens at that time as well. The object deserialization can proceed concurrently. In addition to its name, one needs to give the file to read, e.g.
+```
+> threaded_io_test SharedRootEventSource=test.eroot 1 1 0 10
+```
+
+#### SharedRootBatchEventsSource
+This is similar to SharedRootEventSource except this time each entry in the `Events` TTree is actually for a batch of Events. The `Events` TTree again only holds 2 TBranches. One branch holds a `std::vector<EventIdentifier>`. The other holds a (possibly pre-compressed) buffer of all the pre-object serialized data products for all the events in the batch and a vector of offsets into that buffer for the beginning of each data products serialization. The Source is shared between the concurrent Events. Reads from the file are serialized for thread-safety and decompressing the Event happens at that time as well. The object deserialization can proceed concurrently. In addition to its name, one needs to give the file to read, e.g.
+```
+> threaded_io_test SharedRootBatchEventsSource=test.eroot 1 1 0 10
+```
+
 ### Outputers
 
 #### DummyOutputer
@@ -219,6 +231,46 @@ or
 ```
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 HDFOutputer=test.hdf:batchSize=10
 ```
+
+#### RootEventOutputer
+Writes the _event_ data products into a ROOT file where all data products for an event are stored in a single TBranch where the data products have been pre-object serialized into a `std::vector<char>`. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+
+- tfileCompressionLevel: compression level to be used by ROOT 0-9, default 0
+- tfileCompressionAlgorithm: name of compression algorithm to be used by ROOT. Allowed valued "", "ZLIB", "LZMA", "LZ4"
+- treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
+- autoFlush: passed value to TTree SetAutoFlush. Use of the default value -1 means no call is made.
+- compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values
+  - 0 - 19 (negative values and values 20-22 are possible but not considered good choices by the zstandard authors)
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "None", "ZSTD", "LZ4"
+- serializationAlgorithm: name of a serialization algorithm. Allowed values "", "ROOT", "ROOTUnrolled" or "Unrolled". The default is "ROOT" (which is the same as ""). Both _unrolled_ names correspond to the same algorithm.
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootEventOutputer=test.root
+```
+or
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootEventOutputer=test.root:compressionAlgorithm=LZ4
+```
+
+#### RootBatchEventsOutputer
+Writes the _event_ data products into a ROOT file where all data products for a batch of events are stored in a single TBranch where the data products for all the events in the batch have been pre-object serialized into a `std::vector<char>`. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+
+- batchSize: number of events to batch together when storing, default 1
+- tfileCompressionLevel: compression level to be used by ROOT 0-9, default 0
+- tfileCompressionAlgorithm: name of compression algorithm to be used by ROOT. Allowed valued "", "ZLIB", "LZMA", "LZ4"
+- treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
+- autoFlush: passed value to TTree SetAutoFlush. Use of the default value -1 means no call is made.
+- compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values
+  - 0 - 19 (negative values and values 20-22 are possible but not considered good choices by the zstandard authors)
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "None", "ZSTD", "LZ4"
+- serializationAlgorithm: name of a serialization algorithm. Allowed values "", "ROOT", "ROOTUnrolled" or "Unrolled". The default is "ROOT" (which is the same as ""). Both _unrolled_ names correspond to the same algorithm.
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootBatchEventsOutputer=test.root
+```
+or
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootBatchEventsOutputer=test.root:batchSize=4
+```
+
 
 ## unroll_test
 

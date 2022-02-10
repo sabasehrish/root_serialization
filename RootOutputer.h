@@ -53,6 +53,7 @@ private:
   std::vector<std::vector<DataProductRetriever> const*> retrievers_;
   std::chrono::microseconds accumulatedTime_;
   int basketSize_;
+  int splitLevel_;
 };
 }
 #endif

@@ -17,7 +17,8 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   eventTree_(new TTree("Events","", iConfig.splitLevel_, &file_)),
   retrievers_{std::size_t(iNLanes)},
   accumulatedTime_(std::chrono::microseconds::zero()),
-  basketSize_{iConfig.basketSize_}
+  basketSize_{iConfig.basketSize_},
+  splitLevel_{iConfig.splitLevel_}
 {
   if(not iConfig.compressionAlgorithm_.empty()) {
     if(iConfig.compressionAlgorithm_ == "ZLIB") {
@@ -52,20 +53,19 @@ RootOutputer::~RootOutputer() {
 
 void RootOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
-  bool hasEventAuxiliaryBranch = false;
   retrievers_[iLaneIndex] = &iDPs;
   if(iLaneIndex == 0) {
+    bool hasEventAuxiliaryBranch = false;
     branches_.reserve(iDPs.size());
     for(auto& dp : iDPs) {
-      branches_.push_back( eventTree_->Branch(dp.name().c_str(), dp.classType()->GetName(), dp.address(), basketSize_) );
+      branches_.push_back( eventTree_->Branch(dp.name().c_str(), dp.classType()->GetName(), dp.address(), basketSize_, splitLevel_) );
       if(dp.name() == eventAuxiliaryBranchName) {
         hasEventAuxiliaryBranch = true;
       }
     }
-  }
-
-  if(not hasEventAuxiliaryBranch) {
-    eventIDBranch_ = eventTree_->Branch("EventID", &id_, "run/i:lumi/i:event/l");
+    if(not hasEventAuxiliaryBranch) {
+      eventIDBranch_ = eventTree_->Branch("EventID", &id_, "run/i:lumi/i:event/l");
+    }
   }
 }
 

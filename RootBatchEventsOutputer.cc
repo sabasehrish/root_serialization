@@ -19,9 +19,9 @@ RootBatchEventsOutputer::RootBatchEventsOutputer(std::string const& iFileName, u
                                                  std::string const& iTFileCompression, int iTFileCompressionLevel,
                                                  uint32_t iBatchSize): 
   file_(iFileName.c_str(), "recreate", "", iTFileCompressionLevel),
-  serializers_{std::size_t(iNLanes)},
-  eventBatches_{std::size_t(iNLanes)},
-  waitingEventsInBatch_(std::size_t(iNLanes)),
+  serializers_{iNLanes},
+  eventBatches_{iNLanes},
+  waitingEventsInBatch_(iNLanes),
   presentEventEntry_(0),
   batchSize_(iBatchSize),
   compression_{iCompression},
@@ -70,8 +70,7 @@ RootBatchEventsOutputer::RootBatchEventsOutputer(std::string const& iFileName, u
     }
 }
 
-RootBatchEventsOutputer::~RootBatchEventsOutputer() {
-}
+RootBatchEventsOutputer::~RootBatchEventsOutputer() = default;
 
 
 void RootBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
@@ -222,25 +221,21 @@ void RootBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
 void RootBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs, std::vector<char>  iBuffer, std::vector<uint32_t> iOffsets) {
 
   eventIDs_ = std::move(iEventIDs);
-  offsetsAndBlob_.first = std::move(iOffsets);
-  offsetsAndBlob_.second = std::move(iBuffer);
+  offsetsAndBlob_ = {std::move(iOffsets), std::move(iBuffer)};
 
   eventsTree_->Fill();
 
-  offsetsAndBlob_.first = std::vector<uint32_t>();
-  offsetsAndBlob_.second = std::vector<char>();
+  offsetsAndBlob_ = {};
 }
 
 void RootBatchEventsOutputer::writeMetaData(SerializeStrategy const& iSerializers) {
 
   std::vector<std::pair<std::string, std::string>> typeAndNames;
   for(auto const& s: iSerializers) {
-    std::string type(s.className());
-    std::string name(s.name());
-    typeAndNames.emplace_back(std::move(type), std::move(name));
+    typeAndNames.emplace_back(s.className(), s.name());
   }
 
-  int objectSerializationUsed = static_cast<std::underlying_type_t<Serialization>>(serialization_);
+  auto objectSerializationUsed = static_cast<int>(serialization_);
 
 
   std::string compression = pds::name(compression_);

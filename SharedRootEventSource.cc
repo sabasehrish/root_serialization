@@ -74,15 +74,9 @@ SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long
     //std::cout <<"compressionAlgorithm "<<compression<<std::endl;
   }
 
-  pds::Serialization serialization;
-  switch(objectSerializationUsed) {
-  case static_cast<int>(pds::Serialization::kRoot):
-    serialization = pds::Serialization::kRoot;
-    break;
-  case static_cast<int>(pds::Serialization::kRootUnrolled):
-    serialization = pds::Serialization::kRootUnrolled;
-    break;
-  }
+  assert(objectSerializationUsed == static_cast<int>(pds::Serialization::kRoot) or 
+         objectSerializationUsed == static_cast<int>(pds::Serialization::kRootUnrolled));
+  pds::Serialization serialization{objectSerializationUsed};
 
   if (compression == "None") {
     compression_ = pds::Compression::kNone;
@@ -99,8 +93,8 @@ SharedRootEventSource::SharedRootEventSource(unsigned int iNLanes, unsigned long
   productInfo.reserve(typeAndNames.size());
   { 
     unsigned int index = 0;
-    for( auto const& typeAndName: typeAndNames) {
-      productInfo.emplace_back(typeAndName.second, index++, typeAndName.first);
+    for( auto const& [type, name]: typeAndNames) {
+      productInfo.emplace_back(name, index++, type);
     }
   }
 
@@ -198,7 +192,7 @@ void SharedRootEventSource::readEventAsync(unsigned int iLane, long iEventIndex,
             
             start = std::chrono::high_resolution_clock::now();
             //uBuffer.pop_back();
-            pds::deserializeDataProducts(&(*uBuffer.begin()), &(*uBuffer.end()), 
+            pds::deserializeDataProducts(uBuffer.data(), uBuffer.data()+uBuffer.size(), 
                                          offsetsAndBuffer.first.begin(), offsetsAndBuffer.first.end(),
                                          laneInfo.dataProducts_, laneInfo.deserializers_);
             laneInfo.deserializeTime_ += 

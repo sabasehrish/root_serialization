@@ -101,16 +101,23 @@ HDFEventOutputer::output(EventIdentifier const& iEventID,
                          SerializeStrategy const& iSerializers,
                          std::vector<char> iBuffer,
                          std::vector<uint32_t> iOffsets ) {
-  eventID_ = iEventID;
-  std::vector<int> ids;
-  ids.push_back(iEventID.event);
   hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
-  write_ds<int>(gid, "Event_IDs", ids);
+  if (firstEvent_) {
+    firstEvent_ = false;
+     auto r = hdf5::Attribute::open(gid, "run");
+     r.write(iEventID.run);  
+     auto sr = hdf5::Attribute::open(gid, "lumisec");
+     sr.write(iEventID.lumi);  
+  }
+  eventID_ = iEventID;
+  std::vector<unsigned long long> ids;
+  ids.push_back(iEventID.event);
+  write_ds<unsigned long long>(gid, "Event_IDs", ids);
   write_ds<char>(gid, "products", iBuffer);
-  std::vector<int> offset;
+  std::vector<uint32_t> offset;
   offset.resize(iOffsets.size()); 
-  std::copy( iOffsets.begin(), iOffsets.end(), offset.begin() );
-  write_ds<int>(gid, "offsets", offset); 
+ // std::copy( iOffsets.begin(), iOffsets.end(), offset.begin() );
+  write_ds<uint32_t>(gid, "offsets", iOffsets); 
 }
 
 void 
@@ -124,21 +131,20 @@ HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   prop.set_chunk(ndims, chunk_dims);
   hdf5::Group g = hdf5::Group::create(file_, "Lumi");
   hdf5::Dataset::create<int>(g, "Event_IDs", space, prop);
-  hdf5::Dataset dset1 = hdf5::Dataset::create<char>(g, "products", space, prop);
-  hdf5::Dataset dset2 = hdf5::Dataset::create<int>(g, "offsets", space, prop);
+  hdf5::Dataset::create<char>(g, "products", space, prop);
+  hdf5::Dataset::create<int>(g, "offsets", space, prop);
 
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
-  hdf5::Attribute r = hdf5::Attribute::create<int>(g, "run", scalar_space);
-  hdf5::Attribute l = hdf5::Attribute::create<int>(g, "lumisec", scalar_space);
+  hdf5::Attribute::create<int>(g, "run", scalar_space);
+  hdf5::Attribute::create<int>(g, "lumisec", scalar_space);
   
   for(auto const& s: iSerializers) {
-    std::string type(s.className());
-    std::string name(s.name());
+    std::string const type(s.className());
+    std::string const name(s.name());
     constexpr hsize_t     str_dims[ndims] = {10};
-    const auto string_space = hdf5::Dataspace::create_simple(1, str_dims, NULL);
     auto const attr_type = H5Tcopy (H5T_C_S1);
     H5Tset_size(attr_type, H5T_VARIABLE);
-    auto attr_space  = H5Screate(H5S_SCALAR);
+    auto const attr_space  = H5Screate(H5S_SCALAR);
     hdf5::Attribute prod_name = hdf5::Attribute::create<std::string>(g, name.c_str(), attr_space); 
     prod_name.write<std::string>(type);
   }

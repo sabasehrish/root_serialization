@@ -49,6 +49,7 @@ private:
   mutable std::vector<SerializeStrategy> serializers_;
   mutable std::pair<std::vector<uint32_t>, std::vector<char>> offsetsAndBlob_;
   EventIdentifier eventID_;
+  bool firstEvent_ = true;
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

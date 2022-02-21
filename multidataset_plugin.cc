@@ -26,14 +26,10 @@ hsize_t total_data_size;
 int init_multidataset() {
     dataset_size = 0;
     dataset_size_limit = 0;
-/*
-    dataspace_recycle_size = 0;
-    dataspace_recycle_size_limit = 0;
-    memspace_recycle_size = 0;
-    memspace_recycle_size_limit = 0;
-    dataset_recycle_size_limit = 0;
-    dataset_recycle_size = 0;
-*/
+
+    set_max_batch_size(2);
+    set_hdf5_method(-1);
+    set_total_n_events(-1);
     return 0;
 }
 
@@ -56,62 +52,32 @@ int finalize_multidataset() {
     return 0;
 }
 
-#if 0
-int register_dataset_recycle(hid_t did) {
-    if (dataset_recycle_size == dataset_recycle_size_limit) {
-        if ( dataset_recycle_size_limit > 0 ) {
-            dataset_recycle_size_limit *= 2;
-            hid_t *temp = (hid_t*) malloc(dataset_recycle_size_limit*sizeof(hid_t));
-            memcpy(temp, dataset_recycle, sizeof(hid_t) * dataset_recycle_size);
-            free(dataset_recycle);
-            dataset_recycle = temp;
-        } else {
-            dataset_recycle_size_limit = MEM_SIZE;
-            dataset_recycle = (hid_t*) malloc(dataset_recycle_size_limit*sizeof(hid_t));
-        }
-    }
-    dataset_recycle[dataset_recycle_size] = did;
-    dataset_recycle_size++;
+int set_max_batch_size(int max_batch_size) {
+    max_batch_size_g = max_batch_size;
     return 0;
 }
 
+int get_max_batch_size() {
+    return max_batch_size_g;
+}
 
-int register_dataspace_recycle(hid_t dsid) {
-    if (dataspace_recycle_size == dataspace_recycle_size_limit) {
-        if ( dataspace_recycle_size_limit > 0 ) {
-            dataspace_recycle_size_limit *= 2;
-            hid_t *temp = (hid_t*) malloc(dataspace_recycle_size_limit*sizeof(hid_t));
-            memcpy(temp, dataspace_recycle, sizeof(hid_t) * dataspace_recycle_size);
-            free(dataspace_recycle);
-            dataspace_recycle = temp;
-        } else {
-            dataspace_recycle_size_limit = MEM_SIZE;
-            dataspace_recycle = (hid_t*) malloc(dataspace_recycle_size_limit*sizeof(hid_t));
-        }
-    }
-    dataspace_recycle[dataspace_recycle_size] = dsid;
-    dataspace_recycle_size++;
+int set_hdf5_method(int hdf5_method) {
+    hdf5_method_g = hdf5_method;
     return 0;
 }
 
-int register_memspace_recycle(hid_t msid) {
-    if (memspace_recycle_size == memspace_recycle_size_limit) {
-        if ( memspace_recycle_size_limit > 0 ) {
-            memspace_recycle_size_limit *= 2;
-            hid_t *temp = (hid_t*) malloc(memspace_recycle_size_limit*sizeof(hid_t));
-            memcpy(temp, memspace_recycle, sizeof(hid_t) * memspace_recycle_size);
-            free(memspace_recycle);
-            memspace_recycle = temp;
-        } else {
-            memspace_recycle_size_limit = MEM_SIZE;
-            memspace_recycle = (hid_t*) malloc(memspace_recycle_size_limit*sizeof(hid_t));
-        }
-    }
-    memspace_recycle[memspace_recycle_size] = msid;
-    memspace_recycle_size++;
+int get_hdf5_method() {
+    return hdf5_method_g;
+}
+
+int set_total_n_events(int total_n_events) {
+    total_n_events_g = total_n_events;
     return 0;
 }
-#endif
+
+int get_total_n_events() {
+    return total_n_events;
+}
 
 static hid_t get_dataset_id(const char* name, hid_t gid) {
     int i;

@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
   unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
   if(argc > 5) {
     nEvents = atoi(argv[5]);
-    total_n_events = nEvents;
+    set_total_n_events(nEvents);
   }
 
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
@@ -113,24 +113,12 @@ int main(int argc, char* argv[]) {
   } else {
     outFactory = outputerFactoryGenerator(outputerName, "");
   }
-  char *p = getenv("HEP_MAX_BATCH_SIZE");
-  if ( p != NULL ) {
-    max_batch_size = atoi(p);
-  } else {
-    max_batch_size = 2;
-  }
-  p = getenv("HEP_IO_TYPE");
-  if ( p != NULL ) {
-    hdf_method = atoi(p);
-  } else {
-    hdf_method = 1;
-  }
 
   if(argc > 7) {
-    max_batch_size = atoi(argv[7]);
+    set_max_batch_size(atoi(argv[7]));
   }
   if(argc > 8) {
-    hdf_method = atoi(argv[8]);
+    set_hdf_method(atoi(argv[8]));
   }
 
   auto [sourceType, sourceOptions] = parseCompound(argv[1]);

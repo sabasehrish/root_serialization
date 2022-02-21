@@ -27,8 +27,18 @@ int init_multidataset() {
     dataset_size = 0;
     dataset_size_limit = 0;
 
-    set_max_batch_size(2);
-    set_hdf5_method(-1);
+    char *p = getenv("HEP_MAX_BATCH_SIZE");
+    if ( p != NULL ) {
+        set_max_batch_size(atoi(p));
+    } else {
+        set_max_batch_size(2);
+    }
+    p = getenv("HEP_IO_TYPE");
+    if ( p != NULL ) {
+        set_hdf5_method(atoi(p));
+    } else {
+        set_hdf5_method(1);
+    }
     set_total_n_events(-1);
     return 0;
 }
@@ -477,6 +487,7 @@ int flush_multidatasets() {
         multi_datasets[i].did = -1;
         free(temp_buf[i]);
     }
+
 
     free(multi_datasets_temp);
 #else

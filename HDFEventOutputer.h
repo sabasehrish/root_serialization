@@ -18,15 +18,13 @@
 
 #include "HDFCxx.h"
 
-using product_t = std::vector<char>;
 
 namespace cce::tf {
   class HDFEventOutputer : public OutputerBase {
     public:
-    HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, pds::Serialization iSerialization);
+    HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Serialization iSerialization);
     HDFEventOutputer(HDFEventOutputer&&) = default;
     HDFEventOutputer(HDFEventOutputer const&) = default;
-    ~HDFEventOutputer();
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
 
@@ -44,11 +42,11 @@ namespace cce::tf {
   std::pair<std::vector<uint32_t>,std::vector<char>> writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const;
 private:
   hdf5::File file_;
+  hdf5::Group group_;
   mutable SerialTaskQueue queue_;
-  int maxBatchSize_;
+  int chunkSize_;
   mutable std::vector<SerializeStrategy> serializers_;
   mutable std::pair<std::vector<uint32_t>, std::vector<char>> offsetsAndBlob_;
-  EventIdentifier eventID_;
   bool firstEvent_ = true;
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;

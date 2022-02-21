@@ -13,9 +13,12 @@
 
 using namespace cce::tf;
 using namespace cce::tf::pds;
-using product_t = std::vector<char>; 
 
 namespace {
+  constexpr const char* const PRODUCTS_DSNAME="Products";
+  constexpr const char* const EVENTS_DSNAME="EventIDs";
+  constexpr const char* const OFFSETS_DSNAME="Offsets";
+  constexpr const char* const GNAME="Lumi";
   template <typename T> 
   void 
   write_ds(hid_t gid, 
@@ -41,16 +44,16 @@ namespace {
   }
 }
 
-HDFEventOutputer::HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, pds::Serialization iSerialization) : 
+HDFEventOutputer::HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Serialization iSerialization) : 
   file_(hdf5::File::create(iFileName.c_str())),
-  maxBatchSize_{iBatchSize},
+  group_(hdf5::Group::create(file_, GNAME)),
+  chunkSize_{iChunkSize},
   serializers_{std::size_t(iNLanes)},
   serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
   {}
 
-HDFEventOutputer::~HDFEventOutputer() { }
 
 void HDFEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
@@ -62,11 +65,12 @@ void HDFEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataPro
   }
   s.reserve(iDPs.size());
   offsetsAndBlob_.first.resize(iDPs.size()+1, 0);
+  if(iLaneIndex == 0) {
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-  std::cout << "Setting up for Lanes\n"; 
-  if(iLaneIndex == 0) {writeFileHeader(s); }
+    writeFileHeader(s); 
+  }
 }
 
 void HDFEventOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -101,42 +105,35 @@ HDFEventOutputer::output(EventIdentifier const& iEventID,
                          SerializeStrategy const& iSerializers,
                          std::vector<char> iBuffer,
                          std::vector<uint32_t> iOffsets ) {
-  hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
   if (firstEvent_) {
     firstEvent_ = false;
-     auto r = hdf5::Attribute::open(gid, "run");
+     auto r = hdf5::Attribute::open(group_, "run");
      r.write(iEventID.run);  
-     auto sr = hdf5::Attribute::open(gid, "lumisec");
+     auto sr = hdf5::Attribute::open(group_, "lumisec");
      sr.write(iEventID.lumi);  
   }
-  eventID_ = iEventID;
-  std::vector<unsigned long long> ids;
-  ids.push_back(iEventID.event);
-  write_ds<unsigned long long>(gid, "Event_IDs", ids);
-  write_ds<char>(gid, "products", iBuffer);
-  std::vector<uint32_t> offset;
-  offset.resize(iOffsets.size()); 
- // std::copy( iOffsets.begin(), iOffsets.end(), offset.begin() );
-  write_ds<uint32_t>(gid, "offsets", iOffsets); 
+  std::vector<unsigned long long> ids = {{iEventID.event}};
+  write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids);
+  write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer);
+  write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets); 
 }
 
 void 
 HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   constexpr hsize_t ndims = 1;
   constexpr hsize_t     dims[ndims] = {0};
-  constexpr hsize_t     chunk_dims[ndims] = {128};
+  hsize_t     chunk_dims[ndims] = {chunkSize_};
   constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
   auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
   auto prop   = hdf5::Property::create();
   prop.set_chunk(ndims, chunk_dims);
-  hdf5::Group g = hdf5::Group::create(file_, "Lumi");
-  hdf5::Dataset::create<int>(g, "Event_IDs", space, prop);
-  hdf5::Dataset::create<char>(g, "products", space, prop);
-  hdf5::Dataset::create<int>(g, "offsets", space, prop);
+  hdf5::Dataset::create<int>(group_, EVENTS_DSNAME, space, prop);
+  hdf5::Dataset::create<char>(group_, PRODUCTS_DSNAME, space, prop);
+  hdf5::Dataset::create<int>(group_, OFFSETS_DSNAME, space, prop);
 
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
-  hdf5::Attribute::create<int>(g, "run", scalar_space);
-  hdf5::Attribute::create<int>(g, "lumisec", scalar_space);
+  hdf5::Attribute::create<int>(group_, "run", scalar_space);
+  hdf5::Attribute::create<int>(group_, "lumisec", scalar_space);
   
   for(auto const& s: iSerializers) {
     std::string const type(s.className());
@@ -145,7 +142,7 @@ HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
     auto const attr_type = H5Tcopy (H5T_C_S1);
     H5Tset_size(attr_type, H5T_VARIABLE);
     auto const attr_space  = H5Screate(H5S_SCALAR);
-    hdf5::Attribute prod_name = hdf5::Attribute::create<std::string>(g, name.c_str(), attr_space); 
+    hdf5::Attribute prod_name = hdf5::Attribute::create<std::string>(group_, name.c_str(), attr_space); 
     prod_name.write<std::string>(type);
   }
 }
@@ -188,7 +185,7 @@ namespace {
         return {};
       }
 
-      auto batchSize = params.get<int>("batchSize", 1);
+      auto chunkSize = params.get<int>("hdfchunkSize", 128);
       auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
       auto serialization = pds::toSerialization(serializationName);
       if(not serialization) {
@@ -196,7 +193,7 @@ namespace {
         return {};
       }
 
-      return std::make_unique<HDFEventOutputer>(*fileName, iNLanes, batchSize, *serialization);
+      return std::make_unique<HDFEventOutputer>(*fileName, iNLanes, chunkSize, *serialization);
     }
   };
 

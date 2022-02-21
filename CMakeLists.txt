@@ -81,8 +81,8 @@ add_executable(threaded_io_test
   sourceFactoryGenerator.cc
   threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include ${MPI_DIR}/include)
-target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib ${MPI_LIB}/lib)
+target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
+target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
 
 target_link_libraries(threaded_io_test
                       PRIVATE LZ4::lz4

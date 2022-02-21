@@ -55,6 +55,7 @@ add_executable(threaded_io_test
   EmptySource.cc
   DummyOutputer.cc
   SerializeOutputer.cc
+  HDFEventOutputer.cc
   HDFOutputer.cc
   HDFSource.cc
   Lane.cc
@@ -162,3 +163,6 @@ add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
 add_test(NAME HDFOutputerEmptyTest
          COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)
 add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prod.h5 1 1 0 10 TestProductsOutputer")
+add_test(NAME HDFEventOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFEventOutputer=test_empty_event.h5)
+add_test(NAME TestProductsHDFEvent COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFEventOutputer=test_prod_e.h5") 
+#; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prodi_e.h5 1 1 0 10 TestProductsOutputer")

@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   using namespace cce::tf;
 
   if(not (argc > 1 and argc < 8) ) {
-    std::cout <<"1 to 7 arguments required\n"
+    std::cout <<"1 to 6 arguments required\n"
                 "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
     return 1;
   }
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
 
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
   std::string outputerName = "DummyOutputer";
-  if(argc > 6) {
+  if(argc == 7) {
     outputerName = argv[6];
     auto [outputType, outputInfo] = parseCompound(argv[6]);
     outFactory = outputerFactoryGenerator(outputType, outputInfo);

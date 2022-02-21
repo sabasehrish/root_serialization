@@ -10,7 +10,7 @@
 #define MULTIDATASET_DEFINE 1
 
 static int max_batch_size_g = 2;
-static int hdf_method_g = -1;
+static int hdf5_method_g = -1;
 static int total_n_events_g = -1;
 
 

@@ -86,7 +86,7 @@ int set_total_n_events(int total_n_events) {
 }
 
 int get_total_n_events() {
-    return total_n_events;
+    return total_n_events_g;
 }
 
 static hid_t get_dataset_id(const char* name, hid_t gid) {

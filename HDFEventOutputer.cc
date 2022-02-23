@@ -112,7 +112,11 @@ HDFEventOutputer::output(EventIdentifier const& iEventID,
      auto r = hdf5::Attribute::open(group_, "run");
      r.write(iEventID.run);  
      auto sr = hdf5::Attribute::open(group_, "lumisec");
-     sr.write(iEventID.lumi);  
+     sr.write(iEventID.lumi); 
+     auto comp = hdf5::Attribute::open(group_, "Compression");
+     comp.write(name(compression_));
+     auto level = hdf5::Attribute::open(group_, "CompressionLevel");
+     level.write(compressionLevel_); 
   }
   std::vector<unsigned long long> ids = {{iEventID.event}};
   write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids);
@@ -136,14 +140,15 @@ HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
   hdf5::Attribute::create<int>(group_, "run", scalar_space);
   hdf5::Attribute::create<int>(group_, "lumisec", scalar_space);
-  
+  hdf5::Attribute::create<int>(group_, "CompressionLevel", scalar_space);
+  constexpr hsize_t     str_dims[ndims] = {10};
+  auto const attr_type = H5Tcopy (H5T_C_S1);
+  H5Tset_size(attr_type, H5T_VARIABLE);
+  auto const attr_space  = H5Screate(H5S_SCALAR);
+  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,"Compression" , attr_space); 
   for(auto const& s: iSerializers) {
     std::string const type(s.className());
     std::string const name(s.name());
-    constexpr hsize_t     str_dims[ndims] = {10};
-    auto const attr_type = H5Tcopy (H5T_C_S1);
-    H5Tset_size(attr_type, H5T_VARIABLE);
-    auto const attr_space  = H5Screate(H5S_SCALAR);
     hdf5::Attribute prod_name = hdf5::Attribute::create<std::string>(group_, name.c_str(), attr_space); 
     prod_name.write<std::string>(type);
   }

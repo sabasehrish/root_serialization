@@ -22,7 +22,7 @@
 namespace cce::tf {
   class HDFEventOutputer : public OutputerBase {
     public:
-    HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Serialization iSerialization);
+    HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, pds::Serialization iSerialization);
     HDFEventOutputer(HDFEventOutputer&&) = default;
     HDFEventOutputer(HDFEventOutputer const&) = default;
 
@@ -48,6 +48,8 @@ private:
   mutable std::vector<SerializeStrategy> serializers_;
   mutable std::pair<std::vector<uint32_t>, std::vector<char>> offsetsAndBlob_;
   bool firstEvent_ = true;
+  pds::Compression compression_;
+  int compressionLevel_;
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

@@ -44,11 +44,13 @@ namespace {
   }
 }
 
-HDFEventOutputer::HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Serialization iSerialization) : 
+HDFEventOutputer::HDFEventOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, pds::Serialization iSerialization) : 
   file_(hdf5::File::create(iFileName.c_str())),
   group_(hdf5::Group::create(file_, GNAME)),
   chunkSize_{iChunkSize},
   serializers_{std::size_t(iNLanes)},
+  compression_{iCompression},
+  compressionLevel_{iCompressionLevel},
   serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
@@ -65,10 +67,10 @@ void HDFEventOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataPro
   }
   s.reserve(iDPs.size());
   offsetsAndBlob_.first.resize(iDPs.size()+1, 0);
-  if(iLaneIndex == 0) {
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
+  if(iLaneIndex == 0) {
     writeFileHeader(s); 
   }
 }
@@ -110,7 +112,11 @@ HDFEventOutputer::output(EventIdentifier const& iEventID,
      auto r = hdf5::Attribute::open(group_, "run");
      r.write(iEventID.run);  
      auto sr = hdf5::Attribute::open(group_, "lumisec");
-     sr.write(iEventID.lumi);  
+     sr.write(iEventID.lumi); 
+     auto comp = hdf5::Attribute::open(group_, "Compression");
+     comp.write(name(compression_));
+     auto level = hdf5::Attribute::open(group_, "CompressionLevel");
+     level.write(compressionLevel_); 
   }
   std::vector<unsigned long long> ids = {{iEventID.event}};
   write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids);
@@ -122,7 +128,7 @@ void
 HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   constexpr hsize_t ndims = 1;
   constexpr hsize_t     dims[ndims] = {0};
-  hsize_t     chunk_dims[ndims] = {chunkSize_};
+  hsize_t     chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
   constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
   auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
   auto prop   = hdf5::Property::create();
@@ -134,14 +140,15 @@ HDFEventOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
   hdf5::Attribute::create<int>(group_, "run", scalar_space);
   hdf5::Attribute::create<int>(group_, "lumisec", scalar_space);
-  
+  hdf5::Attribute::create<int>(group_, "CompressionLevel", scalar_space);
+  constexpr hsize_t     str_dims[ndims] = {10};
+  auto const attr_type = H5Tcopy (H5T_C_S1);
+  H5Tset_size(attr_type, H5T_VARIABLE);
+  auto const attr_space  = H5Screate(H5S_SCALAR);
+  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,"Compression" , attr_space); 
   for(auto const& s: iSerializers) {
     std::string const type(s.className());
     std::string const name(s.name());
-    constexpr hsize_t     str_dims[ndims] = {10};
-    auto const attr_type = H5Tcopy (H5T_C_S1);
-    H5Tset_size(attr_type, H5T_VARIABLE);
-    auto const attr_space  = H5Screate(H5S_SCALAR);
     hdf5::Attribute prod_name = hdf5::Attribute::create<std::string>(group_, name.c_str(), attr_space); 
     prod_name.write<std::string>(type);
   }
@@ -168,10 +175,12 @@ std::pair<std::vector<uint32_t>, std::vector<char>> HDFEventOutputer::writeDataP
       auto offset = offsets[index++];
       std::copy(s.blob().begin(), s.blob().end(), buffer.begin()+offset );
     }
-    assert(buffer.size() == offset[index]);
+    assert(buffer.size() == offsets[index]);
   }
 
-  return {offsets, buffer};
+  auto cBuffer  = pds::compressBuffer(0,0, compression_, compressionLevel_, buffer);
+
+  return {offsets, cBuffer};
 }
 namespace {
   class HDFEventMaker : public OutputerMakerBase {
@@ -186,6 +195,13 @@ namespace {
       }
 
       auto chunkSize = params.get<int>("hdfchunkSize", 128);
+      int compressionLevel = params.get<int>("compressionLevel", 18);
+      auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
+      auto compression = pds::toCompression(compressionName);
+      if(not compression) {
+        std::cout <<"unknown compression "<<compressionName<<std::endl;
+        return {};
+      }
       auto serializationName = params.get<std::string>("serializationAlgorithm", "ROOT");
       auto serialization = pds::toSerialization(serializationName);
       if(not serialization) {
@@ -193,7 +209,7 @@ namespace {
         return {};
       }
 
-      return std::make_unique<HDFEventOutputer>(*fileName, iNLanes, chunkSize, *serialization);
+      return std::make_unique<HDFEventOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, *serialization);
     }
   };
 

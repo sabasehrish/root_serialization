@@ -114,7 +114,7 @@ HDFEventOutputer::output(EventIdentifier const& iEventID,
      auto sr = hdf5::Attribute::open(group_, "lumisec");
      sr.write(iEventID.lumi); 
      auto comp = hdf5::Attribute::open(group_, "Compression");
-     comp.write(name(compression_));
+     comp.write(std::string(name(compression_)));
      auto level = hdf5::Attribute::open(group_, "CompressionLevel");
      level.write(compressionLevel_); 
   }

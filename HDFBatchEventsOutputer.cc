@@ -125,17 +125,6 @@ void HDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifie
   }
   auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   parallelTime_ += time.count();
-
-  /*
-  queue_.push(*iCallback.group(), [this, iEventID, iLaneIndex, callback=std::move(iCallback), buffer = std::move(buffer), offsets = std::move(offsets)]() mutable {
-      auto start = std::chrono::high_resolution_clock::now();
-      const_cast<HDFBatchEventsOutputer*>(this)->output(iEventID, serializers_[iLaneIndex], std::move(buffer), std::move(offsets));
-        serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
-      callback.doneWaiting();
-    });
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
-    parallelTime_ += time.count();
-  */
 }
 
 void HDFBatchEventsOutputer::printSummary() const  {

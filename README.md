@@ -232,6 +232,25 @@ or
 > threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 HDFOutputer=test.hdf:batchSize=10
 ```
 
+#### HDFBatchEventsOutputer
+Writes the _event_ data products into a HDF file where all data products for a batch of events are stored in a single dataset where the data products for all the events in the batch have been pre-object serialized into a `std::vector<char>`. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+
+- hdfchunkSize: HDF chunk size value to use for dataset. Default is 10485760.
+- batchSize: number of events to batch together when storing, default 1
+- compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values
+  - 0 - 19 (negative values and values 20-22 are possible but not considered good choices by the zstandard authors)
+- compressionAlgorithm: name of compression algorithm. Allowed values "", "None", "ZSTD", "LZ4"
+- compressionChoice: what to compress. Allowed values "None", "Events", "Batch", "Both". Default is "Events".
+- serializationAlgorithm: name of a serialization algorithm. Allowed values "", "ROOT", "ROOTUnrolled" or "Unrolled". The default is "ROOT" (which is the same as ""). Both _unrolled_ names correspond to the same algorithm.
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootBatchEventsOutputer=test.root
+```
+or
+```
+> threaded_io_test ReplicatedRootSource=test.root 1 1 0 10 RootBatchEventsOutputer=test.root:batchSize=4
+```
+
+
 #### RootEventOutputer
 Writes the _event_ data products into a ROOT file where all data products for an event are stored in a single TBranch where the data products have been pre-object serialized into a `std::vector<char>`. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
 

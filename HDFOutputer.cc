@@ -193,7 +193,7 @@ namespace {
       }
 
       auto batchSize = params.get<int>("batchSize", 1);
-      auto chunkSize = params.get<int>("hdfchunkSize", 128);
+      auto chunkSize = params.get<int>("hdfchunkSize", 1048576);
 
       return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize, chunkSize);
     }

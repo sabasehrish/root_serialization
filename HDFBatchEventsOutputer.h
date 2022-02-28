@@ -22,7 +22,14 @@
 namespace cce::tf {
   class HDFBatchEventsOutputer : public OutputerBase {
     public:
-    HDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, pds::Serialization iSerialization, uint32_t iBatchSize);
+    enum class CompressionChoice {
+      kNone,
+        kEvents,
+        kBatch,
+        kBoth
+    };
+
+    HDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize);
     HDFBatchEventsOutputer(HDFBatchEventsOutputer&&) = default;
     HDFBatchEventsOutputer(HDFBatchEventsOutputer const&) = default;
 
@@ -61,6 +68,7 @@ private:
   bool firstEvent_ = true;
   pds::Compression compression_;
   int compressionLevel_;
+  CompressionChoice compressionChoice_;
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;

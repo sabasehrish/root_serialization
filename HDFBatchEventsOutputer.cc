@@ -44,7 +44,7 @@ namespace {
   }
 }
 
-HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, pds::Serialization iSerialization, uint32_t iBatchSize) : 
+HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize) : 
   file_(hdf5::File::create(iFileName.c_str())),
   group_(hdf5::Group::create(file_, GNAME)),
   chunkSize_{iChunkSize},
@@ -55,6 +55,7 @@ HDFBatchEventsOutputer::HDFBatchEventsOutputer(std::string const& iFileName, uns
   batchSize_(iBatchSize),
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
+  compressionChoice_{iChoice},
   serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0}
@@ -186,11 +187,16 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
     blob = std::vector<char>();
   }
 
-  auto compressedBuffer  = pds::compressBuffer(0,0, compression_, compressionLevel_, batchBlob);
-  batchBlob = std::vector<char>();
+  std::vector<char> bufferToWrite;
+  if(compressionChoice_ == CompressionChoice::kBatch or compressionChoice_ == CompressionChoice::kBoth) {
+    bufferToWrite  = pds::compressBuffer(0,0, compression_, compressionLevel_, batchBlob);
+    batchBlob = std::vector<char>();
+  } else {
+    bufferToWrite = std::move(batchBlob);
+  }
 
   
-  queue_.push(*iCallback.group(), [this, eventIDs=std::move(batchEventIDs), offsets = std::move(batchOffsets), buffer = std::move(compressedBuffer),  callback=std::move(iCallback)]() mutable {
+  queue_.push(*iCallback.group(), [this, eventIDs=std::move(batchEventIDs), offsets = std::move(batchOffsets), buffer = std::move(bufferToWrite),  callback=std::move(iCallback)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
       const_cast<HDFBatchEventsOutputer*>(this)->output(std::move(eventIDs), std::move(buffer), std::move(offsets));
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
@@ -212,8 +218,8 @@ HDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
      sr.write(iEventIDs[0].lumi); 
      auto comp = hdf5::Attribute::open(group_, "Compression");
      comp.write(std::string(name(compression_)));
-     auto level = hdf5::Attribute::open(group_, "CompressionLevel");
-     level.write(compressionLevel_); 
+     auto level = hdf5::Attribute::open(group_, "CompressionChoice");
+     level.write(static_cast<int>(compressionChoice_)); 
   }
   std::vector<unsigned long long> ids;
   ids.reserve(iEventIDs.size());
@@ -242,6 +248,7 @@ HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   hdf5::Attribute::create<int>(group_, "run", scalar_space);
   hdf5::Attribute::create<int>(group_, "lumisec", scalar_space);
   hdf5::Attribute::create<int>(group_, "CompressionLevel", scalar_space);
+  hdf5::Attribute::create<int>(group_, "CompressionChoice", scalar_space);
   constexpr hsize_t     str_dims[ndims] = {10};
   auto const attr_type = H5Tcopy (H5T_C_S1);
   H5Tset_size(attr_type, H5T_VARIABLE);
@@ -279,14 +286,18 @@ std::pair<std::vector<uint32_t>, std::vector<char>> HDFBatchEventsOutputer::writ
     assert(buffer.size() == offsets[index]);
   }
 
-  auto cBuffer  = pds::compressBuffer(0,0, compression_, compressionLevel_, buffer);
+  if(compressionChoice_ == CompressionChoice::kEvents or compressionChoice_ == CompressionChoice::kBoth) {
+    auto cBuffer  = pds::compressBuffer(0,0, compression_, compressionLevel_, buffer);
 
-  return {offsets, cBuffer};
+    return {offsets, cBuffer};
+  }
+
+  return {offsets, buffer};
 }
 namespace {
-  class HDFEventMaker : public OutputerMakerBase {
+  class Maker : public OutputerMakerBase {
   public:
-    HDFEventMaker(): OutputerMakerBase("HDFBatchEventsOutputer") {}
+    Maker(): OutputerMakerBase("HDFBatchEventsOutputer") {}
     
     std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
       auto fileName = params.get<std::string>("fileName");
@@ -295,7 +306,7 @@ namespace {
         return {};
       }
 
-      auto chunkSize = params.get<int>("hdfchunkSize", 128);
+      auto chunkSize = params.get<int>("hdfchunkSize", 10485760);
       int compressionLevel = params.get<int>("compressionLevel", 18);
       auto compressionName = params.get<std::string>("compressionAlgorithm", "ZSTD");
       auto compression = pds::toCompression(compressionName);
@@ -309,12 +320,25 @@ namespace {
         std::cout <<"unknown serialization "<<serializationName<<std::endl;
         return {};
       }
+      auto compressionChoiceName = params.get<std::string>("compressionChoice", "Events");
+      auto compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kEvents;
+      if(compressionChoiceName == "Events") {
+      }else if(compressionChoiceName == "Batch") {
+        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kBatch;
+      }else if(compressionChoiceName == "Both") {
+        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kBoth;
+      }else if(compressionChoiceName == "None") {
+        compressionChoice = HDFBatchEventsOutputer::CompressionChoice::kNone;
+      } else {
+        std::cout <<"Unknown compression choice "<<compressionChoiceName<<std::endl;
+        return {};
+      }
 
       auto batchSize = params.get<int>("batchSize",1);
 
-      return std::make_unique<HDFBatchEventsOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, *serialization, batchSize);
+      return std::make_unique<HDFBatchEventsOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, compressionChoice, *serialization, batchSize);
     }
   };
 
-  HDFEventMaker s_maker;
+  Maker s_maker;
 }

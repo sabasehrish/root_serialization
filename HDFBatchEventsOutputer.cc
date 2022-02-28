@@ -170,7 +170,9 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
   batchEventIDs.reserve(batch->size());
 
   std::vector<uint32_t> batchOffsets;
-  batchOffsets.reserve(batch->size() * (serializers_.size()+1));
+  batchOffsets.reserve(batch->size() * (serializers_.size()+2));
+  //one extra size to but the final blob size. This is either the
+  // compressed size or the uncompressed size depending on the compression choice
 
   std::vector<char> batchBlob;
 
@@ -186,6 +188,9 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
     std::copy(offsets.begin(), offsets.end(), std::back_inserter(batchOffsets));
 
     auto& blob = std::get<2>(event);
+    //record the size of the blob as the final offset. Needed to decompress
+    // the event during reading
+    batchOffsets.push_back(blob.size());
     std::copy(blob.begin(), blob.end(), std::back_inserter(batchBlob));
 
     //release memory

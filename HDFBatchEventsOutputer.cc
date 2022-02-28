@@ -19,6 +19,11 @@ namespace {
   constexpr const char* const EVENTS_DSNAME="EventIDs";
   constexpr const char* const OFFSETS_DSNAME="Offsets";
   constexpr const char* const GNAME="Lumi";
+  constexpr const char* const RUN_ANAME="run";
+  constexpr const char* const LUMISEC_ANAME="lumisec";
+  constexpr const char* const COMPRESSION_ANAME="Compression";
+  constexpr const char* const COMPRESSION_LEVEL_ANAME="CompressionLevel";
+  constexpr const char* const COMPRESSION_CHOICE_ANAME="CompressionChoice";
   template <typename T> 
   void 
   write_ds(hid_t gid, 
@@ -212,14 +217,16 @@ HDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
   if (firstEvent_) {
     assert(not iEventIDs.empty());
     firstEvent_ = false;
-     auto r = hdf5::Attribute::open(group_, "run");
-     r.write(iEventIDs[0].run);  
-     auto sr = hdf5::Attribute::open(group_, "lumisec");
-     sr.write(iEventIDs[0].lumi); 
-     auto comp = hdf5::Attribute::open(group_, "Compression");
-     comp.write(std::string(name(compression_)));
-     auto level = hdf5::Attribute::open(group_, "CompressionChoice");
-     level.write(static_cast<int>(compressionChoice_)); 
+    auto r = hdf5::Attribute::open(group_, RUN_ANAME);
+    r.write(iEventIDs[0].run);  
+    auto sr = hdf5::Attribute::open(group_, LUMISEC_ANAME);
+    sr.write(iEventIDs[0].lumi); 
+    auto comp = hdf5::Attribute::open(group_, COMPRESSION_ANAME);
+    comp.write(std::string(name(compression_)));
+    auto level = hdf5::Attribute::open(group_, COMPRESSION_LEVEL_ANAME);
+    level.write(compressionLevel_); 
+    auto choice = hdf5::Attribute::open(group_, COMPRESSION_CHOICE_ANAME);
+    choice.write(static_cast<int>(compressionChoice_)); 
   }
   std::vector<unsigned long long> ids;
   ids.reserve(iEventIDs.size());
@@ -234,9 +241,9 @@ HDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
 void 
 HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   constexpr hsize_t ndims = 1;
-  constexpr hsize_t     dims[ndims] = {0};
-  hsize_t     chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
-  constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
+  constexpr hsize_t dims[ndims] = {0};
+  hsize_t chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
+  constexpr hsize_t  max_dims[ndims] = {H5S_UNLIMITED};
   auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
   auto prop   = hdf5::Property::create();
   prop.set_chunk(ndims, chunk_dims);
@@ -245,15 +252,15 @@ HDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   hdf5::Dataset::create<int>(group_, OFFSETS_DSNAME, space, prop);
 
   const auto scalar_space  = hdf5::Dataspace::create_scalar();
-  hdf5::Attribute::create<int>(group_, "run", scalar_space);
-  hdf5::Attribute::create<int>(group_, "lumisec", scalar_space);
-  hdf5::Attribute::create<int>(group_, "CompressionLevel", scalar_space);
-  hdf5::Attribute::create<int>(group_, "CompressionChoice", scalar_space);
+  hdf5::Attribute::create<int>(group_, RUN_ANAME, scalar_space);
+  hdf5::Attribute::create<int>(group_, LUMISEC_ANAME, scalar_space);
+  hdf5::Attribute::create<int>(group_, COMPRESSION_LEVEL_ANAME, scalar_space);
+  hdf5::Attribute::create<int>(group_, COMPRESSION_CHOICE_ANAME, scalar_space);
   constexpr hsize_t     str_dims[ndims] = {10};
   auto const attr_type = H5Tcopy (H5T_C_S1);
   H5Tset_size(attr_type, H5T_VARIABLE);
   auto const attr_space  = H5Screate(H5S_SCALAR);
-  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,"Compression" , attr_space); 
+  hdf5::Attribute compression = hdf5::Attribute::create<std::string>(group_,COMPRESSION_ANAME, attr_space); 
   for(auto const& s: iSerializers) {
     std::string const type(s.className());
     std::string const name(s.name());

@@ -118,9 +118,7 @@ void HDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifie
 
   auto indexInBatch = eventIndex % (batchSize_);
   //std::cout <<"indexInBatch "<<indexInBatch<<std::endl;
-  std::get<0>((*batchContainer)[indexInBatch]) = iEventID;
-  std::get<1>((*batchContainer)[indexInBatch]) = std::move(offsets);
-  std::get<2>((*batchContainer)[indexInBatch]) = std::move(buffer);
+  (*batchContainer)[indexInBatch] = std::make_tuple(iEventID, std::move(offsets), std::move(buffer));
 
   assert(waitingEventsInBatch_[batchIndex].load() < batchSize_);
 
@@ -177,24 +175,22 @@ void HDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHold
   std::vector<char> batchBlob;
 
   int index = 0;
-  for(auto& event: *batch) {
+  for(auto& [id, offsets, blob]: *batch) {
     if(index++ == eventsInBatch) {
       //batch was smaller than usual. Can happen at end of job
       break;
     }
-    batchEventIDs.push_back(std::get<0>(event));
+    batchEventIDs.push_back(id);
 
-    auto& offsets = std::get<1>(event);
     std::copy(offsets.begin(), offsets.end(), std::back_inserter(batchOffsets));
 
-    auto& blob = std::get<2>(event);
     //record the size of the blob as the final offset. Needed to decompress
     // the event during reading
     batchOffsets.push_back(blob.size());
     std::copy(blob.begin(), blob.end(), std::back_inserter(batchBlob));
 
     //release memory
-    blob = std::vector<char>();
+    blob = {};
   }
 
   std::vector<char> bufferToWrite;
@@ -301,10 +297,10 @@ std::pair<std::vector<uint32_t>, std::vector<char>> HDFBatchEventsOutputer::writ
   if(compressionChoice_ == CompressionChoice::kEvents or compressionChoice_ == CompressionChoice::kBoth) {
     auto cBuffer  = pds::compressBuffer(0,0, compression_, compressionLevel_, buffer);
 
-    return {offsets, cBuffer};
+    return {std::move(offsets), std::move(cBuffer)};
   }
 
-  return {offsets, buffer};
+  return {std::move(offsets), std::move(buffer)};
 }
 namespace {
   class Maker : public OutputerMakerBase {

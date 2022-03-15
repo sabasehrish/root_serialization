@@ -9,7 +9,7 @@
 
 using namespace cce::tf;
 
-RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents, std::string const& iBranchToRead) :
+RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int iNUniqueEvents, unsigned int iNLanes, unsigned long long iNEvents, std::string const& iBranchToRead, bool iDumpBranches) :
   SharedSourceBase(iNEvents),
   nUniqueEvents_(iNUniqueEvents),
   dataProductsPerLane_(iNLanes),
@@ -56,7 +56,9 @@ RepeatingRootSource::RepeatingRootSource(std::string const& iName, unsigned int 
     if((not branchesToRead.empty()) and branchesToRead.end() == branchesToRead.find(b->GetName())) {
       continue;
     }
-    std::cout<<b->GetName()<<std::endl;
+    if(iDumpBranches) {
+      std::cout<<b->GetName()<<std::endl;
+    }
     for(auto& dataProducts: dataProductsPerLane_) {
       dataProducts.emplace_back(index,
                                 nullptr,
@@ -148,7 +150,8 @@ namespace {
         }
         unsigned int nUniqueEvents=params.get<unsigned int>("repeat",10);
         std::string branchToRead = params.get<std::string>("branchToRead","");
-        return std::make_unique<RepeatingRootSource>(*fileName, nUniqueEvents, iNLanes, iNEvents, branchToRead);
+        bool dumpBranches = params.get<bool>("dumpBranches", false);
+        return std::make_unique<RepeatingRootSource>(*fileName, nUniqueEvents, iNLanes, iNEvents, branchToRead, dumpBranches);
     }
     };
 

@@ -55,10 +55,6 @@ add_executable(threaded_io_test
   EmptySource.cc
   DummyOutputer.cc
   SerializeOutputer.cc
-  HDFEventOutputer.cc
-  HDFBatchEventsOutputer.cc
-  HDFOutputer.cc
-  HDFSource.cc
   Lane.cc
   PDSOutputer.cc
   PDSSource.cc
@@ -91,9 +87,6 @@ add_executable(threaded_io_test
   sourceFactoryGenerator.cc
   threaded_io_test.cc)
 
-target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
-target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
-
 target_link_libraries(threaded_io_test
                       PRIVATE LZ4::lz4
                               ROOT::Core
@@ -104,8 +97,7 @@ target_link_libraries(threaded_io_test
                               configKeys
                               sequence_classes_dict
                               batchevents_classes_dict
-                              zstd::libzstd_shared
-                              hdf5)
+                              zstd::libzstd_shared)
 
 add_subdirectory(cms)
 add_subdirectory(test_classes)
@@ -161,10 +153,24 @@ add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test EmptyS
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test EmptySource 1 1 0 10 TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
 add_test(NAME UseIMTTest COMMAND threaded_io_test EmptySource 1/useIMT 1 0 10)
-add_test(NAME HDFOutputerEmptyTest
-         COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)
-add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prod.h5 1 1 0 10 TestProductsOutputer")
-add_test(NAME HDFEventOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFEventOutputer=test_empty_event.h5)
-add_test(NAME HDFBatchEventsOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFBatchEventsOutputer=test_empty_event.h5)
-add_test(NAME TestProductsHDFEvent COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFEventOutputer=test_prod_e.h5") 
-#; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prodi_e.h5 1 1 0 10 TestProductsOutputer")
+
+option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
+if(ENABLE_HDF5)
+  if(NOT DEFINED HDF5_DIR)
+    message(FATAL_ERROR "You must provide HDF5_DIR variable")
+  endif()
+  target_sources(threaded_io_test PRIVATE
+    HDFEventOutputer.cc
+    HDFBatchEventsOutputer.cc
+    HDFOutputer.cc
+    HDFSource.cc)
+  target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
+  target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
+  target_link_libraries(threaded_io_test PRIVATE hdf5)
+  add_test(NAME HDFOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFOutputer=test_empty.h5)
+  add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prod.h5 1 1 0 10 TestProductsOutputer")
+  add_test(NAME HDFEventOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFEventOutputer=test_empty_event.h5)
+  add_test(NAME HDFBatchEventsOutputerEmptyTest COMMAND threaded_io_test EmptySource 1 1 0 10 HDFBatchEventsOutputer=test_empty_event.h5)
+  add_test(NAME TestProductsHDFEvent COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test TestProductsSource 1 1 0 10 HDFEventOutputer=test_prod_e.h5")
+  #; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test HDFSource=test_prodi_e.h5 1 1 0 10 TestProductsOutputer")
+endif()

@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
       AtomicRefCounter laneCounter(nLanesWaiting);
       for(auto& lane: lanes) {
         auto& group = *itGroup;
-        group.run([&]() {lane.processEventsAsync(ievt,group, *pOut,laneCounter);});
+        group.run([&, laneCounter]() {lane.processEventsAsync(ievt,group, *pOut,laneCounter);});
         ++itGroup;
       }
     }

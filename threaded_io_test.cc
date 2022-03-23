@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <cmath>
 
+#include "CLI11.hpp"
+
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
 
@@ -18,7 +20,7 @@
 #include "tbb/task_arena.h"
 
 namespace {
-  std::pair<std::string, std::string> parseCompound(const char* iArg) {
+  std::pair<std::string, std::string> parseCompound(std::string_view iArg) {
     std::string sArg(iArg);
     auto found = sArg.find('=');
     auto next = found;
@@ -27,36 +29,35 @@ namespace {
     }
     return std::pair(sArg, std::string());
   }
-
-  bool checkForIMT(const char* iArg) {
-    std::string sArg(iArg);
-    auto found = sArg.find('/');
-    if(found != std::string::npos) {
-      if(sArg.substr(found+1) != "useIMT") {
-	std::cout <<"unknown option for threads "<<sArg.substr(found+1)<<std::endl;
-	abort();
-      }
-      return true;
-    }
-    return false;
-  }
 }
 
 int main(int argc, char* argv[]) {
   using namespace cce::tf;
 
-  if(not (argc > 1 and argc < 8) ) {
-    std::cout <<"1 to 6 arguments required\n"
-                "threaded_io_test <Source configuration> [# threads[/useIMT]] [# conconcurrent events] [wait time scale factor] [max # events] [<Outputer configuration>]\n";
-    return 1;
-  }
+  CLI::App app{"test different I/O systems under threading"};
 
+  std::string sourceConfig;
+  app.add_option("-s,--source",sourceConfig,"configure Source")->required();
+  
   int parallelism = tbb::this_task_arena::max_concurrency();
-  bool useIMT=false;
-  if(argc > 2) {
-    useIMT = checkForIMT(argv[2]);
-    parallelism = atoi(argv[2]);
-  }
+  app.add_option("-t,--num-threads", parallelism, "number of threads to use.\nDefault is all cores on the machine.");
+
+  bool useIMT = false;
+  app.add_option("--use-IMT", useIMT, "Use ROOT's Implicit MultiThreading.\nDefault is false.");
+
+  unsigned int nLanes = parallelism;
+  app.add_option("-l,--num-lanes", nLanes, "Number of concurrently processing event Lanes.\nDefault is number of threads.");
+
+  unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
+  app.add_option("-n,--num-events", nEvents, "Number of events to process.\nDefault is max value.");
+
+  std::string outputerConfig="DummyOutputer";
+  app.add_option("-o,--outputer", outputerConfig, "configure Outputer.\nDefault is 'DummyOutputer'.");
+
+  double scale = -1.;
+  app.add_option("--scale", scale, "Scale to use when converting data product size to wait time. A value less than 1 turns off this feature. \nDefault is -1.");
+
+  CLI11_PARSE(app, argc, argv);
 
   tbb::global_control c(tbb::global_control::max_allowed_parallelism, parallelism);
 
@@ -73,43 +74,24 @@ int main(int argc, char* argv[]) {
   TVirtualStreamerInfo::Optimize(false);
 
   std::vector<Lane> lanes;
-  unsigned int nLanes = 4;
-  if(argc > 3) {
-    nLanes = atoi(argv[3]);
-  }
-
-  double scale = 0.;
-  if(argc > 4) {
-    scale = atof(argv[4]);
-  }
-
-  unsigned long long nEvents = std::numeric_limits<unsigned long long>::max();
-  if(argc > 5) {
-    nEvents = atoi(argv[5]);
-  }
-
 
   std::function<std::unique_ptr<OutputerBase>(unsigned int)> outFactory;
-  std::string outputerName = "DummyOutputer";
-  if(argc == 7) {
-    outputerName = argv[6];
-    auto [outputType, outputInfo] = parseCompound(argv[6]);
+  {
+    auto [outputType, outputInfo] = parseCompound(outputerConfig);
     outFactory = outputerFactoryGenerator(outputType, outputInfo);
     if(not outFactory) {
       std::cout <<"unknown output type "<<outputType<<std::endl;
       return 1;
     }
-  } else {
-    outFactory = outputerFactoryGenerator(outputerName, "");
   }
 
-  auto [sourceType, sourceOptions] = parseCompound(argv[1]);
+  auto [sourceType, sourceOptions] = parseCompound(sourceConfig);
   auto sourceFactory = sourceFactoryGenerator(sourceType, sourceOptions);
   if(not sourceFactory) {
     std::cout <<"unknown source type "<<sourceType<<std::endl;
     return 1;
   }
-
+ 
   {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
@@ -181,8 +163,8 @@ int main(int argc, char* argv[]) {
 
   //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
   std::cout <<"----------"<<std::endl;
-  std::cout <<"Source "<<argv[1]<<"\n"
-            <<"Outputer "<<outputerName<<"\n"
+  std::cout <<"Source "<<sourceConfig<<"\n"
+            <<"Outputer "<<outputerConfig<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
 	    <<"time scale "<<scale<<"\n"

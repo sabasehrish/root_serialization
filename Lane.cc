@@ -7,7 +7,7 @@
 
 using namespace cce::tf;
 
-Lane::Lane(unsigned int iIndex, SharedSourceBase* iSource, Waiter const* iWaiter): source_(iSource), waiter_(iWaiter), index_{iIndex} {
+Lane::Lane(unsigned int iIndex, SharedSourceBase* iSource, WaiterBase const* iWaiter): source_(iSource), waiter_(iWaiter), index_{iIndex} {
 }
 
 void Lane::processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer, 

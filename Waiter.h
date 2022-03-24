@@ -6,15 +6,16 @@
 #include "EventIdentifier.h"
 #include "DataProductRetriever.h"
 #include "TaskHolder.h"
+#include "WaiterBase.h"
 
 namespace cce::tf {
-class Waiter {
+  class Waiter : public WaiterBase {
  public:
 
  Waiter(std::size_t iNumberOfDataProducts,  double iScaleFactor):
   scale_{iScaleFactor} {}
 
-    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, TaskHolder iCallback) const {
+    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, TaskHolder iCallback) const final {
       iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index]() {
 	  using namespace std::chrono_literals;
 	  auto sleep = scale*iRetrievers[index].size()*1us;

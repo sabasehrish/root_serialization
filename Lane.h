@@ -9,13 +9,13 @@
 
 #include "SharedSourceBase.h"
 #include "OutputerBase.h"
-#include "Waiter.h"
+#include "WaiterBase.h"
 #include "AtomicRefCounter.h"
 
 namespace cce::tf {
 class Lane {
 public:
-  Lane(unsigned int iIndex, SharedSourceBase* iSource, Waiter const* iWaiter);
+  Lane(unsigned int iIndex, SharedSourceBase* iSource, WaiterBase const* iWaiter);
 
   void processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer, AtomicRefCounter);
 
@@ -37,7 +37,7 @@ private:
 		   AtomicRefCounter counter);
 
   SharedSourceBase* source_;
-  Waiter const* waiter_;
+  WaiterBase const* waiter_;
   long presentEventIndex_ = -1;
   unsigned int index_;
   bool verbose_ = false;

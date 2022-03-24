@@ -12,6 +12,7 @@
 
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
+#include "Waiter.h"
 
 #include "Lane.h"
 
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]) {
       std::cout <<"failed to create source\n";
       return 1;
     }
-    Lane lane(0, source.get(), 0);
+    Lane lane(0, source.get(), nullptr);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
     std::cout <<"begin warmup"<<std::endl;

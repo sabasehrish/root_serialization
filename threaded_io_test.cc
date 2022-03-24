@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
   auto source = sourceFactory(nLanes, nEvents);
   std::unique_ptr<WaiterBase> waiter;
   if(waiterFactory) {
-    waiter = waiterFactory(source->numberOfDataProducts());
+    waiter = waiterFactory(nLanes, source->numberOfDataProducts());
   }
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {

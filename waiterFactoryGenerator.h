@@ -7,7 +7,7 @@
 #include "WaiterBase.h"
 
 namespace cce::tf {
-std::function<std::unique_ptr<WaiterBase>(size_t)>
+std::function<std::unique_ptr<WaiterBase>(unsigned int, size_t)>
 waiterFactoryGenerator(std::string_view iType, std::string_view iOptions);
 }
 #endif

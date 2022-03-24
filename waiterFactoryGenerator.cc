@@ -3,13 +3,13 @@
 #include "configKeyValuePairs.h"
 #include <iostream>
 
-std::function<std::unique_ptr<cce::tf::WaiterBase>(std::size_t)>
+std::function<std::unique_ptr<cce::tf::WaiterBase>(unsigned int, std::size_t)>
 cce::tf::waiterFactoryGenerator(std::string_view iType, std::string_view iOptions) {
-  std::function<std::unique_ptr<WaiterBase>(unsigned int)> waitFactory;
+  std::function<std::unique_ptr<WaiterBase>(unsigned int, std::size_t)> waitFactory;
 
   auto keyValues = cce::tf::configKeyValuePairs(iOptions);
-  waitFactory = [type=std::string(iType), params=ConfigurationParameters(keyValues)](size_t iNDataProducts) {
-    auto maker = WaiterFactory::get()->create(type, iNDataProducts, params);
+  waitFactory = [type=std::string(iType), params=ConfigurationParameters(keyValues)](unsigned int iNLanes, size_t iNDataProducts) {
+    auto maker = WaiterFactory::get()->create(type, iNLanes, iNDataProducts, params);
     if(not maker) {
       return maker;
     }

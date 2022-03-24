@@ -12,10 +12,12 @@ namespace cce::tf {
   class ScaleWaiter : public WaiterBase {
  public:
 
- ScaleWaiter(std::size_t iNumberOfDataProducts,  double iScaleFactor):
+ ScaleWaiter(double iScaleFactor):
   scale_{iScaleFactor} {}
 
-    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, TaskHolder iCallback) const final {
+    void waitAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, long iEventIndex,
+                   std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, 
+                   TaskHolder iCallback) const final {
       iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index]() {
 	  using namespace std::chrono_literals;
 	  auto sleep = scale*iRetrievers[index].size()*1us;
@@ -37,11 +39,11 @@ namespace {
   public:
     Maker(): WaiterMakerBase("ScaleWaiter") {}
 
-    std::unique_ptr<WaiterBase> create(std::size_t iNDataProducts, ConfigurationParameters const& params) const final {
+    std::unique_ptr<WaiterBase> create(unsigned int iNLanes, std::size_t iNDataProducts, ConfigurationParameters const& params) const final {
 
       auto scale = params.get<float>("scale", 0);
 
-      return std::make_unique<ScaleWaiter>(iNDataProducts, scale);
+      return std::make_unique<ScaleWaiter>(scale);
     }
     
   };

@@ -6,7 +6,8 @@
 #include "ConfigurationParameters.h"
 
 namespace cce::tf {
-  using WaiterFactory = ComponentFactory<WaiterBase*(std::size_t , ConfigurationParameters const&)>;
+  // arguments are number of lanes followed by number of data products
+  using WaiterFactory = ComponentFactory<WaiterBase*(unsigned int, std::size_t , ConfigurationParameters const&)>;
   using WaiterMakerBase = WaiterFactory::CMakerBase;
 }
 

@@ -22,7 +22,10 @@ TaskHolder Lane::makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder
   } else {  
     return TaskHolder(group,
                       make_functor_task([index,  holder, this]() {
-                          waiter_->waitAsync(dataProducts(),index, std::move(holder));
+                          waiter_->waitAsync(index_, 
+                                             source_->eventIdentifier(index_, presentEventIndex_),
+                                             presentEventIndex_,
+                                             dataProducts(),index, std::move(holder));
                         }) );
   }
 }

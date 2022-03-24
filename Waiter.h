@@ -11,12 +11,11 @@ namespace cce::tf {
 class Waiter {
  public:
 
- Waiter(unsigned int iDataProductIndex, double iScaleFactor):
-  scale_{iScaleFactor},
-    index_{iDataProductIndex} {}
+ Waiter(std::size_t iNumberOfDataProducts,  double iScaleFactor):
+  scale_{iScaleFactor} {}
 
-    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, TaskHolder iCallback) const {
-      iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index= index_]() {
+    void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, TaskHolder iCallback) const {
+      iCallback.group()->run([iCallback, &iRetrievers, scale=scale_, index]() {
 	  using namespace std::chrono_literals;
 	  auto sleep = scale*iRetrievers[index].size()*1us;
 	  //std::cout <<"sleep "<<sleep.count()<<std::endl;
@@ -27,7 +26,6 @@ class Waiter {
 
  private:
   double scale_;
-  unsigned int index_;
 };
 }
 #endif

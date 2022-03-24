@@ -7,13 +7,7 @@
 
 using namespace cce::tf;
 
-Lane::Lane(unsigned int iIndex, SharedSourceBase* iSource, double iScaleFactor): source_(iSource), index_{iIndex} {
-    if(iScaleFactor >=0.) {
-      waiters_.reserve(source_->numberOfDataProducts());
-      for( int ib = 0; ib< source_->numberOfDataProducts(); ++ib) {
-	waiters_.emplace_back(ib, iScaleFactor);
-      }
-    }
+Lane::Lane(unsigned int iIndex, SharedSourceBase* iSource, Waiter const* iWaiter): source_(iSource), waiter_(iWaiter), index_{iIndex} {
 }
 
 void Lane::processEventsAsync(std::atomic<long>& index, tbb::task_group& group, const OutputerBase& outputer, 
@@ -23,14 +17,12 @@ void Lane::processEventsAsync(std::atomic<long>& index, tbb::task_group& group, 
 
 
 TaskHolder Lane::makeWaiterTask(tbb::task_group& group, size_t index, TaskHolder holder) {
-  if(waiters_.empty()) {
+  if(not waiter_) {
     return holder;
   } else {  
     return TaskHolder(group,
                       make_functor_task([index,  holder, this]() {
-                          auto laneIndex = this->index_;
-                          auto& w = waiters_[index];
-                          w.waitAsync(dataProducts(),std::move(holder));
+                          waiter_->waitAsync(dataProducts(),index, std::move(holder));
                         }) );
   }
 }

@@ -124,8 +124,12 @@ int main(int argc, char* argv[]) {
   auto out = outFactory(nLanes);
   auto source = sourceFactory(nLanes, nEvents);
   lanes.reserve(nLanes);
+  std::unique_ptr<Waiter> waiter;
+  if(scale >= 0.) {
+    waiter = std::make_unique<Waiter>(source->numberOfDataProducts(), scale);
+  }
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, source.get(), scale);
+    lanes.emplace_back(i, source.get(), waiter.get());
     out->setupForLane(i, lanes.back().dataProducts());
   }
 

@@ -29,15 +29,12 @@ typedef struct H5D_rw_multi_t
 #endif
 
 typedef struct multidataset_array {
-    char *name;
-    hsize_t *start;
-    hsize_t *end;
+    std::vector<hsize_t> start;
+    std::vector<hsize_t> end;
     hsize_t last_end;
     hid_t did;
     hid_t mtype;      /* memory datatype ID */
-    char **temp_mem;
-    int request_size;
-    int request_size_limit;
+    std::vector<char*> temp_mem;
 } multidataset_array;
 
 int set_max_batch_size(int max_batch_size);

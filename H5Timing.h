@@ -9,18 +9,29 @@
 #undef H5_TIMING_ENABLE
 
 #ifdef H5_TIMING_ENABLE
-typedef struct{
+typedef struct H5Timer{
     double start;
     double end;
     size_t data_size;
-    char *name;
+    std::string name;
 } H5Timer;
 
-typedef struct{
-    H5Timer *timer_array;
-    size_t max_size;
-    size_t size;
-} H5TimerArray;
+typedef struct H5TimerClass{
+    std::vector<H5Timer> dataset_timers;
+    std::vector<H5Timer> dataset_sz_timers;
+    std::vector<H5Timer> dataset_read_timers;
+    std::vector<H5Timer> dataset_sz_read_timers;
+    int H5Dwrite_count;
+    int H5Dread_count;
+
+    double H5Dclose_time;
+    double wrap_requests_time;
+    double merge_requests_time;
+    double H5Dwrite_time;
+    double H5Dread_time;
+    double total_start_time;
+    double total_end_time;
+} H5TimerClass;
 
 int init_timers();
 int register_timer_start(double *start_time);

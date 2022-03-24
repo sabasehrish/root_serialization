@@ -17,6 +17,11 @@ namespace cce::tf {
   }
 
   template<>
+    float ConfigurationParameters::convert<float>(std::string const& iValue) {
+    return std::stof(iValue);
+  }
+
+  template<>
   bool ConfigurationParameters::convert<bool>(std::string const& iValue) {
     return (iValue.empty()) or (
                                      (iValue[0] == 't') or (iValue[0] == 'T') or (iValue[0] == 'y') or (iValue[0] == 'Y')

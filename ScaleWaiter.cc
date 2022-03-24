@@ -1,5 +1,3 @@
-#if !defined(Waiter_h)
-#define Waiter_h
 
 #include <vector>
 #include <thread>
@@ -7,12 +5,14 @@
 #include "DataProductRetriever.h"
 #include "TaskHolder.h"
 #include "WaiterBase.h"
+#include "WaiterFactory.h"
+
 
 namespace cce::tf {
-  class Waiter : public WaiterBase {
+  class ScaleWaiter : public WaiterBase {
  public:
 
- Waiter(std::size_t iNumberOfDataProducts,  double iScaleFactor):
+ ScaleWaiter(std::size_t iNumberOfDataProducts,  double iScaleFactor):
   scale_{iScaleFactor} {}
 
     void waitAsync(std::vector<DataProductRetriever> const& iRetrievers, unsigned int index, TaskHolder iCallback) const final {
@@ -29,4 +29,22 @@ namespace cce::tf {
   double scale_;
 };
 }
-#endif
+
+namespace {
+
+  using namespace cce::tf;
+  class Maker : public WaiterMakerBase {
+  public:
+    Maker(): WaiterMakerBase("ScaleWaiter") {}
+
+    std::unique_ptr<WaiterBase> create(std::size_t iNDataProducts, ConfigurationParameters const& params) const final {
+
+      auto scale = params.get<float>("scale", 0);
+
+      return std::make_unique<ScaleWaiter>(iNDataProducts, scale);
+    }
+    
+  };
+
+  Maker s_maker;
+}

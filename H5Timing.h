@@ -6,6 +6,9 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <vector>
+#include <map>
+#include <string>
 #undef H5_TIMING_ENABLE
 
 #ifdef H5_TIMING_ENABLE

@@ -42,14 +42,14 @@ int init_multidataset() {
 
 int finalize_multidataset() {
     int i, j;
-    std::map<std::string, multidataset_array>::iterator it;
+    std::map<std::string, multidataset_array*>::iterator it;
     std::vector<char*>::iterator it2;
-    for ( it = multidatasets.begin(); it != multidatasets.end(); ++it ) {
-        for ( it2 = it->second.temp_mem.begin(); it2 != it->second.temp_mem.end(); ++it2 ) {
+    for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
+        for ( it2 = it->second->temp_mem.begin(); it2 != it->second->temp_mem.end(); ++it2 ) {
             free(*it2);
         }
-        if (it->second.did != -1) {
-            H5Dclose(it->second.did);
+        if (it->second->did != -1) {
+            H5Dclose(it->second->did);
         }
         free(it->second);
     }
@@ -85,13 +85,13 @@ int get_total_n_events() {
 
 static hid_t get_dataset_id(const char* name, hid_t gid) {
     std::string s(name);
-    if ( multidatasets.find(s) == multidatasets.end()) {
-        multi_datasets[s].did = H5Dopen2(gid, name, H5P_DEFAULT);
+    if ( multi_datasets.find(s) == multi_datasets.end()) {
+        multi_datasets[s]->did = H5Dopen2(gid, name, H5P_DEFAULT);
     }
-    return multi_datasets[s].did;
+    return multi_datasets[s]->did;
 }
 
-static int wrap_hdf5_spaces(int total_requests, std::vector<hsize_t> &start, std::vector<hsize_t> &end, hid_t did, hid_t* dsid_ptr, hid_t *msid_ptr) {
+static int wrap_hdf5_spaces(int total_requests, hsize_t *start, hsize_t *end, hid_t did, hid_t* dsid_ptr, hid_t *msid_ptr) {
     const hsize_t ndims = 1;
     hsize_t old_dims[ndims]; //our datasets are 1D
     hsize_t new_dims[ndims];
@@ -138,12 +138,11 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
     size_t esize = H5Tget_size (mtype) * (end - start);
     std::map<std::string, multidataset_array*>::iterator it;
 
-    it = multi_datasets->find(s);
-    if ( it == multi_datasets->end()) {
-        multidataset_array *multidataset = (multidataset_array *) malloc(sizeof(multidataset_array));
-        multidataset->did = H5Dopen2(gid, name, H5P_DEFAULT);
-        multi_datasets->insert(std::pair<std::string, multidataset_array*>(s, multidataset));
-        it = multi_datasets->find(s);
+    it = multi_datasets.find(s);
+    if ( it == multi_datasets.end()) {
+        multidataset_array *multi_dataset = (multidataset_array *) malloc(sizeof(multidataset_array));
+        multi_datasets.insert(std::pair<std::string, multidataset_array*>(s, multi_dataset));
+        it = multi_datasets.find(s);
     }
     if (it->second->did == -1 ) {
         it->second->did = H5Dopen2(gid, name, H5P_DEFAULT);
@@ -164,8 +163,8 @@ int register_multidataset_request_append(const char *name, hid_t gid, void *buf,
     std::map<std::string, multidataset_array*>::iterator it;
     hsize_t start, end;
 
-    it = multi_datasets->find(s);
-    if ( it == multi_datasets->end() ){
+    it = multi_datasets.find(s);
+    if ( it == multi_datasets.end() ){
         start = it->second->last_end;
         end = it->second->last_end + data_size;
     } else {
@@ -240,7 +239,7 @@ int flush_multidatasets() {
     #endif
     multi_datasets_temp = (H5D_rw_multi_t*) malloc(sizeof(H5D_rw_multi_t) * dataset_size);
 
-    for ( it = multi_datasets.begin(); it != multi_datasets.begin(); ++it ) {
+    for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
         if (it->second->did == -1) {
             continue;
         }
@@ -260,7 +259,7 @@ int flush_multidatasets() {
 
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets_temp);
 
-    for ( it = multi_datasets.begin(); it != multi_datasets.begin(); ++it ) {
+    for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
         if (it->second->did == -1) {
             continue;
         }
@@ -274,7 +273,7 @@ int flush_multidatasets() {
     free(multi_datasets_temp);
 #else
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
-    for ( it = multi_datasets.begin(); it != multi_datasets.begin(); ++it ) {
+    for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
         if (it->second->did == -1) {
             continue;
         }

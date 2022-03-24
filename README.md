@@ -291,6 +291,10 @@ or
 For each data product this waiter sleeps for an amount of time proportional to the `size` property of the data product. The configuration options are:
 - scale: used to convert the size property of the _event_ data products into microseconds used for a call to sleep. A value of 0 means no sleeping.
 
+#### EventSleepWaiter
+This waiter reads a file containing the total time it should sleep for each event. If the number of events in the file is less than the total number of the job, the waiter will repeat the same sleep times. The order of the sleep times is guaranteed to line up with the order of Events coming from the Source. The waiter divides the event sleep time equally among all the data products.
+The configuration options are:
+- filename: the name of the file containing the event sleep times. The event entries must be separated by white space. The sleep times are in microseconds. 
 
 ## unroll_test
 

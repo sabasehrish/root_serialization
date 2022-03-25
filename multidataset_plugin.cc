@@ -4,7 +4,7 @@
 static std::map<std::string, multidataset_array*> multi_datasets;
 
 int init_multidataset() {
-    p = getenv("HEP_IO_TYPE");
+    char *p = getenv("HEP_IO_TYPE");
     if ( p != NULL ) {
         set_hdf5_method(atoi(p));
     } else {

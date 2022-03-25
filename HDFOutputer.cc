@@ -53,8 +53,10 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
   return 0;
 }
 
-HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize) : 
+HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, int iChunkSize) : 
+
   file_(hdf5::File::create(iFileName.c_str())),
+  chunkSize_{iChunkSize},
   maxBatchSize_{iBatchSize},
   serializers_{std::size_t(iNLanes)},
   serialTime_{std::chrono::microseconds::zero()},
@@ -96,6 +98,16 @@ void HDFOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iE
 void HDFOutputer::printSummary() const  {
   std::cout <<"HDFOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
     "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
+
+  auto start = std::chrono::high_resolution_clock::now();
+  if (batch_ != 0) {
+    //flush the remaining data to the file
+    const_cast<HDFOutputer*>(this)->writeBatch();
+  }
+  auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+  
+  std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
+
   summarize_serializers(serializers_);
 }
 
@@ -137,6 +149,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
+
   if (total_n_events > 0) {
     total_n_events--;
   }
@@ -178,6 +191,7 @@ HDFOutputer::output(EventIdentifier const& iEventID,
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
 #endif
     }
+
     batch_ = 0;
     products_.clear();
     events_.clear();
@@ -192,12 +206,25 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   set_total_n_events(total_n_events);
 }
 
+void
+HDFOutputer::writeBatch() {
+  hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
+  write_ds<int>(gid, "Event_IDs", events_);
+  auto const dpi_size = dataProductIndices_.size();
+  for(auto & [name, index]: dataProductIndices_) {
+    auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
+    write_ds<char>(gid, name, prods);
+    auto s = name+"_sz";
+    write_ds<size_t>(gid, s, sizes);
+  }
+}
+
 void 
 HDFOutputer::writeFileHeader(EventIdentifier const& iEventID, 
                              std::vector<SerializerWrapper> const& iSerializers) {
   constexpr hsize_t ndims = 1;
   constexpr hsize_t     dims[ndims] = {0};
-  constexpr hsize_t     chunk_dims[ndims] = {128};
+  const hsize_t     chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
   constexpr hsize_t     max_dims[ndims] = {H5S_UNLIMITED};
   auto space = hdf5::Dataspace::create_simple (ndims, dims, max_dims); 
   auto prop   = hdf5::Property::create();
@@ -238,8 +265,9 @@ namespace {
       }
 
       auto batchSize = params.get<int>("batchSize", 1);
+      auto chunkSize = params.get<int>("hdfchunkSize", 1048576);
 
-      return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize);
+      return std::make_unique<HDFOutputer>(*fileName, iNLanes, batchSize, chunkSize);
     }
   };
 

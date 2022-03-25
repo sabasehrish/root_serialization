@@ -18,13 +18,17 @@ inline hid_t string_type() {
 
 template<typename T> constexpr hid_t H5filetype_for = -1;
 template<> inline hid_t H5filetype_for<int> = H5T_STD_I32LE;
+template<> inline hid_t H5filetype_for<unsigned int> = H5T_STD_U32LE;
 template<> inline hid_t H5filetype_for<char> = H5T_STD_I8LE;
 template<> inline hid_t H5filetype_for<size_t> = H5T_STD_U64LE;
+template<> inline hid_t H5filetype_for<unsigned long long> = H5T_STD_U64LE;
 
 template<typename T> constexpr hid_t H5memtype_for = -1;
 template<> inline hid_t H5memtype_for<int> = H5T_NATIVE_INT;
+template<> inline hid_t H5memtype_for<unsigned int> = H5T_NATIVE_UINT;
 template<> inline hid_t H5memtype_for<char> = H5T_NATIVE_CHAR;
 template<> inline hid_t H5memtype_for<size_t> = H5T_NATIVE_ULLONG;
+template<> inline hid_t H5memtype_for<unsigned long long> = H5T_NATIVE_ULLONG;
 template<> inline hid_t H5memtype_for<std::string> = string_type();
 
 //wrapper for File

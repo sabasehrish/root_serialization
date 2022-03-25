@@ -142,8 +142,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-  if (batch_ == max_batch_size) {
-    writeBatch()
+  if (batch_ == maxBatchSize_) {
+    writeBatch();
     batch_ = 0;
     products_.clear();
     events_.clear();

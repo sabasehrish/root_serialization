@@ -132,13 +132,6 @@ get_prods_and_sizes(std::vector<product_t> & input,
 void 
 HDFOutputer::output(EventIdentifier const& iEventID, 
                     std::vector<SerializerWrapper> const& iSerializers) {
-#ifdef H5_TIMING_ENABLE
-  size_t total_data_size = 0;
-#endif
-  int method = get_hdf5_method();
-  int max_batch_size = get_max_batch_size();
-  int total_n_events = get_total_n_events();
-
   if(firstTime_) {
     writeFileHeader(iEventID, iSerializers);
     firstTime_ = false;
@@ -149,16 +142,24 @@ HDFOutputer::output(EventIdentifier const& iEventID,
   events_.push_back(iEventID.event);
 
   ++batch_;
-
-  if (total_n_events > 0) {
-    total_n_events--;
+  if (batch_ == max_batch_size) {
+    writeBatch()
+    batch_ = 0;
+    products_.clear();
+    events_.clear();
   }
+}
 
-  if (batch_ == max_batch_size || total_n_events == 0) {
-    hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
-    write_ds<int>(gid, "Event_IDs", events_);
-    auto const dpi_size = dataProductIndices_.size();
-    for(auto & [name, index]: dataProductIndices_) {
+void
+HDFOutputer::writeBatch() {
+  int method = get_hdf5_method();
+#ifdef H5_TIMING_ENABLE
+  size_t total_data_size = 0;
+#endif
+  hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
+  write_ds<int>(gid, "Event_IDs", events_);
+  auto const dpi_size = dataProductIndices_.size();
+  for(auto & [name, index]: dataProductIndices_) {
       auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
 #ifdef H5_TIMING_ENABLE
       register_dataset_timer_start(name.c_str());
@@ -190,33 +191,16 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 #ifdef H5_TIMING_ENABLE
       total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
 #endif
-    }
-
-    batch_ = 0;
-    products_.clear();
-    events_.clear();
-#ifdef H5_TIMING_ENABLE
-    register_dataset_timer_start("flush_all");
-#endif
-    flush_multidatasets();
-#ifdef H5_TIMING_ENABLE
-    register_dataset_timer_end(total_data_size);
-#endif
   }
-  set_total_n_events(total_n_events);
-}
 
-void
-HDFOutputer::writeBatch() {
-  hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
-  write_ds<int>(gid, "Event_IDs", events_);
-  auto const dpi_size = dataProductIndices_.size();
-  for(auto & [name, index]: dataProductIndices_) {
-    auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
-    write_ds<char>(gid, name, prods);
-    auto s = name+"_sz";
-    write_ds<size_t>(gid, s, sizes);
-  }
+#ifdef H5_TIMING_ENABLE
+  register_dataset_timer_start("flush_all");
+#endif
+  flush_multidatasets();
+#ifdef H5_TIMING_ENABLE
+  register_dataset_timer_end(total_data_size);
+#endif
+
 }
 
 void 

@@ -4,19 +4,12 @@
 static std::map<std::string, multidataset_array*> multi_datasets;
 
 int init_multidataset() {
-    char *p = getenv("HEP_MAX_BATCH_SIZE");
-    if ( p != NULL ) {
-        set_max_batch_size(atoi(p));
-    } else {
-        set_max_batch_size(2);
-    }
     p = getenv("HEP_IO_TYPE");
     if ( p != NULL ) {
         set_hdf5_method(atoi(p));
     } else {
         set_hdf5_method(1);
     }
-    set_total_n_events(-1);
     return 0;
 }
 
@@ -39,15 +32,6 @@ int finalize_multidataset() {
     return 0;
 }
 
-int set_max_batch_size(int max_batch_size) {
-    max_batch_size_g = max_batch_size;
-    return 0;
-}
-
-int get_max_batch_size() {
-    return max_batch_size_g;
-}
-
 int set_hdf5_method(int hdf5_method) {
     hdf5_method_g = hdf5_method;
     return 0;
@@ -55,15 +39,6 @@ int set_hdf5_method(int hdf5_method) {
 
 int get_hdf5_method() {
     return hdf5_method_g;
-}
-
-int set_total_n_events(int total_n_events) {
-    total_n_events_g = total_n_events;
-    return 0;
-}
-
-int get_total_n_events() {
-    return total_n_events_g;
 }
 
 static hid_t get_dataset_id(const char* name, hid_t gid) {

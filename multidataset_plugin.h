@@ -37,25 +37,10 @@ typedef struct multidataset_array {
     std::vector<char*> *temp_mem;
 } multidataset_array;
 
-int set_max_batch_size(int max_batch_size);
-int get_max_batch_size();
 int set_hdf5_method(int hdf5_method);
 int get_hdf5_method();
-int set_total_n_events(int total_n_events);
-int get_total_n_events();
-
 int init_multidataset();
 int finalize_multidataset();
-//hid_t get_dataset_id(const char* name, hid_t gid);
-/*
-int register_dataset_recycle(hid_t did);
-int register_dataspace_recycle(hid_t dsid);
-int register_memspace_recycle(hid_t msid);
-int register_multidataset(const char* name, void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write);
-int dataset_recycle_all();
-int dataspace_recycle_all();
-int memspace_recycle_all();
-*/
 int register_multidataset_request_append(const char *name, hid_t gid, void *buf, hsize_t data_size, hid_t mtype);
 int flush_multidatasets();
 //int check_write_status();

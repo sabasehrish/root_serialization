@@ -9,21 +9,21 @@
 #include <vector>
 #include <map>
 #include <string>
-#undef H5_TIMING_ENABLE
+#define H5_TIMING_ENABLE
 
 #ifdef H5_TIMING_ENABLE
 typedef struct H5Timer{
     double start;
     double end;
     size_t data_size;
-    std::string name;
+    char *name;
 } H5Timer;
 
 typedef struct H5TimerClass{
-    std::vector<H5Timer> dataset_timers;
-    std::vector<H5Timer> dataset_sz_timers;
-    std::vector<H5Timer> dataset_read_timers;
-    std::vector<H5Timer> dataset_sz_read_timers;
+    std::vector<H5Timer> *dataset_timers;
+    std::vector<H5Timer> *dataset_sz_timers;
+    std::vector<H5Timer> *dataset_read_timers;
+    std::vector<H5Timer> *dataset_sz_read_timers;
     int H5Dwrite_count;
     int H5Dread_count;
 

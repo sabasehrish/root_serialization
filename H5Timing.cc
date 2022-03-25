@@ -7,10 +7,15 @@ static H5TimerClass* timer_class;
 int init_timers() {
     struct timeval temp_time;
 
-    timer_class = malloc(sizeof(H5TimerClass));
+    timer_class = (H5TimerClass*) malloc(sizeof(H5TimerClass));
 
     gettimeofday(&temp_time, NULL);
     timer_class->total_start_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
+
+    timer_class->dataset_timers = new std::vector<H5Timer>;
+    timer_class->dataset_sz_timers = new std::vector<H5Timer>;
+    timer_class->dataset_read_timers = new std::vector<H5Timer>;
+    timer_class->dataset_sz_read_timers = new std::vector<H5Timer>;
 
     timer_class->H5Dwrite_count = 0;
     timer_class->H5Dread_count = 0;
@@ -29,18 +34,16 @@ int init_timers() {
     struct timeval temp_time;                                       \
     H5Timer temp;                              \
     gettimeofday(&temp_time, NULL); \
-    std::string s(name);   \
     temp.start = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0; \
-    temp.name = s; \
-    strcpy(temp.name, name); \
-    timers.push_back(temp);          \
+    temp.name = strdup(name); \
+    timers->push_back(temp);          \
 }
 
 #define TIMER_END(timers, data_size) { \
     struct timeval temp_time;     \
     gettimeofday(&temp_time, NULL); \
-    timers.back()->end = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0; \
-    timers.back()->data_size = data_size; \
+    timers->back().end = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0; \
+    timers->back().data_size = data_size; \
 }
 
 int register_timer_start(double *start_time) {
@@ -125,7 +128,7 @@ int increment_H5Dread() {
     return 0;
 }
 
-static int record_timer(std::vector<H5Timer> &timer, const char* filename) {
+static int record_timer(std::vector<H5Timer> *timer, const char* filename) {
     FILE *stream;
     size_t i, total_mem_size;
     double total_time = 0, min_time = -1, max_time = -1;
@@ -133,18 +136,20 @@ static int record_timer(std::vector<H5Timer> &timer, const char* filename) {
     fprintf(stream, "dataset_name,start,end,elapse,data_size\n");
     total_mem_size = 0;
     for ( i = 0; i < timer->size(); ++i ) {
-        fprintf(stream, "%s, %lf, %lf, %lf, %zu\n", timer[i].name, timer[i].start, timer[i].end, (timer[i].end - timer[i].start)/1000000, timer[i].data_size);
-        total_time += (timer[i].end - timer[i].start)/1000000;
-        if (min_time == -1 || min_time > timer[i].start) {
-            min_time = timer[i].start;
+        fprintf(stream, "%s, %lf, %lf, %lf, %zu\n", timer[0][i].name, timer[0][i].start, timer[0][i].end, (timer[0][i].end - timer[0][i].start)/1000000, timer[0][i].data_size);
+        total_time += (timer[0][i].end - timer[0][i].start)/1000000;
+        if (min_time == -1 || min_time > timer[0][i].start) {
+            min_time = timer[0][i].start;
         }
-        if (max_time == -1 || max_time < timer[i].end) {
-            max_time = timer[i].end;
+        if (max_time == -1 || max_time < timer[0][i].end) {
+            max_time = timer[0][i].end;
         }
-        total_mem_size += timer[i].data_size;
+        total_mem_size += timer[0][i].data_size;
+	free(timer[0][i].name);
     }
     fprintf(stream, "total,%lf,%lf,%lf,%zu\n", min_time, max_time, total_time, total_mem_size);
     fclose(stream);
+    timer->clear();
     return 0;
 }
 
@@ -171,7 +176,7 @@ int finalize_timers() {
     output_results();
 
     gettimeofday(&temp_time, NULL);
-    total_end_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
+    timer_class->total_end_time = (temp_time.tv_usec + temp_time.tv_sec * 1000000) + .0;
     printf("total program time is %lf, H5Dwrite time = %lf, H5Dread time = %lf\n", (timer_class->total_end_time - timer_class->total_start_time) / 1000000, timer_class->H5Dwrite_time / 1000000, timer_class->H5Dread_time / 1000000);
     printf("merge requests time = %lf, wrap requests time = %lf, H5Dclose = %lf\n", timer_class->merge_requests_time / 1000000, timer_class->wrap_requests_time / 1000000, timer_class->H5Dclose_time / 1000000);
 

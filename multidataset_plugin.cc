@@ -2,26 +2,6 @@
 
 
 static std::map<std::string, multidataset_array*> multi_datasets;
-/*
-static hid_t *dataset_recycle;
-static hid_t *memspace_recycle;
-static hid_t *dataspace_recycle;
-*/
-static int dataset_size;
-static int dataset_size_limit;
-
-/*
-static int dataset_recycle_size;
-static int dataset_recycle_size_limit;
-static int dataspace_recycle_size;
-static int dataspace_recycle_size_limit;
-static int memspace_recycle_size;
-static int memspace_recycle_size_limit;
-*/
-hsize_t total_data_size;
-
-#define MEM_SIZE 2048
-#define MAX_DATASET 65536
 
 int init_multidataset() {
     char *p = getenv("HEP_MAX_BATCH_SIZE");
@@ -45,12 +25,15 @@ int finalize_multidataset() {
     std::map<std::string, multidataset_array*>::iterator it;
     std::vector<char*>::iterator it2;
     for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
-        for ( it2 = it->second->temp_mem.begin(); it2 != it->second->temp_mem.end(); ++it2 ) {
+        for ( it2 = it->second->temp_mem->begin(); it2 != it->second->temp_mem->end(); ++it2 ) {
             free(*it2);
         }
         if (it->second->did != -1) {
             H5Dclose(it->second->did);
         }
+	delete it->second->start;
+	delete it->second->end;
+	delete it->second->temp_mem;
         free(it->second);
     }
     return 0;
@@ -141,16 +124,20 @@ int register_multidataset_request(const char *name, hid_t gid, void *buf, hsize_
     it = multi_datasets.find(s);
     if ( it == multi_datasets.end()) {
         multidataset_array *multi_dataset = (multidataset_array *) malloc(sizeof(multidataset_array));
-        multi_datasets.insert(std::pair<std::string, multidataset_array*>(s, multi_dataset));
-        it = multi_datasets.find(s);
+	multi_dataset->start = new std::vector<hsize_t>;
+	multi_dataset->end =new std::vector<hsize_t>;
+	multi_dataset->temp_mem = new std::vector<char*>;
+        multi_datasets[s] = multi_dataset;
+	it = multi_datasets.find(s);
+	it->second->did = -1;
     }
     if (it->second->did == -1 ) {
         it->second->did = H5Dopen2(gid, name, H5P_DEFAULT);
     }
-    it->second->start.push_back(start);
-    it->second->end.push_back(end);
+    it->second->start->push_back(start);
+    it->second->end->push_back(end);
     temp_mem = (char*) malloc(esize);
-    it->second->temp_mem.push_back(temp_mem);
+    it->second->temp_mem->push_back(temp_mem);
     memcpy(temp_mem, buf, esize);
     it->second->last_end = end;
     it->second->mtype = mtype;
@@ -162,85 +149,83 @@ int register_multidataset_request_append(const char *name, hid_t gid, void *buf,
     std::string s(name);
     std::map<std::string, multidataset_array*>::iterator it;
     hsize_t start, end;
-
     it = multi_datasets.find(s);
-    if ( it == multi_datasets.end() ){
+    if ( it != multi_datasets.end() ){
         start = it->second->last_end;
         end = it->second->last_end + data_size;
     } else {
         start = 0;
         end = data_size;
     }
-
     register_multidataset_request(name, gid, buf, start, end, mtype);
     return 0;
 }
 
-static int merge_requests(std::vector<hsize_t> &start, std::vector<hsize_t> &end, int request_size, std::vector<char*> &buf, hsize_t **new_start, hsize_t **new_end, char** new_buf, hid_t mtype, int *request_size_ptr) {
+static int merge_requests(std::vector<hsize_t> *start, std::vector<hsize_t> *end, int request_size, std::vector<char*> *buf, hsize_t **new_start, hsize_t **new_end, char** new_buf, hid_t mtype, int *request_size_ptr) {
     int i, index;
     int merged_requests = request_size;
     char* ptr;
     size_t esize = H5Tget_size (mtype);
-    size_t total_data_size = end[0] - start[0];
+    size_t total_data_size = end[0][0] - start[0][0];
 
     for ( i = 1; i < request_size; ++i ) {
-        total_data_size += end[i] - start[i];
-        if ( end[i-1] == start[i] ) {
+        total_data_size += end[0][i] - start[0][i];
+        if ( end[0][i-1] == start[0][i] ) {
             merged_requests--;
         }
     }
+
     *new_start = (hsize_t*) malloc(sizeof(hsize_t) * merged_requests * 2);
     *new_end = new_start[0] + merged_requests;
 
     index = 0;
-    new_start[0][0] = start[0];
-    new_end[0][0] = end[0];
-
+    new_start[0][0] = start[0][0];
+    new_end[0][0] = end[0][0];
 
     *new_buf = (char*) malloc(esize * total_data_size);
     ptr = *new_buf;
-    memcpy(ptr, buf[0], (end[0] - start[0]) * esize);
-    ptr += (end[0] - start[0]) * esize;
-    free(buf[0]);
+    memcpy(ptr, buf[0][0], (end[0][0] - start[0][0]) * esize);
+    ptr += (end[0][0] - start[0][0]) * esize;
+    free(buf[0][0]);
     for ( i = 1; i < request_size; ++i ) {
-        memcpy(ptr, buf[i], (end[i] - start[i]) * esize);
-        ptr += (end[i] - start[i]) * esize;
-        free(buf[i]);
+        memcpy(ptr, buf[0][i], (end[0][i] - start[0][i]) * esize);
+        ptr += (end[0][i] - start[0][i]) * esize;
+        free(buf[0][i]);
 
-        if ( end[i-1] < start[i] ) {
+        if ( end[0][i-1] < start[0][i] ) {
             index++;
-            new_start[0][index] = start[i];
+            new_start[0][index] = start[0][i];
         }
-        new_end[0][index] = end[i];
+        new_end[0][index] = end[0][i];
     }
     *request_size_ptr = merged_requests;
     return 0;
 }
 
 int flush_multidatasets() {
-    int i, j;
+    int i;
     size_t esize;
     hsize_t dims[H5S_MAX_RANK], mdims[H5S_MAX_RANK];
     H5D_rw_multi_t *multi_datasets_temp;
     hsize_t *new_start, *new_end;
     int new_request_size;
     hid_t msid, dsid;
-    int data_size = multi_datasets.size();
+    int dataset_size = multi_datasets.size();
     std::map<std::string, multidataset_array*>::iterator it;
     char **temp_buf = (char**) malloc(sizeof(char*) * dataset_size);
 #ifdef H5_TIMING_ENABLE
     double start_time;
 #endif
-
+    i = 0;
     //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
 #if ENABLE_MULTIDATASET==1
     #ifdef H5_TIMING_ENABLE
     increment_H5Dwrite();
     #endif
     multi_datasets_temp = (H5D_rw_multi_t*) malloc(sizeof(H5D_rw_multi_t) * dataset_size);
-
     for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
         if (it->second->did == -1) {
+	    i++;
             continue;
         }
 
@@ -249,12 +234,13 @@ int flush_multidatasets() {
         increment_H5Dwrite();
         #endif
 
-        merge_requests(it->second->start, it->second->end, it->second->start.size(), it->second->temp_mem, &new_start, &new_end, &(temp_buf[i]), it->second->mtype, &new_request_size);
+        merge_requests(it->second->start, it->second->end, it->second->start->size(), it->second->temp_mem, &new_start, &new_end, &(temp_buf[i]), it->second->mtype, &new_request_size);
         multi_datasets_temp[i].dset_id = it->second->did;
         multi_datasets_temp[i].mem_type_id = it->second->mtype;
         multi_datasets_temp[i].u.wbuf = temp_buf[i];
 
         wrap_hdf5_spaces(new_request_size, new_start, new_end, it->second->did, &(multi_datasets_temp[i].dset_space_id), &(multi_datasets_temp[i].mem_space_id));
+	i++;
     }
 
     H5Dwrite_multi(H5P_DEFAULT, dataset_size, multi_datasets_temp);
@@ -263,10 +249,12 @@ int flush_multidatasets() {
         if (it->second->did == -1) {
             continue;
         }
-        H5Sclose(it->second->dset_space_id);
-        H5Sclose(it->second->mem_space_id);
-        H5Dclose(it->second->did);
-        it->second->did = -1;
+        H5Sclose(multi_datasets_temp[i].dset_space_id);
+        H5Sclose(multi_datasets_temp[i].mem_space_id);
+        H5Dclose(multi_datasets_temp[i].dset_id);
+	delete it->second->start;
+	delete it->second->end;
+	delete it->second->temp_mem;
         free(temp_buf[i]);
     }
 
@@ -275,6 +263,7 @@ int flush_multidatasets() {
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
     for ( it = multi_datasets.begin(); it != multi_datasets.end(); ++it ) {
         if (it->second->did == -1) {
+	    i++;
             continue;
         }
         #ifdef H5_TIMING_ENABLE
@@ -283,11 +272,11 @@ int flush_multidatasets() {
 #ifdef H5_TIMING_ENABLE
         register_timer_start(&start_time);
 #endif
-        merge_requests(it->second->start, it->second->end, it->second->start.size(), it->second->temp_mem, &new_start, &new_end, &(temp_buf[i]), it->second->mtype, &new_request_size);
+        merge_requests(it->second->start, it->second->end, it->second->start->size(), it->second->temp_mem, &new_start, &new_end, temp_buf + i, it->second->mtype, &new_request_size);
+
 #ifdef H5_TIMING_ENABLE
         register_merge_requests_timer_end(start_time);
 #endif
-
 #ifdef H5_TIMING_ENABLE
         register_timer_start(&start_time);
 #endif
@@ -313,10 +302,14 @@ int flush_multidatasets() {
 #ifdef H5_TIMING_ENABLE
         register_H5Dclose_timer_end(start_time);
 #endif
-        it->second->did = -1;
+	delete it->second->start;
+	delete it->second->end;
+	delete it->second->temp_mem;
         free(temp_buf[i]);
+	i++;
     }
 #endif
+    multi_datasets.clear();
 
     free(temp_buf);
     return 0;

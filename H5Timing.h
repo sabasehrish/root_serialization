@@ -9,7 +9,7 @@
 #include <vector>
 #include <map>
 #include <string>
-#define H5_TIMING_ENABLE
+#undef H5_TIMING_ENABLE
 
 #ifdef H5_TIMING_ENABLE
 typedef struct H5Timer{

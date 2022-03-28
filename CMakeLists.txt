@@ -54,8 +54,6 @@ target_link_libraries(batchevents_classes_dict PUBLIC ROOT::RIO ROOT::Net)
 
 add_executable(threaded_io_test
   DeserializeStrategy.cc
-  multidataset_plugin.cc
-  H5Timing.cc
   EmptySource.cc
   DummyOutputer.cc
   SerializeOutputer.cc
@@ -100,8 +98,6 @@ target_link_libraries(threaded_io_test
                               Threads::Threads
                               configKeys
                               sequence_classes_dict
-                              hdf5_hl
-                              hdf5
                               batchevents_classes_dict
                               zstd::libzstd_shared)
 
@@ -166,13 +162,15 @@ if(ENABLE_HDF5)
     message(FATAL_ERROR "You must provide HDF5_DIR variable")
   endif()
   target_sources(threaded_io_test PRIVATE
+    multidataset_plugin.cc
+    H5Timing.cc
     HDFEventOutputer.cc
     HDFBatchEventsOutputer.cc
     HDFOutputer.cc
     HDFSource.cc)
   target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
   target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
-  target_link_libraries(threaded_io_test PRIVATE hdf5)
+  target_link_libraries(threaded_io_test PRIVATE hdf5 hdf5_hl)
   add_test(NAME HDFOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o HDFOutputer=test_empty.h5)
   add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s HDFSource=test_prod.h5 -t 1 -n 10 -o TestProductsOutputer")
   add_test(NAME HDFEventOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o HDFEventOutputer=test_empty_event.h5)

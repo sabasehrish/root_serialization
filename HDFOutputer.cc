@@ -54,6 +54,10 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
 }
 
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, int iChunkSize) : 
+#ifdef H5_TIMING_ENABLE
+  init_timers();
+#endif
+  init_multidataset();
 
   file_(hdf5::File::create(iFileName.c_str())),
   chunkSize_{iChunkSize},
@@ -72,9 +76,14 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-   products_.reserve(iDPs.size() * maxBatchSize_);
-   events_.reserve(maxBatchSize_);
-   offsets_.reserve(maxBatchSize_);
+  products_.reserve(iDPs.size() * maxBatchSize_);
+  events_.reserve(maxBatchSize_);
+  offsets_.reserve(maxBatchSize_);
+
+  finalize_multidataset();
+#ifdef H5_TIMING_ENABLE
+  finalize_timers();
+#endif
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {

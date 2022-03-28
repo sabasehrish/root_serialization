@@ -39,14 +39,7 @@ namespace {
 
 int main(int argc, char* argv[]) {
   using namespace cce::tf;
-
   CLI::App app{"test different I/O systems under threading"};
-
-#ifdef H5_TIMING_ENABLE
-  init_timers();
-#endif
-
-  init_multidataset();
 
   std::string sourceConfig;
   app.add_option("-s,--source",sourceConfig,"configure Source")->required();
@@ -188,8 +181,5 @@ int main(int argc, char* argv[]) {
   source->printSummary();
   out->printSummary();
 
-  finalize_multidataset();
-#ifdef H5_TIMING_ENABLE
-  finalize_timers();
-#endif
+  return 0;
 }

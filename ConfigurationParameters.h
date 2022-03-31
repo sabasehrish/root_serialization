@@ -74,6 +74,9 @@ namespace cce::tf {
   template<>
     bool ConfigurationParameters::convert<bool>(std::string const& iValue);
 
+  template<>
+    float ConfigurationParameters::convert<float>(std::string const& iValue);
+
 
 }
 

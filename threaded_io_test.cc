@@ -12,6 +12,7 @@
 
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
+#include "waiterFactoryGenerator.h"
 
 #include "Lane.h"
 
@@ -54,8 +55,8 @@ int main(int argc, char* argv[]) {
   std::string outputerConfig="DummyOutputer";
   app.add_option("-o,--outputer", outputerConfig, "configure Outputer.\nDefault is 'DummyOutputer'.");
 
-  double scale = -1.;
-  app.add_option("--scale", scale, "Scale to use when converting data product size to wait time. A value less than 1 turns off this feature. \nDefault is -1.");
+  std::string waiterConfig;
+  app.add_option("-w,--waiter", waiterConfig, "configure Waiter.\nDefault is no waiter denoted by ''.");
 
   CLI11_PARSE(app, argc, argv);
 
@@ -91,7 +92,17 @@ int main(int argc, char* argv[]) {
     std::cout <<"unknown source type "<<sourceType<<std::endl;
     return 1;
   }
- 
+
+  decltype(waiterFactoryGenerator(waiterConfig, waiterConfig)) waiterFactory;
+  if(not waiterConfig.empty()) {
+    auto [type, options] = parseCompound(waiterConfig);
+    waiterFactory = waiterFactoryGenerator(type, options);
+    if(not waiterFactory) {
+      std::cout <<"unknown waiter type "<<type<<std::endl;
+      return 1;
+    }
+  }
+
   {
     //warm up the system by processing 1 event 
     tbb::task_arena arena(1);
@@ -105,7 +116,7 @@ int main(int argc, char* argv[]) {
       std::cout <<"failed to create source\n";
       return 1;
     }
-    Lane lane(0, source.get(), 0);
+    Lane lane(0, source.get(), nullptr);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
     std::cout <<"begin warmup"<<std::endl;
@@ -123,9 +134,13 @@ int main(int argc, char* argv[]) {
 
   auto out = outFactory(nLanes);
   auto source = sourceFactory(nLanes, nEvents);
+  std::unique_ptr<WaiterBase> waiter;
+  if(waiterFactory) {
+    waiter = waiterFactory(nLanes, source->numberOfDataProducts());
+  }
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, source.get(), scale);
+    lanes.emplace_back(i, source.get(), waiter.get());
     out->setupForLane(i, lanes.back().dataProducts());
   }
 
@@ -165,9 +180,9 @@ int main(int argc, char* argv[]) {
   std::cout <<"----------"<<std::endl;
   std::cout <<"Source "<<sourceConfig<<"\n"
             <<"Outputer "<<outputerConfig<<"\n"
+	    <<"Waiter "<<waiterConfig<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
-	    <<"time scale "<<scale<<"\n"
 	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
   std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
   std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;

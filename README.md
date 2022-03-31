@@ -43,26 +43,22 @@ infer the build information for TBB, zstd, and lz4.  If the ROOT
 runtime is setup, one can use `-DROOT_DIR=$ROOTSYS/cmake`.
 
 ## threaded_io_test design
-The testing structure has 2 customizable component types
+The testing structure has 3 customizable component types
 1. `Source`s: These supply the _event_ data products used for testing.
 1. `Outputer`s: These read the _event_ data products. Some Outputers also write that data out for storage.
+1. `Waiter`s: These get called for each _event_ data product after the data products are read from testing. The `Outputer` is called
+once the `Waiter` has finished its asynchronous callback for the data product. This allows tuning the timing of events to better mimic actual HEP data processing.
 
-In order to mimic the time taken to process event data, the testing structure has `Waiter`s. A `Waiter` read one _event_ data product and based on a property of that data
-product calls sleep for a length proportional to that property.
+The testing structure can process multiple _events_ concurrently. The processing of 
+an _event_ is handled by a `Lane`. Concurrent _events_ are then done by having multiple `Lane`s.
 
-The testing structure can process multiple _events_ concurrently. Each concurrent _event_ has its own set of `Waiter`s, one for each data product. The processing of 
-an _event_ is handled by a `Lane`. Concurrent _events_ are then done by having multiple `Lane`s. The `Waiter`s within a `Lane` are considered to be completely 
-independent and can be run concurrently.
-
-All `Lane`s share the same `Outputer`. Therefore an `Outputer` is required to be thread safe.
-
-All `Lane`s share the same `Source`. Therefore a `Source` is required to be thread safe.
+All `Lane`s share the same `Source`, `Waiter`, and `Outputer`. Therefore all three of these types are required to be thread safe.
 
 The way data is processed is as follows:
 1. When a `Lane` is no longer processing an _event_ it requests a new one from the system. The system advances an atomic counter and tells the `Lane` to use the _event_ associated with that index.
 1. The `Lane` then passes the _event_ index to the `Source` and asks it to asynchronously retrieve the _event_ data products.
 1. Once the `Source` has retrieved the data products, it signals to the `Waiter`s to run asynchronously.
-1. Once each `Waiter` has finished, the system signals to the `Outputer` that the particular _event_ data product is available for the `Outputer`. The `Outputer`
+1. Once the`Waiter` has finished with each data product, the system signals to the `Outputer` that the particular _event_ data product is available for the `Outputer`. The `Outputer`
 can then asynchronously process that data product.
 1. Once the `Outputer` has finished with all the data products, the system signals the `Outputer` that the _event_ has finished. The `Outputer` can then do
 additional asynchronous work.
@@ -71,14 +67,14 @@ additional asynchronous work.
 ## Running tests
 The `threaded_io_test` takes the following command line arguments
 ```
-threaded_io_test -s <Source configuration> [-t <# threads>] [--use-IMT=<T/F>] [-l <# conconcurrent events>] [-s <time scale factor>] [ -n <max # events>] [-o <Outputer configuration>]
+threaded_io_test -s <Source configuration> [-t <# threads>] [--use-IMT=<T/F>] [-l <# conconcurrent events>] [-w <Waiter configuration>] [ -n <max # events>] [-o <Outputer configuration>]
 ```
 
 1. `--source, -s` `<Source configuration>` : which `Source` to use and any additional information needed to configure it. Options are described below.
 1. `--num-threads, -t` `<# threads>` : number of threads to use in the job. 
 1. `--use-IMT` turn on or off ROOT's implicit multithreaded (IMT). Default is off.
 1. `--num-lanes, -l` `<# concurrent events>` : number of concurrent _events_ (that is `Lane`s) to use. Best if number of events is less than  or equal to number of threads. Default is the value used for `--num-threads`.
-1. `--scale` `<time scale factor>` : used to convert the property of the _event_ data products into microseconds used for the sleep call. A value of 0 means no sleeping. A value less than 0 prohibits the creation of the objects which do the sleep. Default is -1.
+1. `--waiter, -w` `<Waiter configuration>` : used to specify which `Waiter` to use and any additional information needed to configure it. The exact options are described below. Default is '' which causes no `Waiter` to be used.
 1. `--num-events, -n` `<max # events>` : max number of events to process in the job. Default is largest possible 64 bit value.
 1. `--outputer, -o`  `<Outputer configuration>` : used to specify which `Outputer` to use and any additional information needed to configure it. The exact options are described below. Default is `DummyOutputer`.
 
@@ -289,6 +285,16 @@ or
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RootBatchEventsOutputer=test.root:batchSize=4
 ```
 
+### Waiters
+
+#### ScaleWaiter
+For each data product this waiter sleeps for an amount of time proportional to the `size` property of the data product. The configuration options are:
+- scale: used to convert the size property of the _event_ data products into microseconds used for a call to sleep. A value of 0 means no sleeping.
+
+#### EventSleepWaiter
+This waiter reads a file containing the total time it should sleep for each event. If the number of events in the file is less than the total number of the job, the waiter will repeat the same sleep times. The order of the sleep times is guaranteed to line up with the order of Events coming from the Source. The waiter divides the event sleep time equally among all the data products.
+The configuration options are:
+- filename: the name of the file containing the event sleep times. The event entries must be separated by white space. The sleep times are in microseconds. 
 
 ## unroll_test
 

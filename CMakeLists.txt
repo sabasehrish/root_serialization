@@ -80,6 +80,10 @@ add_executable(threaded_io_test
   ConfigurationParameters.cc
   OutputerFactory.cc
   outputerFactoryGenerator.cc
+  WaiterFactory.cc
+  waiterFactoryGenerator.cc
+  ScaleWaiter.cc
+  EventSleepWaiter.cc
   pds_reading.cc
   pds_writer.cc
   pds_common.cc
@@ -153,6 +157,8 @@ add_test(NAME TBufferMergerRootOutputerEmptyTest COMMAND threaded_io_test -s Emp
 add_test(NAME TBufferMergerRootOutputerEmptySplitLevelTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o TBufferMergerRootOutputer=test_empty.root:splitLevel=1)
 add_test(NAME TBufferMergerRootOutputerEmptyAllOptionsTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o TBufferMergerRootOutputer=test_empty.root:splitLevel=1:compressionLevel=1:compressionAlgorithm=LZMA:basketSize=32000:treeMaxVirtualSize=-1:autoFlush=900)
 add_test(NAME UseIMTTest COMMAND threaded_io_test -s EmptySource -t 1 --use-IMT=t -n 10)
+add_test(NAME ScaleWaiterTest COMMAND threaded_io_test -s TestProductsSource -t 1 -n 10 -w ScaleWaiter=scale=1000.)
+add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -w EventSleepWaiter=filename=times.wait")
 
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)

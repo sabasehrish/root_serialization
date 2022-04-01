@@ -23,8 +23,9 @@
 namespace {
   std::pair<std::string, std::string> parseCompound(std::string_view iArg) {
     std::string sArg(iArg);
-    auto found = sArg.find('=');
-    auto next = found;
+    auto foundEq = sArg.find('=');
+    auto foundComma = sArg.find(':');
+    auto found = foundEq < foundComma ? foundEq : foundComma;
     if(found != std::string::npos) {
       return std::pair(sArg.substr(0,found), sArg.substr(found+1));
     }
@@ -137,6 +138,10 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<WaiterBase> waiter;
   if(waiterFactory) {
     waiter = waiterFactory(nLanes, source->numberOfDataProducts());
+    if(not waiter) {
+      std::cout <<"failed to create Waiter "<<waiterConfig<<std::endl;
+      return 1;
+    }
   }
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {

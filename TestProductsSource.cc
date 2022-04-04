@@ -53,7 +53,7 @@ TestProductsSource::TestProductsSource(unsigned int iNLanes, unsigned long long 
 {
   delayedPerLane_.reserve(iNLanes);
   retrieverPerLane_.reserve(iNLanes);
-  for(unsigned int lane; lane<iNLanes; ++lane) {
+  for(unsigned int lane = 0; lane<iNLanes; ++lane) {
     delayedPerLane_.emplace_back(&intsPerLane_[lane], &floatsPerLane_[lane]);
     std::vector<DataProductRetriever> r;
     r.reserve(2);

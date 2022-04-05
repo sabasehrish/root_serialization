@@ -84,6 +84,7 @@ add_executable(threaded_io_test
   waiterFactoryGenerator.cc
   ScaleWaiter.cc
   EventSleepWaiter.cc
+  EventUnevenSleepWaiter.cc
   pds_reading.cc
   pds_writer.cc
   pds_common.cc

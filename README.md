@@ -296,6 +296,13 @@ This waiter reads a file containing the total time it should sleep for each even
 The configuration options are:
 - filename: the name of the file containing the event sleep times. The event entries must be separated by white space. The sleep times are in microseconds. 
 
+#### EventUnevenSleepWaiter
+Similar to EvenSleep Waiter, this waiter reads a file containing the total time it should sleep for each event. If the number of events in the file is less than the total number of the job, the waiter will repeat the same sleep times. The order of the sleep times is guaranteed to line up with the order of Events coming from the Source. The waiter divides the event sleep time equally among the number of data products specified by the configuration option. This numer must be less than or equal to the number of data products in the job.
+The configuration options are:
+- filename: the name of the file containing the event sleep times. The event entries must be separated by white space. The sleep times are in microseconds.
+- divideBetween: how many tasks that should split the event time equally. Default is the number of data products in the job.
+- scale: a floating point value used to multiple with the event times in the file. Default is 1.0.
+
 ## unroll_test
 
 The _unroll_test_ executable is meant to allow testing of the unrolled serialization process and allow comparison of object serialization sizes with respect to ROOT's standard serialization. The executable takes the following command line arguments

@@ -47,8 +47,6 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
 }
 
 RootOutputer::~RootOutputer() {
-  file_.Write();
-  file_.Close();
 }
 
 void RootOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
@@ -101,7 +99,17 @@ void RootOutputer::write(unsigned int iLaneIndex, EventIdentifier const& iEventI
 }
   
 void RootOutputer::printSummary() const {
+  auto start = std::chrono::high_resolution_clock::now();
+  file_.Write();
+  auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+
+  start = std::chrono::high_resolution_clock::now();
+  file_.Close();
+  auto closeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+
   std::cout <<"RootOutputer total time: "<<accumulatedTime_.count()<<"us\n";
+  std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
+  std::cout << "  end of job file close time: "<<closeTime.count()<<"us\n";
 }
 
 namespace {

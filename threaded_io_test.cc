@@ -19,10 +19,6 @@
 #include "tbb/global_control.h"
 #include "tbb/task_arena.h"
 
-extern int max_batch_size;
-extern int hdf_method;
-extern int total_n_events;
-
 namespace {
   std::pair<std::string, std::string> parseCompound(std::string_view iArg) {
     std::string sArg(iArg);

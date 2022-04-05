@@ -9,11 +9,6 @@
 #define ENABLE_MULTIDATASET 0
 #define MULTIDATASET_DEFINE 1
 
-static int max_batch_size_g = 2;
-static int hdf5_method_g = -1;
-static int total_n_events_g = -1;
-
-
 #if MULTIDATASET_DEFINE == 1
 typedef struct H5D_rw_multi_t
 {

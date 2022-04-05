@@ -1,15 +1,25 @@
 #include "multidataset_plugin.h"
-
+static int max_batch_size_g = 2;
+static int hdf5_method_g = -1;
+static int total_n_events_g = -1;
+static int initialized = 0;
 
 static std::map<std::string, multidataset_array*> multi_datasets;
 
 int init_multidataset() {
+    if ( initialized ) {
+        return 0;
+    }
+#ifdef H5_TIMING_ENABLE
+    init_timers();
+#endif
     char *p = getenv("HEP_IO_TYPE");
     if ( p != NULL ) {
         set_hdf5_method(atoi(p));
     } else {
         set_hdf5_method(1);
     }
+    initialized = 1;
     return 0;
 }
 
@@ -29,6 +39,9 @@ int finalize_multidataset() {
 	delete it->second->temp_mem;
         free(it->second);
     }
+#ifdef H5_TIMING_ENABLE
+    finalize_timers();
+#endif
     return 0;
 }
 
@@ -243,6 +256,7 @@ int flush_multidatasets() {
         }
         #ifdef H5_TIMING_ENABLE
         increment_H5Dwrite();
+
         #endif
 #ifdef H5_TIMING_ENABLE
         register_timer_start(&start_time);

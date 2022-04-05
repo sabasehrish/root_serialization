@@ -9,8 +9,8 @@
 #include <cmath>
 #include <set>
 #include <hdf5_hl.h>
-#include "H5Timing.h"
 #include "multidataset_plugin.h"
+#include "H5Timing.h"
 
 using namespace cce::tf;
 using product_t = std::vector<char>; 
@@ -54,11 +54,6 @@ int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_siz
 }
 
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, int iChunkSize) : 
-#ifdef H5_TIMING_ENABLE
-  init_timers();
-#endif
-  init_multidataset();
-
   file_(hdf5::File::create(iFileName.c_str())),
   chunkSize_{iChunkSize},
   maxBatchSize_{iBatchSize},
@@ -80,10 +75,6 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   events_.reserve(maxBatchSize_);
   offsets_.reserve(maxBatchSize_);
 
-  finalize_multidataset();
-#ifdef H5_TIMING_ENABLE
-  finalize_timers();
-#endif
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -113,6 +104,8 @@ void HDFOutputer::printSummary() const  {
     //flush the remaining data to the file
     const_cast<HDFOutputer*>(this)->writeBatch();
   }
+
+  finalize_multidataset();
   auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   
   std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
@@ -161,6 +154,8 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 
 void
 HDFOutputer::writeBatch() {
+  init_multidataset();
+
   int method = get_hdf5_method();
 #ifdef H5_TIMING_ENABLE
   size_t total_data_size = 0;

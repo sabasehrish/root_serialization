@@ -175,10 +175,6 @@ if(ENABLE_HDF5)
     HDFBatchEventsOutputer.cc
     HDFOutputer.cc
     HDFSource.cc)
-  target_sources(unroll_test PRIVATE
-    multidataset_plugin.cc
-    H5Timing.cc
-  )
   target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
   target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
   target_link_libraries(threaded_io_test PRIVATE hdf5 hdf5_hl)

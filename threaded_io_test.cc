@@ -35,7 +35,6 @@ namespace {
 
 int main(int argc, char* argv[]) {
   using namespace cce::tf;
-
   CLI::App app{"test different I/O systems under threading"};
 
   std::string sourceConfig;
@@ -195,4 +194,6 @@ int main(int argc, char* argv[]) {
 
   source->printSummary();
   out->printSummary();
+
+  return 0;
 }

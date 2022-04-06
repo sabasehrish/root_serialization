@@ -8,6 +8,9 @@
 #include <cstring>
 #include <cmath>
 #include <set>
+#include <hdf5_hl.h>
+#include "multidataset_plugin.h"
+#include "H5Timing.h"
 
 using namespace cce::tf;
 using product_t = std::vector<char>; 
@@ -38,6 +41,18 @@ namespace {
   }
 }
 
+int append_dataset(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+  hid_t did = H5Dopen2(gid, name, H5P_DEFAULT);
+  H5DOappend( did, H5P_DEFAULT, 0, data_size, mtype, data);
+  H5Dclose(did);
+  return 0;
+}
+
+int write_multidatasets(hid_t gid, const char *name, char* data, size_t data_size, hid_t mtype) {
+  register_multidataset_request_append(name, gid, data, data_size, mtype);
+  return 0;
+}
+
 HDFOutputer::HDFOutputer(std::string const& iFileName, unsigned int iNLanes, int iBatchSize, int iChunkSize) : 
   file_(hdf5::File::create(iFileName.c_str())),
   chunkSize_{iChunkSize},
@@ -56,9 +71,10 @@ void HDFOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductR
   for(auto const& dp: iDPs) {
     s.emplace_back(dp.name(), dp.classType());
   }
-   products_.reserve(iDPs.size() * maxBatchSize_);
-   events_.reserve(maxBatchSize_);
-   offsets_.reserve(maxBatchSize_);
+  products_.reserve(iDPs.size() * maxBatchSize_);
+  events_.reserve(maxBatchSize_);
+  offsets_.reserve(maxBatchSize_);
+
 }
 
 void HDFOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -88,6 +104,8 @@ void HDFOutputer::printSummary() const  {
     //flush the remaining data to the file
     const_cast<HDFOutputer*>(this)->writeBatch();
   }
+
+  finalize_multidataset();
   auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   
   std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
@@ -136,15 +154,57 @@ HDFOutputer::output(EventIdentifier const& iEventID,
 
 void
 HDFOutputer::writeBatch() {
+  init_multidataset();
+
+  int method = get_hdf5_method();
+#ifdef H5_TIMING_ENABLE
+  size_t total_data_size = 0;
+#endif
   hdf5::Group gid = hdf5::Group::open(file_, "Lumi");   
   write_ds<int>(gid, "Event_IDs", events_);
   auto const dpi_size = dataProductIndices_.size();
   for(auto & [name, index]: dataProductIndices_) {
-    auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
-    write_ds<char>(gid, name, prods);
-    auto s = name+"_sz";
-    write_ds<size_t>(gid, s, sizes);
+      auto [prods, sizes] = get_prods_and_sizes(products_, index, dpi_size);
+#ifdef H5_TIMING_ENABLE
+      register_dataset_timer_start(name.c_str());
+#endif
+      if ( method == 1 ) {
+        write_ds<char>(gid, name, prods);
+      } else if (method == 0 ) {
+        write_multidatasets(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      } else {
+        append_dataset(gid, name.c_str(), (char*) &(prods[0]), prods.size(), H5T_NATIVE_CHAR);
+      }
+#ifdef H5_TIMING_ENABLE
+      register_dataset_timer_end((size_t)prods.size());
+#endif
+      auto s = name+"_sz";
+#ifdef H5_TIMING_ENABLE
+      register_dataset_sz_timer_start(s.c_str());
+#endif
+      if (method == 1) {
+        write_ds<size_t>(gid, s, sizes);
+      } else if ( method == 0 ) {
+        write_multidatasets(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      } else {
+        append_dataset(gid, s.c_str(), (char*) &(sizes[0]), sizes.size(), H5T_NATIVE_ULLONG);
+      }
+#ifdef H5_TIMING_ENABLE
+      register_dataset_sz_timer_end((size_t)sizes.size() * sizeof(size_t));
+#endif
+#ifdef H5_TIMING_ENABLE
+      total_data_size += (size_t)prods.size() + (size_t)sizes.size() * sizeof(size_t);
+#endif
   }
+
+#ifdef H5_TIMING_ENABLE
+  register_dataset_timer_start("flush_all");
+#endif
+  flush_multidatasets();
+#ifdef H5_TIMING_ENABLE
+  register_dataset_timer_end(total_data_size);
+#endif
+
 }
 
 void 

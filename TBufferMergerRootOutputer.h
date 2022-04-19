@@ -26,6 +26,7 @@ class TBufferMergerRootOutputer :public OutputerBase {
     int compressionLevel_=9;
     std::string compressionAlgorithm_="";
     int basketSize_=16384;
+    int cacheSize_=0;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=kDefaultAutoFlush; //This is ROOT's default value
     bool concurrentWrite = false;

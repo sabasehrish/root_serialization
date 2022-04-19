@@ -18,6 +18,7 @@ namespace cce::tf {
     config.basketSize_ = params.get<int>("basketSize", config.basketSize_);
     config.treeMaxVirtualSize_ =  params.get<int>("treeMaxVirtualSize", config.treeMaxVirtualSize_);
     config.autoFlush_ = params.get<int>("autoFlush", config.autoFlush_);
+    config.cacheSize_= params.get<int>("cacheSize", config.cacheSize_);
     return std::make_pair(*fileName,config);
   }
 }

@@ -21,7 +21,9 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   basketSize_{iConfig.basketSize_},
   splitLevel_{iConfig.splitLevel_}
 {
-  new TFileCacheWrite(&file_, iConfig.cacheSize_);
+  if(iConfig.cacheSize_ > 0 ) { 
+     new TFileCacheWrite(&file_, iConfig.cacheSize_);
+  }
   if(not iConfig.compressionAlgorithm_.empty()) {
     if(iConfig.compressionAlgorithm_ == "ZLIB") {
       file_.SetCompressionAlgorithm(ROOT::kZLIB);

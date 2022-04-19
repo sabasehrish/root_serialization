@@ -13,7 +13,7 @@ namespace cce::tf {
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=-1;
-    int cacheSize_=102400;
+    int cacheSize_=0;
   };
 
   template<typename T>

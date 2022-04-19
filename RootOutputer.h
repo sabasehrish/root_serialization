@@ -26,7 +26,7 @@ class RootOutputer :public OutputerBase {
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=-1;
-    int cacheSize_=102400;
+    int cacheSize_=0;
   };
 
   RootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);

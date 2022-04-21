@@ -8,6 +8,7 @@
 #include "TTree.h"
 #include "TBranch.h"
 #include "TROOT.h"
+#include "TFileCacheWrite.h"
 
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
@@ -41,6 +42,9 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush },
                     concurrentWrite_{iConfig.concurrentWrite}
 {
+   if(iConfig.cacheSize_ > 0 ) {
+      new TFileCacheWrite(buffer_.GetFile(), iConfig.cacheSize_);
+   }
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {

@@ -43,7 +43,7 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     concurrentWrite_{iConfig.concurrentWrite}
 {
    if(iConfig.cacheSize_ > 0 ) {
-      new TFileCacheWrite(buffer_.GetFile(), iConfig.cacheSize_);
+      new TFileCacheWrite(buffer_.GetFile()->CurrentFile(), iConfig.cacheSize_);
    }
 }
 

@@ -61,6 +61,7 @@ private:
   void write(unsigned int iLaneIndex, TaskHolder iCallback);
   void writeWhenBytesFull(unsigned int iLaneIndex);
   void writeWhenEnoughEvents(unsigned int iLaneIndex);
+  static std::unique_ptr<TFile> createFile(const char *filename, const char *option, Config const&);
   ROOT::Experimental::TBufferMerger buffer_;
   SerialTaskQueue queue_;
   std::vector<PerLane> lanes_;

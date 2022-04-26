@@ -34,7 +34,7 @@ namespace {
 }
 
 TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const& iConfig): 
-  buffer_(iFileName.c_str(), "recreate", ROOT::CompressionSettings(algorithmChoice(iConfig.compressionAlgorithm_),iConfig.compressionLevel_)),
+  buffer_(createFile(iFileName.c_str(), "recreate", iConfig)),
   lanes_{std::size_t(iNLanes)},
                     basketSize_{iConfig.basketSize_},
                     splitLevel_{iConfig.splitLevel_},
@@ -42,12 +42,17 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
                     autoFlush_{iConfig.autoFlush_ != -1 ? iConfig.autoFlush_ : Config::kDefaultAutoFlush },
                     concurrentWrite_{iConfig.concurrentWrite}
 {
-   if(iConfig.cacheSize_ > 0 ) {
-      new TFileCacheWrite(buffer_.GetFile()->CurrentFile(), iConfig.cacheSize_);
-   }
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
+}
+
+std::unique_ptr<TFile> TBufferMergerRootOutputer::createFile(const char *filename, const char *option, Config const& iConfig) {
+   auto * file = TFile::Open(filename, option, filename, iConfig.compressionLevel_);
+   if(iConfig.cacheSize_ > 0 ) {
+      new TFileCacheWrite(file, iConfig.cacheSize_);
+   }
+   return std::unique_ptr<TFile>(file);
 }
 
 void TBufferMergerRootOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {

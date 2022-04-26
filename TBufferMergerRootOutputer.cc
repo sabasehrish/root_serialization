@@ -48,8 +48,7 @@ TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
 }
 
 std::unique_ptr<TFile> TBufferMergerRootOutputer::createFile(const char *filename, const char *option, Config const& iConfig) {
-   auto file = TFile::Open(filename, option, filename, iConfig.compressionLevel_);
-   file->SetCompressionAlgorithm(algorithmChoice(iConfig.compressionAlgorithm_));
+   auto file = TFile::Open(filename, option, filename, ROOT::CompressionSettings(algorithmChoice(iConfig.compressionAlgorithm_),iConfig.compressionLevel_));
    if(iConfig.cacheSize_ > 0 ) {
       new TFileCacheWrite(file, iConfig.cacheSize_);
    }

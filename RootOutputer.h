@@ -26,6 +26,7 @@ class RootOutputer :public OutputerBase {
     int basketSize_=16384;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=-1;
+    int cacheSize_=0;
   };
 
   RootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const&);
@@ -48,7 +49,6 @@ private:
   std::vector<TBranch*> branches_;
   TBranch* eventIDBranch_;
   EventIdentifier id_;
-
   mutable SerialTaskQueue queue_;
   std::vector<std::vector<DataProductRetriever> const*> retrievers_;
   std::chrono::microseconds accumulatedTime_;

@@ -26,6 +26,7 @@ class TBufferMergerRootOutputer :public OutputerBase {
     int compressionLevel_=9;
     std::string compressionAlgorithm_="";
     int basketSize_=16384;
+    int cacheSize_=0;
     int treeMaxVirtualSize_=-1;
     int autoFlush_=kDefaultAutoFlush; //This is ROOT's default value
     bool concurrentWrite = false;
@@ -60,6 +61,7 @@ private:
   void write(unsigned int iLaneIndex, TaskHolder iCallback);
   void writeWhenBytesFull(unsigned int iLaneIndex);
   void writeWhenEnoughEvents(unsigned int iLaneIndex);
+  static std::unique_ptr<TFile> createFile(const char *filename, const char *option, Config const&);
   ROOT::Experimental::TBufferMerger buffer_;
   SerialTaskQueue queue_;
   std::vector<PerLane> lanes_;

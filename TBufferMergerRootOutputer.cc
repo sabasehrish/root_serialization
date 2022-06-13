@@ -8,6 +8,7 @@
 #include "TTree.h"
 #include "TBranch.h"
 #include "TROOT.h"
+#include "TFileCacheWrite.h"
 
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
@@ -33,7 +34,7 @@ namespace {
 }
 
 TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileName, unsigned int iNLanes, Config const& iConfig): 
-  buffer_(iFileName.c_str(), "recreate", ROOT::CompressionSettings(algorithmChoice(iConfig.compressionAlgorithm_),iConfig.compressionLevel_)),
+  buffer_(createFile(iFileName.c_str(), "recreate", iConfig)),
   lanes_{std::size_t(iNLanes)},
                     basketSize_{iConfig.basketSize_},
                     splitLevel_{iConfig.splitLevel_},
@@ -44,6 +45,14 @@ TBufferMergerRootOutputer::TBufferMergerRootOutputer(std::string const& iFileNam
 }
 
 TBufferMergerRootOutputer::~TBufferMergerRootOutputer() {
+}
+
+std::unique_ptr<TFile> TBufferMergerRootOutputer::createFile(const char *filename, const char *option, Config const& iConfig) {
+   auto file = TFile::Open(filename, option, filename, ROOT::CompressionSettings(algorithmChoice(iConfig.compressionAlgorithm_),iConfig.compressionLevel_));
+   if(iConfig.cacheSize_ > 0 ) {
+      new TFileCacheWrite(file, iConfig.cacheSize_);
+   }
+   return std::unique_ptr<TFile>(file);
 }
 
 void TBufferMergerRootOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {

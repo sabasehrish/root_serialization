@@ -7,6 +7,7 @@
 #include "TTree.h"
 #include "TBranch.h"
 #include "TROOT.h"
+#include "TFileCacheWrite.h"
 
 #include "tbb/task_arena.h"
 
@@ -20,6 +21,9 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   basketSize_{iConfig.basketSize_},
   splitLevel_{iConfig.splitLevel_}
 {
+  if(iConfig.cacheSize_ > 0 ) { 
+     new TFileCacheWrite(&file_, iConfig.cacheSize_);
+  }
   if(not iConfig.compressionAlgorithm_.empty()) {
     if(iConfig.compressionAlgorithm_ == "ZLIB") {
       file_.SetCompressionAlgorithm(ROOT::kZLIB);

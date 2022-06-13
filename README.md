@@ -197,12 +197,38 @@ Writes the _event_ data products into a ROOT file. Specify both the name of the 
 - basketSize: default size of all baskets, default size 16384
 - treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
 - autoFlush: passed value to TTree SetAutoFlush. Use of the default value -1 means no call is made.
+- cacheSize: size in bytes passed to TFileCacheWrite. Use of the dafault value 0 means cache is set to 0.
 ```
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RootOutputer=test.root
 ```
 or
 ```
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RootOutputer=test.root:splitLevel=1
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RootOutputer=test.root:splitLevel=1:cacheSize:1048576
+```
+
+#### TBufferMergerRootOutputer
+Writes the _event_ data products into a buffer that is then written to a ROOT file. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+- splitLevel: split level for the branches, default 99
+- compressionLevel: compression level 0-9, default 9
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "ZLIB", "LZMA", "LZ4"
+- basketSize: default size of all baskets, default size 16384
+- treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
+- autoFlush: passed value to TTree SetAutoFlush. Use of the default value -1 means no call is made.
+- cacheSize: size in bytes passed to TFileCacheWrite. Use of the dafault value 0 means cache is set to 0.
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o TBufferMergerRootOutputer=test.root
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o TBufferMergerRootOutputer=test.root:splitLevel=1
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o TBufferMergerRootOutputer=test.root:splitLevel=1:cacheSize:1048576
 ```
 
 

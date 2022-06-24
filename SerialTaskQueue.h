@@ -122,6 +122,8 @@ class SerialTaskQueue {
     class TaskBase {
       friend class SerialTaskQueue;
 
+      virtual ~TaskBase() = default;
+
       tbb::task_group* group() { return m_group;}
       virtual void execute() = 0 ;
     protected:

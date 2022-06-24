@@ -76,14 +76,17 @@ EventIdentifier SharedPDSSource::eventIdentifier(unsigned int iLane, long iEvent
 
 void SharedPDSSource::readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder iTask) {
   queue_.push(*iTask.group(), [iLane, optTask = std::move(iTask), this]() mutable {
+      //For some reason optTask's destructor is not being called. 'move'ing to a local
+      // variable guarantees the destructor is called.
+      auto localOptTask = std::move(optTask);
       auto start = std::chrono::high_resolution_clock::now();
       std::vector<uint32_t> buffer;
       
       if(pds::readCompressedEventBuffer(file_, this->laneInfos_[iLane].eventID_, buffer)) {
         //last entry in buffer is just a crosscheck on its size
         buffer.pop_back();
-        auto group = optTask.group();
-        group->run([this, buffer=std::move(buffer), task = optTask.releaseToTaskHolder(), iLane]() {
+        auto group = localOptTask.group();
+        group->run([this, buffer=std::move(buffer), task = localOptTask.releaseToTaskHolder(), iLane]() {
             auto& laneInfo = this->laneInfos_[iLane];
 
             auto start = std::chrono::high_resolution_clock::now();

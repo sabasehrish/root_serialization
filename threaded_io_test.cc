@@ -10,11 +10,14 @@
 
 #include "CLI11.hpp"
 
+#define TBB_PREVIEW_TASK_GROUP_EXTENSIONS 1 // for task_group::defer
+
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
 #include "waiterFactoryGenerator.h"
 
 #include "Lane.h"
+#include "FunctorTask.h"
 
 #include "tbb/task_group.h"
 #include "tbb/global_control.h"
@@ -123,9 +126,9 @@ int main(int argc, char* argv[]) {
     arena.execute([&lane,pOut]() {
         tbb::task_group group;
         std::atomic<long> ievt{0};
-	std::atomic<unsigned int> count{0};
+        TaskHolder finalTask(group, make_functor_task([&group, task=group.defer([](){})]() mutable { group.run(std::move(task)); }));
         group.run([&]() {
-            lane.processEventsAsync(ievt, group, *pOut, AtomicRefCounter(count));
+            lane.processEventsAsync(ievt, group, *pOut, std::move(finalTask));
           });
         group.wait();
       });
@@ -155,23 +158,17 @@ int main(int argc, char* argv[]) {
   decltype(std::chrono::high_resolution_clock::now()) start;
   auto pOut = out.get();
   arena.execute([&lanes, &ievt, pOut, &start]() {
-    std::atomic<unsigned int> nLanesWaiting{ 0 };
     std::vector<tbb::task_group> groups(lanes.size());
     start = std::chrono::high_resolution_clock::now();
     auto itGroup = groups.begin();
     {
-      AtomicRefCounter laneCounter(nLanesWaiting);
       for(auto& lane: lanes) {
         auto& group = *itGroup;
-        group.run([&, laneCounter]() {lane.processEventsAsync(ievt,group, *pOut,laneCounter);});
+        TaskHolder finalTask(group, make_functor_task([&group, task=group.defer([](){})]() mutable { group.run(std::move(task)); }));
+        group.run([&]() {lane.processEventsAsync(ievt, group, *pOut, std::move(finalTask));});
         ++itGroup;
       }
     }
-    do {
-      for(auto& group: groups) {
-	group.wait();
-      }
-    } while(nLanesWaiting != 0);
     //be sure all groups have fully finished
     for(auto& group: groups) {
       group.wait();

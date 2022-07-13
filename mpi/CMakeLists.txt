@@ -24,6 +24,11 @@ add_executable(mpi_threaded_io_test
   ../ConfigurationParameters.cc
   ../OutputerFactory.cc
   ../outputerFactoryGenerator.cc
+  ../WaiterFactory.cc
+  ../waiterFactoryGenerator.cc
+  ../ScaleWaiter.cc
+  ../EventSleepWaiter.cc
+  ../EventUnevenSleepWaiter.cc
   ../pds_reading.cc
   ../pds_writer.cc
   ../pds_common.cc

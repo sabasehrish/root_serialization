@@ -12,6 +12,7 @@
 
 #include "../outputerFactoryGenerator.h"
 #include "../sourceFactoryGenerator.h"
+#include "../waiterFactoryGenerator.h"
 
 #include "../Lane.h"
 
@@ -132,6 +133,9 @@ int main(int argc, char* argv[]) {
   app.add_option("-n, --nevents", nevents, "Total number of events to process across all MPI ranks")->required();
   app.add_option("-o, --outputerconfig", outputerConfig, "Output Source")->required();
   app.add_option("--olist", olist, "Name of file with a listing of output file names to be generated")->required();
+  std::string waiterConfig;
+  app.add_option("-w,--waiter", waiterConfig, "configure Waiter.\nDefault is no waiter denoted by ''.");
+
   app.parse(argc, argv);
   
   int parallelism = tbb::this_task_arena::max_concurrency();
@@ -205,6 +209,16 @@ int main(int argc, char* argv[]) {
   default:
   break;
 }
+  
+  decltype(waiterFactoryGenerator(waiterConfig, waiterConfig)) waiterFactory;
+  if(not waiterConfig.empty()) {
+    auto [type, options] = parseCompound(waiterConfig);
+    waiterFactory = waiterFactoryGenerator(type, options);
+    if(not waiterFactory) {
+      std::cout <<"unknown waiter type "<<type<<std::endl;
+      return 1;
+    }
+  }
 
   std::cout << my_rank <<" begin warmup"<<std::endl;
   {
@@ -212,7 +226,7 @@ int main(int argc, char* argv[]) {
     tbb::task_arena arena(1);
     auto out = outFactory(1, 1);
     auto source =sourceFactory(1,1);
-    Lane lane(0, source.get(), 0);
+    Lane lane(0, source.get(), nullptr);
     out->setupForLane(0, lane.dataProducts());
     auto pOut = out.get();
     arena.execute([&lane,pOut]() {
@@ -225,16 +239,29 @@ int main(int argc, char* argv[]) {
         group.wait();
       });
   }
+  std::cout <<"finished warmup"<<std::endl;
+  
   //calculate first event index and last event index for this rank 
   int firsteventIndex;
   int lasteventIndex;
   auto event_ranges = ranges(mode, nranks, nEvents);
   std::tie(firsteventIndex, lasteventIndex) = event_ranges[my_rank];
+  
   auto out = outFactory(nLanes, lasteventIndex);
   auto source = sourceFactory(nLanes, lasteventIndex);
+  
+  std::unique_ptr<WaiterBase> waiter;
+  if(waiterFactory) {
+    waiter = waiterFactory(nLanes, source->numberOfDataProducts());
+    if(not waiter) {
+      std::cout <<"failed to create Waiter "<<waiterConfig<<std::endl;
+      return 1;
+    }
+  }
+
   lanes.reserve(nLanes);
   for(unsigned int i = 0; i< nLanes; ++i) {
-    lanes.emplace_back(i, source.get(), scale);
+    lanes.emplace_back(i, source.get(), waiter.get());
     out->setupForLane(i, lanes.back().dataProducts());
   }
 
@@ -260,7 +287,7 @@ int main(int argc, char* argv[]) {
     do {
       for(auto& group: groups) {
 	    group.wait();
- } while(nLanesWaiting != 0);
+      }
     } while(nLanesWaiting != 0);
     //be sure all groups have fully finished
     for(auto& group: groups) {
@@ -283,4 +310,6 @@ int main(int argc, char* argv[]) {
   source->printSummary();
   out->printSummary();
   std::cout << my_rank <<" finished processing"<<std::endl;
+
+  return 0;
 }

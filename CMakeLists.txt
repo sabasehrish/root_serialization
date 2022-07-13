@@ -165,6 +165,7 @@ add_test(NAME ScaleWaiterTest COMMAND threaded_io_test -s TestProductsSource -t 
 add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -w EventSleepWaiter=filename=times.wait")
 
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
+option(ENABLE_MPI "Build MPI-based HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)
   if(NOT DEFINED HDF5_DIR)
     message(FATAL_ERROR "You must provide HDF5_DIR variable")
@@ -178,6 +179,10 @@ if(ENABLE_HDF5)
     HDFSource.cc)
   target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${HDF5_DIR}/include)
   target_link_directories(threaded_io_test PRIVATE ${HDF5_DIR}/lib)
+  if(ENABLE_MPI)
+    target_include_directories(threaded_io_test PRIVATE "${PROJECT_BINARY_DIR}" ${MPI_DIR}/include)
+    target_link_directories(threaded_io_test PRIVATE ${MPI_DIR}/lib)
+  endif()
   target_link_libraries(threaded_io_test PRIVATE hdf5 hdf5_hl)
   add_test(NAME HDFOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o HDFOutputer=test_empty.h5)
   add_test(NAME TestProductsHDF COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o HDFOutputer=test_prod.h5; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s HDFSource=test_prod.h5 -t 1 -n 10 -o TestProductsOutputer")

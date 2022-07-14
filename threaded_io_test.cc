@@ -10,8 +10,6 @@
 
 #include "CLI11.hpp"
 
-#define TBB_PREVIEW_TASK_GROUP_EXTENSIONS 1 // for task_group::defer
-
 #include "outputerFactoryGenerator.h"
 #include "sourceFactoryGenerator.h"
 #include "waiterFactoryGenerator.h"

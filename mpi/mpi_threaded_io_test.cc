@@ -56,7 +56,26 @@ namespace {
          return std::pair(sArg.substr(0,found), sArg.substr(found+1));
        }
        return std::pair(sArg, std::string());
-               }
+   }
+
+   int batchSize(std::string s) {
+   // example is:  filename:batchSize=15:chunkSize=1024
+    std::string delimiter = ":";
+    size_t pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+       // std::cout << token << std::endl;
+        if (token.find("batchSize=") != std::string::npos){
+          std::cout << token << std::endl;
+          auto bs = token.substr(10, token.length()-1);
+          std::cout << "Batch size" <<  bs << std::endl;
+          return std::stoi(bs);
+        }
+        s.erase(0, pos + delimiter.length());
+    }
+    return 0; 
+   }
 
   bool same_num_of_batches(int batch_size, int nranks, unsigned long long nEvents) {
     auto q = nEvents/nranks;
@@ -76,9 +95,9 @@ namespace {
     return result; 
   }
 
-  std::vector<std::pair<long, long>> ranges(int mode, int nranks, unsigned long long nEvents) {
+  std::vector<std::pair<long, long>> ranges(int mode, int nranks, int batch_size, unsigned long long nEvents) {
     auto rem = nEvents%nranks;
-    if (rem != 0 && !same_num_of_batches(15, nranks, nEvents)) {
+    if (!same_num_of_batches(batch_size, nranks, nEvents)) {
         nEvents = nEvents + nranks - rem;
         std::cout << "batch sizes not same!" << std::endl;
     }
@@ -96,7 +115,6 @@ namespace {
     }
     return event_ranges;
   }
-  
 }
 
 int main(int argc, char* argv[]) {
@@ -119,9 +137,8 @@ int main(int argc, char* argv[]) {
   int je;
   double scale;
   int nevents;
-  std::string outputerConfig;
+  std::string outputType;
   std::string olist;
-  int batchSize;
 
   app.add_option("-m, --mode", mode, "Operation mode")->required();
   app.add_option("-s, --source", isource, "Input Source")->required();
@@ -131,7 +148,7 @@ int main(int argc, char* argv[]) {
   app.add_option("--je", je, "Number of events per thread")->required();
   app.add_option("--scale", scale, "Scale")->required();
   app.add_option("-n, --nevents", nevents, "Total number of events to process across all MPI ranks")->required();
-  app.add_option("-o, --outputerconfig", outputerConfig, "Output Source")->required();
+  app.add_option("-o, --outputtype", outputType, "Output Source")->required();
   app.add_option("--olist", olist, "Name of file with a listing of output file names to be generated")->required();
   std::string waiterConfig;
   app.add_option("-w,--waiter", waiterConfig, "configure Waiter.\nDefault is no waiter denoted by ''.");
@@ -163,15 +180,12 @@ int main(int argc, char* argv[]) {
   auto ifilename = ifile(mode, my_rank, sourceOptions);
   auto ofilename = ofile(mode, my_rank, outputInfo);
 
-  std::string outputType = outputerConfig; 
   if (outputType == "TextDumpOutputer") ofilename = "";
   auto outFactory = outputerFactoryGenerator(outputType, ofilename); 
   auto sourceFactory = sourceFactoryGenerator(isource, ifilename);
-  auto ts = parseCompound(ofilename);
-  auto t = parseCompound(ts.second);
-  auto found = ts.second.find("batchSize=");
-  if (found != std::string::npos) std::cout << "found: " << found << std::endl; 
-  std::cout << "Output file options: "<< t.first << ", " << t.second << std::endl;
+  auto batch_size = batchSize(ofilename);
+  std::cout << "Batch size: " << batch_size << std::endl;
+
   if (not sourceFactory) {
     std::cout <<"unknown source type "<<isource<<std::endl;
     return 1;
@@ -244,10 +258,12 @@ int main(int argc, char* argv[]) {
   //calculate first event index and last event index for this rank 
   int firsteventIndex;
   int lasteventIndex;
-  auto event_ranges = ranges(mode, nranks, nEvents);
+  auto event_ranges = ranges(mode, nranks, batch_size, nEvents);
   std::tie(firsteventIndex, lasteventIndex) = event_ranges[my_rank];
-  
-  auto out = outFactory(nLanes, lasteventIndex);
+  std::cout << firsteventIndex << ", " << lasteventIndex << std::endl;
+  auto localevents = (my_rank == nranks-1) ? (nEvents - firsteventIndex) : (lasteventIndex - firsteventIndex);
+  std::cout << "local: " << localevents << std::endl;
+  auto out = outFactory(nLanes, localevents);
   auto source = sourceFactory(nLanes, lasteventIndex);
   
   std::unique_ptr<WaiterBase> waiter;

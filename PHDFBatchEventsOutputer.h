@@ -65,7 +65,8 @@ private:
   mutable std::atomic<uint64_t> presentEventEntry_;
   uint32_t batchSize_;
   mutable std::atomic<uint64_t> nEvents_;
-  mutable std::atomic<uint64_t> firstEventID_;
+  mutable std::atomic<uint64_t> localEventcounter_;
+  mutable bool writefirstEvent_ = true;
   mutable bool firstEvent_ = true;
   pds::Compression compression_;
   int compressionLevel_;

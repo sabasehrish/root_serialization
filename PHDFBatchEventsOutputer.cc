@@ -70,7 +70,7 @@ PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, u
   presentEventEntry_(0),
   batchSize_(iBatchSize),
   nEvents_(nEvents),
-  firstEventID_(0),
+  localEventcounter_(0),
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
   compressionChoice_{iChoice},
@@ -184,11 +184,22 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
   // compressed size or the uncompressed size depending on the compression choice
 
   std::vector<char> batchBlob;
-  
+  int rank;
+  MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+  int nranks;
+  MPI_Comm_size (MPI_COMM_WORLD, &nranks);
   int index = 0;
   for(auto& [id, offsets, blob]: *batch) {
-    if (firstEvent_) firstEventID_ = id.event;
-    if(index++ == eventsInBatch || (id.event - firstEventID_) >= nEvents_+1) {
+    if (firstEvent_) {
+      localEventcounter_=nEvents_+id.event;
+      firstEvent_ = false;
+    }
+    //++localEventcounter_;
+    std::cout << "Local and nevents: " << localEventcounter_ << ", " << id.event << std::endl;
+    if(rank == (nranks-1) && localEventcounter_ <= id.event) { 
+      break;
+    }
+    if(index++ == eventsInBatch) { 
       //batch was smaller than usual. Can happen at end of job
       break;
     }
@@ -227,9 +238,9 @@ void
 PHDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs, 
                          std::vector<char> iBuffer,
                          std::vector<uint32_t> iOffsets ) {
-  if (firstEvent_) {
+  if (writefirstEvent_) {
     assert(not iEventIDs.empty());
-    firstEvent_ = false;
+    writefirstEvent_ = false;
     auto r = hdf5::Attribute::open(group_, RUN_ANAME);
     r.write(iEventIDs[0].run);  
     auto sr = hdf5::Attribute::open(group_, LUMISEC_ANAME);

@@ -4,6 +4,7 @@ add_executable(mpi_threaded_io_test
   ../EmptySource.cc
   ../SerializeOutputer.cc
   ../PHDFBatchEventsOutputer.cc
+  ../PHDFBatchEventsV2Outputer.cc
   ../HDFSource.cc
   ../Lane.cc
   ../PDSSource.cc

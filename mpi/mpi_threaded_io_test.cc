@@ -65,11 +65,8 @@ namespace {
     std::string token;
     while ((pos = s.find(delimiter)) != std::string::npos) {
         token = s.substr(0, pos);
-       // std::cout << token << std::endl;
         if (token.find("batchSize=") != std::string::npos){
-          std::cout << token << std::endl;
           auto bs = token.substr(10, token.length()-1);
-          std::cout << "Batch size" <<  bs << std::endl;
           return std::stoi(bs);
         }
         s.erase(0, pos + delimiter.length());
@@ -183,8 +180,8 @@ int main(int argc, char* argv[]) {
   if (outputType == "TextDumpOutputer") ofilename = "";
   auto outFactory = outputerFactoryGenerator(outputType, ofilename); 
   auto sourceFactory = sourceFactoryGenerator(isource, ifilename);
-  auto batch_size = batchSize(ofilename);
-  std::cout << "Batch size: " << batch_size << std::endl;
+  auto batch_size_per_rank = batchSize(ofilename);
+  //std::cout << "Batch size: " << batch_size_per_rank << std::endl;
 
   if (not sourceFactory) {
     std::cout <<"unknown source type "<<isource<<std::endl;
@@ -207,16 +204,16 @@ int main(int argc, char* argv[]) {
   break;
   case 1:
     //only supported for HDFOutputer
-    if (!outputType.compare("PHDFBatchEventsOutputer")) {
-      std::cout << "Writing to a single file is only supported for HDF5\n";
+    if (outputType != "PHDFBatchEventsOutputer" && outputType != "PHDFBatchEventsV2Outputer") {
+      std::cerr << "Writing to a single file is only supported for HDF5\n";
       return 1;
     }
     break;
   case 2:
     //only supported for HDFOutputer
-    std::cout << outputType << std::endl;
-    if (outputType.compare("PHDFBatchEventsOutputer")) {
-      std::cout << "Writing to a single file is only supported for HDF5\n";
+    //std::cout << outputType << std::endl;
+    if (outputType != "PHDFBatchEventsOutputer" && outputType != "PHDFBatchEventsV2Outputer") {
+      std::cerr << "Writing to a single file is only supported for HDF5\n";
       return 1;
     }
     break;
@@ -255,17 +252,20 @@ int main(int argc, char* argv[]) {
   }
   std::cout <<"finished warmup"<<std::endl;
   
-  //calculate first event index and last event index for this rank 
+  //calculate first event index and last event index for this rank
+  //only for PHDFBatchEventsOutputer, should clean up later
   int firsteventIndex;
   int lasteventIndex;
-  auto event_ranges = ranges(mode, nranks, batch_size, nEvents);
+  auto event_ranges = ranges(mode, nranks, batch_size_per_rank, nEvents);
   std::tie(firsteventIndex, lasteventIndex) = event_ranges[my_rank];
-  std::cout << firsteventIndex << ", " << lasteventIndex << std::endl;
   auto localevents = (my_rank == nranks-1) ? (nEvents - firsteventIndex) : (lasteventIndex - firsteventIndex);
-  std::cout << "local: " << localevents << std::endl;
   auto out = outFactory(nLanes, localevents);
   auto source = sourceFactory(nLanes, lasteventIndex);
-  
+ 
+  if (outputType == "PHDFBatchEventsV2Outputer") {
+    out = outFactory(nLanes, 0);
+    source = sourceFactory(nLanes, nEvents);
+  }
   std::unique_ptr<WaiterBase> waiter;
   if(waiterFactory) {
     waiter = waiterFactory(nLanes, source->numberOfDataProducts());
@@ -280,9 +280,11 @@ int main(int argc, char* argv[]) {
     lanes.emplace_back(i, source.get(), waiter.get());
     out->setupForLane(i, lanes.back().dataProducts());
   }
-
-  std::atomic<long> ievt = firsteventIndex;
   
+  std::atomic<long> ievt = 0; 
+  if (outputType == "PHDFBatchEventsOutputer") 
+    ievt = firsteventIndex;
+
   tbb::task_arena arena(parallelism);
 
   decltype(std::chrono::high_resolution_clock::now()) start;
@@ -320,7 +322,7 @@ int main(int argc, char* argv[]) {
 	    <<"time scale "<<scale<<"\n"
 	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
   std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
-  std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
+ // std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
   std::cout <<"----------"<<std::endl;
 
   source->printSummary();

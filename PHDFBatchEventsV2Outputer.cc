@@ -1,4 +1,4 @@
-#include "PHDFBatchEventsOutputer.h"
+#include "PHDFBatchEventsV2Outputer.h"
 #include "OutputerFactory.h"
 #include "ConfigurationParameters.h"
 #include "UnrolledSerializerWrapper.h"
@@ -60,7 +60,7 @@ namespace {
 
 }
 
-PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize, int nEvents) : 
+PHDFBatchEventsV2Outputer::PHDFBatchEventsV2Outputer(std::string const& iFileName, unsigned int iNLanes, int iChunkSize, pds::Compression iCompression, int iCompressionLevel, CompressionChoice iChoice, pds::Serialization iSerialization, uint32_t iBatchSize, int nEvents) : 
   file_(hdf5::File::parallel_create(iFileName.c_str())),
   group_(hdf5::Group::create(file_, GNAME)),
   chunkSize_{iChunkSize},
@@ -69,7 +69,6 @@ PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, u
   waitingEventsInBatch_(iNLanes),
   presentEventEntry_(0),
   batchSize_(iBatchSize),
-  nEvents_(nEvents),
   localEventcounter_(0),
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
@@ -88,7 +87,7 @@ PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, u
   }
 
 
-void PHDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
+void PHDFBatchEventsV2Outputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   auto& s = serializers_[iLaneIndex];
   switch(serialization_) {
   case pds::Serialization::kRoot:
@@ -105,13 +104,13 @@ void PHDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
   }
 }
 
-void PHDFBatchEventsOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
+void PHDFBatchEventsV2Outputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
   auto& laneSerializers = serializers_[iLaneIndex];
   auto group = iCallback.group();
   laneSerializers[iDataProduct.index()].doWorkAsync(*group, iDataProduct.address(), std::move(iCallback));
 }
 
-void PHDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
+void PHDFBatchEventsV2Outputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto start = std::chrono::high_resolution_clock::now();
   auto [offsets, buffer] = writeDataProductsToOutputBuffer(serializers_[iLaneIndex]);
   
@@ -135,14 +134,14 @@ void PHDFBatchEventsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifi
 
   auto waitingEvents = ++waitingEventsInBatch_[batchIndex];
   if(waitingEvents == batchSize_ ) {
-    const_cast<PHDFBatchEventsOutputer*>(this)->finishBatchAsync(batchIndex, std::move(iCallback));
+    const_cast<PHDFBatchEventsV2Outputer*>(this)->finishBatchAsync(batchIndex, std::move(iCallback));
   }
   if(waitingEvents == batchSize_ ) {
   auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   parallelTime_ += time.count();
   }
 }
-void PHDFBatchEventsOutputer::printSummary() const  {
+void PHDFBatchEventsV2Outputer::printSummary() const  {
   //make sure last batches are out
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -153,7 +152,7 @@ void PHDFBatchEventsOutputer::printSummary() const  {
       TaskHolder th(group, make_functor_task([](){}));
       for( int index=0; index < waitingEventsInBatch_.size();++index) {
         if(0 != waitingEventsInBatch_[index].load()) {
-          const_cast<PHDFBatchEventsOutputer*>(this)->finishBatchAsync(index, th);
+          const_cast<PHDFBatchEventsV2Outputer*>(this)->finishBatchAsync(index, th);
         }
       }
     }
@@ -162,14 +161,14 @@ void PHDFBatchEventsOutputer::printSummary() const  {
   }
   auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
 
-  std::cout <<"PHDFBatchEventsOutputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
+  std::cout <<"PHDFBatchEventsV2Outputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
     "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
   std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
 
   summarize_serializers(serializers_);
 }
 
-void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHolder iCallback) {
+void PHDFBatchEventsV2Outputer::finishBatchAsync(unsigned int iBatchIndex, TaskHolder iCallback) {
 
   std::unique_ptr<std::vector<EventInfo>> batch(eventBatches_[iBatchIndex].exchange(nullptr));
   auto eventsInBatch = waitingEventsInBatch_[iBatchIndex].load();
@@ -177,7 +176,8 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
 
   std::vector<EventIdentifier> batchEventIDs;
   batchEventIDs.reserve(batch->size());
-
+  //std::cout << "[finishBatchAsync] events in batch: " << eventsInBatch << std::endl; 
+  //std::cout << "[finishBatchAsync] batch Size: " << batch->size() << std::endl; 
   std::vector<uint32_t> batchOffsets;
   batchOffsets.reserve(batch->size() * (serializers_.size()+2));
   //one extra size to but the final blob size. This is either the
@@ -189,20 +189,17 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
   int nranks;
   MPI_Comm_size (MPI_COMM_WORLD, &nranks);
   int index = 0;
-  for(auto& [id, offsets, blob]: *batch) {
-    if (firstEvent_) {
-      localEventcounter_=nEvents_+id.event;
-      firstEvent_ = false;
-    }
-    //++localEventcounter_;
-    //std::cout << "Local and nevents: " << localEventcounter_ << ", " << id.event << std::endl;
-    if(rank == (nranks-1) && localEventcounter_ <= id.event) { 
-      break;
-    }
-    if(index++ == eventsInBatch) { 
+  auto local_batch_size = batch->size()/nranks;
+  auto start_index = rank * local_batch_size; 
+  // 0 for rank 0, 2 for rank 1, if local_batch_size = 2, 
+  for(auto i = start_index; i< (start_index+local_batch_size); ++i) {
+    auto& [id, offsets, blob] = (*batch)[i];
+  //std::cout << "[finishBatchAsync] rank, event ID " << rank << ", " << id.event  << std::endl; 
+    if(index++ == local_batch_size) { 
       //batch was smaller than usual. Can happen at end of job
       break;
     }
+    if(id.event != 0) {
     batchEventIDs.push_back(id);
 
     std::copy(offsets.begin(), offsets.end(), std::back_inserter(batchOffsets));
@@ -211,7 +208,7 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
     // the event during reading
     batchOffsets.push_back(blob.size());
     std::copy(blob.begin(), blob.end(), std::back_inserter(batchBlob));
-
+   }
     //release memory
     blob = {};
   }
@@ -227,7 +224,7 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
   
   queue_.push(*iCallback.group(), [this, eventIDs=std::move(batchEventIDs), offsets = std::move(batchOffsets), buffer = std::move(bufferToWrite),  callback=std::move(iCallback)]() mutable {
       auto start = std::chrono::high_resolution_clock::now();
-      const_cast<PHDFBatchEventsOutputer*>(this)->output(std::move(eventIDs), std::move(buffer), std::move(offsets));
+      const_cast<PHDFBatchEventsV2Outputer*>(this)->output(std::move(eventIDs), std::move(buffer), std::move(offsets));
         serialTime_ += std::chrono::duration_cast<decltype(serialTime_)>(std::chrono::high_resolution_clock::now() - start);
       callback.doneWaiting();
     });
@@ -235,7 +232,7 @@ void PHDFBatchEventsOutputer::finishBatchAsync(unsigned int iBatchIndex, TaskHol
 }
 
 void 
-PHDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs, 
+PHDFBatchEventsV2Outputer::output(std::vector<EventIdentifier> iEventIDs, 
                          std::vector<char> iBuffer,
                          std::vector<uint32_t> iOffsets ) {
   if (writefirstEvent_) {
@@ -262,7 +259,7 @@ PHDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
 }
 
 void 
-PHDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) {
+PHDFBatchEventsV2Outputer::writeFileHeader(SerializeStrategy const& iSerializers) {
   constexpr hsize_t ndims = 1;
   constexpr hsize_t dims[ndims] = {0};
   hsize_t chunk_dims[ndims] = {static_cast<hsize_t>(chunkSize_)};
@@ -292,7 +289,7 @@ PHDFBatchEventsOutputer::writeFileHeader(SerializeStrategy const& iSerializers) 
   }
 }
 
-std::pair<std::vector<uint32_t>, std::vector<char>> PHDFBatchEventsOutputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
+std::pair<std::vector<uint32_t>, std::vector<char>> PHDFBatchEventsV2Outputer::writeDataProductsToOutputBuffer(SerializeStrategy const& iSerializers) const{
   //Calculate buffer size needed
   uint32_t bufferSize = 0;
   std::vector<uint32_t> offsets;
@@ -327,12 +324,12 @@ std::pair<std::vector<uint32_t>, std::vector<char>> PHDFBatchEventsOutputer::wri
 namespace {
   class Maker : public OutputerMakerBase {
   public:
-    Maker(): OutputerMakerBase("PHDFBatchEventsOutputer") {}
+    Maker(): OutputerMakerBase("PHDFBatchEventsV2Outputer") {}
     
     std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params, int nEvents) const final {
       auto fileName = params.get<std::string>("fileName");
       if(not fileName) {
-        std::cout<<" no file name given for PHDFBatchEventsOutputer\n";
+        std::cout<<" no file name given for PHDFBatchEventsV2Outputer\n";
         return {};
       }
 
@@ -351,21 +348,25 @@ namespace {
         return {};
       }
       auto compressionChoiceName = params.get<std::string>("compressionChoice", "Events");
-      auto compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kEvents;
+      auto compressionChoice = PHDFBatchEventsV2Outputer::CompressionChoice::kEvents;
       if(compressionChoiceName == "Events") {
       }else if(compressionChoiceName == "Batch") {
-        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kBatch;
+        compressionChoice = PHDFBatchEventsV2Outputer::CompressionChoice::kBatch;
       }else if(compressionChoiceName == "Both") {
-        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kBoth;
+        compressionChoice = PHDFBatchEventsV2Outputer::CompressionChoice::kBoth;
       }else if(compressionChoiceName == "None") {
-        compressionChoice = PHDFBatchEventsOutputer::CompressionChoice::kNone;
+        compressionChoice = PHDFBatchEventsV2Outputer::CompressionChoice::kNone;
       } else {
         std::cout <<"Unknown compression choice "<<compressionChoiceName<<std::endl;
         return {};
       }
 
+      int nranks;
+      MPI_Comm_size (MPI_COMM_WORLD, &nranks);
       auto batchSize = params.get<int>("batchSize", 1);
-      return std::make_unique<PHDFBatchEventsOutputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, compressionChoice, *serialization, batchSize, nEvents);
+      batchSize = batchSize * nranks;
+      //std::cout << "Adjusted batchsize" << batchSize << std::endl;
+      return std::make_unique<PHDFBatchEventsV2Outputer>(*fileName, iNLanes, chunkSize, *compression, compressionLevel, compressionChoice, *serialization, batchSize, nEvents);
     }
   };
 

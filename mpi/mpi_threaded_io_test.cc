@@ -318,13 +318,13 @@ int main(int argc, char* argv[]) {
   fout << std::setprecision(4);
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
   //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
-  fout <<"----------"<<std::endl;
-  fout <<"Source "<<argv[1]<<"\n"
-            <<"Outputer "<<ofile<<"\n"
-	    <<"# threads "<<parallelism<<"\n"
-	    <<"# concurrent events "<<nLanes <<"\n"
-	    <<"time scale "<<scale<<"\n"
-	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
+  fout <<"MPI threaded_io_test stats"<<std::endl;
+  fout <<"Source: "<< isource<<"\n"
+            <<"Outputer: "<< outputType<<"\n"
+	    <<"Num threads: "<<parallelism<<"\n"
+	    <<"Num concurrent events: "<<nLanes <<"\n"
+	    <<"Time scale: "<<scale<<"\n"
+	    <<"Use ROOT IMT: "<< (useIMT? "true\n":"false\n");
   fout <<"Event processing time for rank " << my_rank << ": " << eventTime.count()<<"us"<<std::endl;
   // Each lane will increment the value first and then check if it can process that 
   // event or not so we need to subtract nLanes 

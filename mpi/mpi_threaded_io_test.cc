@@ -282,8 +282,9 @@ int main(int argc, char* argv[]) {
   }
   
   std::atomic<long> ievt = 0; 
-  if (outputType == "PHDFBatchEventsOutputer") 
+  if (outputType == "PHDFBatchEventsOutputer"){ 
     ievt = firsteventIndex;
+  } else firsteventIndex = 0; 
 
   tbb::task_arena arena(parallelism);
 
@@ -312,22 +313,26 @@ int main(int argc, char* argv[]) {
       group.wait();
     }
   });
+  std::string timingfile = "Timing_"+std::to_string(my_rank)+".txt";
+  std::ofstream fout(timingfile);
+  fout << std::setprecision(4);
   std::chrono::microseconds eventTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
   //NOTE: each lane will go 1 beyond the # events so ievt is more then the # events
-  std::cout <<"----------"<<std::endl;
-  std::cout <<"Source "<<argv[1]<<"\n"
+  fout <<"----------"<<std::endl;
+  fout <<"Source "<<argv[1]<<"\n"
             <<"Outputer "<<ofile<<"\n"
 	    <<"# threads "<<parallelism<<"\n"
 	    <<"# concurrent events "<<nLanes <<"\n"
 	    <<"time scale "<<scale<<"\n"
 	    <<"use ROOT IMT "<< (useIMT? "true\n":"false\n");
-  std::cout <<"Event processing time: "<<eventTime.count()<<"us"<<std::endl;
- // std::cout <<"number events: "<<ievt.load() -nLanes<<std::endl;
-  std::cout <<"----------"<<std::endl;
+  fout <<"Event processing time for rank " << my_rank << ": " << eventTime.count()<<"us"<<std::endl;
+  // Each lane will increment the value first and then check if it can process that 
+  // event or not so we need to subtract nLanes 
+  fout <<"Number events read by rank "<< my_rank<< ": " << ievt.load() - firsteventIndex - nLanes << std::endl;
+  fout <<"----------"<<std::endl;
 
   source->printSummary();
   out->printSummary();
-  std::cout << my_rank <<" finished processing"<<std::endl;
-
+  //fout << my_rank <<" finished processing\n"; 
   return 0;
 }

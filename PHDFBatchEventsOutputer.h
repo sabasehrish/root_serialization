@@ -66,6 +66,7 @@ private:
   uint32_t batchSize_;
   mutable std::atomic<uint64_t> nEvents_;
   mutable std::atomic<uint64_t> localEventcounter_;
+  mutable std::atomic<uint64_t> localEventswritten_;
   mutable bool writefirstEvent_ = true;
   mutable bool firstEvent_ = true;
   pds::Compression compression_;
@@ -74,6 +75,9 @@ private:
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
+  mutable std::chrono::microseconds mpiscanTime_;
+  mutable std::chrono::microseconds mpireduceTime_;
+  mutable std::chrono::microseconds h5dswriteTime_;
   };    
 }
 #endif

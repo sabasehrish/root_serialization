@@ -26,12 +26,13 @@ namespace {
   constexpr const char* const COMPRESSION_ANAME="Compression";
   constexpr const char* const COMPRESSION_LEVEL_ANAME="CompressionLevel";
   constexpr const char* const COMPRESSION_CHOICE_ANAME="CompressionChoice";
+
   template <typename T> 
-  void 
+  std::tuple<std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds> 
   write_ds(hid_t gid, 
            std::string const& dsname, 
            std::vector<T> const& data,
-           MPI_Comm comm) {
+           MPI_Comm comm) { 
     constexpr hsize_t ndims = 1;
     auto dset = hdf5::Dataset::open(gid, dsname.c_str()); 
     auto old_fspace = hdf5::Dataspace::get_space(dset);
@@ -43,9 +44,16 @@ namespace {
     //Call to MPI_Scan followed by AllReduce
     //AllReduce will let every rank know the max dim 
     int partial_sum_size[ndims] = {0};
+    
+    auto start = std::chrono::high_resolution_clock::now();
     MPI_Scan(data_size, partial_sum_size, ndims, MPI_INT, MPI_SUM, comm);
+    std::chrono::microseconds scantime = std::chrono::duration_cast<decltype(scantime)>(std::chrono::high_resolution_clock::now() - start);
     int max_size[ndims] = {0};
+    
+    start = std::chrono::high_resolution_clock::now();
     MPI_Allreduce(partial_sum_size, max_size, ndims, MPI_INT, MPI_MAX, comm);
+    std::chrono::microseconds reducetime = std::chrono::duration_cast<decltype(reducetime)>(std::chrono::high_resolution_clock::now() - start);
+    
     hsize_t new_dims[ndims];
     new_dims[0] = old_dims[0] + max_size[0];
     dset.set_extent(new_dims);
@@ -55,7 +63,10 @@ namespace {
     auto new_fspace = hdf5::Dataspace::get_space(dset);
     new_fspace.select_hyperslab(slab_offset, slab_size);
     auto mem_space = hdf5::Dataspace::create_simple(ndims, slab_size, max_dims);
+    start = std::chrono::high_resolution_clock::now();
     dset.parallel_write<T>(mem_space, new_fspace, data); //H5Dwrite
+    std::chrono::microseconds writetime = std::chrono::duration_cast<decltype(writetime)>(std::chrono::high_resolution_clock::now() - start);
+    return {scantime, reducetime, writetime};
   }
 
 }
@@ -69,13 +80,16 @@ PHDFBatchEventsV2Outputer::PHDFBatchEventsV2Outputer(std::string const& iFileNam
   waitingEventsInBatch_(iNLanes),
   presentEventEntry_(0),
   batchSize_(iBatchSize),
-  localEventcounter_(0),
+  localEventswritten_(0),
   compression_{iCompression},
   compressionLevel_{iCompressionLevel},
   compressionChoice_{iChoice},
   serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
-  parallelTime_{0}
+  parallelTime_{0},
+  mpiscanTime_{std::chrono::microseconds::zero()},
+  mpireduceTime_{std::chrono::microseconds::zero()},
+  h5dswriteTime_{std::chrono::microseconds::zero()}
   {
     for(auto& v: waitingEventsInBatch_) {
       v.store(0);
@@ -159,11 +173,28 @@ void PHDFBatchEventsV2Outputer::printSummary() const  {
     
     group.wait();
   }
+  int my_rank;
+  MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
+  int nranks;
+  MPI_Comm_size (MPI_COMM_WORLD, &nranks);
+  std::string timingfile = "Timing_"+std::to_string(my_rank)+".txt";
+  std::ofstream fout(timingfile, std::ios_base::app);
   auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
 
-  std::cout <<"PHDFBatchEventsV2Outputer\n  total serial time at end event: "<<serialTime_.count()<<"us\n"
-    "  total parallel time at end event: "<<parallelTime_.load()<<"us\n";
-  std::cout << "  end of job file write time: "<<writeTime.count()<<"us\n";
+  fout << "PHDFBatchEventsV2Outputer stats for rank " << my_rank << " of " << nranks << " total ranks\n";
+  fout << "Total serial time at end event: "<<serialTime_.count()<<"us\n";
+  fout << "Total parallel time at end event: "<<parallelTime_.load()<<"us\n";
+  fout << "End of job file write time: "<<writeTime.count()<<"us\n";
+  fout << "Total time at end event: "<<serialTime_.count()+parallelTime_.load()+writeTime.count()<<"us\n";
+  fout << "Compression: "<< std::string(name(compression_)) << "\n";
+  fout << "Compression Level: "<< compressionLevel_ << "\n";
+  fout << "Compression Choice: "<< static_cast<int>(compressionChoice_) << "\n";
+  fout << "Batch Size across all ranks: "<< batchSize_ << "\n";
+  fout << "Chunk Size: "<< chunkSize_ << "\n";
+  fout << "Events written: "<< localEventswritten_ << "\n";
+  fout << "MPI Scan time: "<< mpiscanTime_.count() << "\n";
+  fout << "MPI All reduce time: "<< mpireduceTime_.count() << "\n";
+  fout << "HDF5 datasets write time: "<< h5dswriteTime_.count() << "\n";
 
   summarize_serializers(serializers_);
 }
@@ -200,6 +231,7 @@ void PHDFBatchEventsV2Outputer::finishBatchAsync(unsigned int iBatchIndex, TaskH
       break;
     }
     if(id.event != 0) {
+    ++localEventswritten_;
     batchEventIDs.push_back(id);
 
     std::copy(offsets.begin(), offsets.end(), std::back_inserter(batchOffsets));
@@ -252,10 +284,21 @@ PHDFBatchEventsV2Outputer::output(std::vector<EventIdentifier> iEventIDs,
   std::vector<unsigned long long> ids;
   ids.reserve(iEventIDs.size());
   std::transform(iEventIDs.begin(), iEventIDs.end(), std::back_inserter(ids), [](auto const&id) {return id.event;});
-  write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids, MPI_COMM_WORLD);
-  write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer, MPI_COMM_WORLD);
-  write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets, MPI_COMM_WORLD);
-       
+  std::chrono::microseconds a;
+  std::chrono::microseconds b;
+  std::chrono::microseconds c;
+  std::tie(a, b, c) = write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids, MPI_COMM_WORLD);
+  mpiscanTime_+=a;
+  mpireduceTime_+=b;
+  h5dswriteTime_+=c;
+  std::tie(a, b, c) = write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer, MPI_COMM_WORLD);
+  mpiscanTime_+=a;
+  mpireduceTime_+=b;
+  h5dswriteTime_+=c;
+  std::tie(a, b, c) = write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets, MPI_COMM_WORLD);
+  mpiscanTime_+=a;
+  mpireduceTime_+=b;
+  h5dswriteTime_+=c;
 }
 
 void 

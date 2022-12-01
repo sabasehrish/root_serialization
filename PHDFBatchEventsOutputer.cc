@@ -29,14 +29,19 @@ namespace {
   constexpr const char* const COMPRESSION_CHOICE_ANAME="CompressionChoice";
   
   template <typename T> 
-  std::tuple<std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds> 
+  std::tuple<std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds, std::chrono::microseconds> 
   write_ds(hid_t gid, 
            std::string const& dsname, 
            std::vector<T> const& data,
            MPI_Comm comm) {
     constexpr hsize_t ndims = 1;
+    
+    auto start = std::chrono::high_resolution_clock::now();
     auto dset = hdf5::Dataset::open(gid, dsname.c_str()); 
+    std::chrono::microseconds dsopentime = std::chrono::duration_cast<decltype(dsopentime)>(std::chrono::high_resolution_clock::now() - start);
+    start = std::chrono::high_resolution_clock::now();
     auto old_fspace = hdf5::Dataspace::get_space(dset);
+    std::chrono::microseconds getspacetime = std::chrono::duration_cast<decltype(getspacetime)>(std::chrono::high_resolution_clock::now() - start);
     hsize_t max_dims[ndims]; 
     hsize_t old_dims[ndims]; //our datasets are 1D
     H5Sget_simple_extent_dims(old_fspace, old_dims, max_dims);
@@ -46,7 +51,7 @@ namespace {
     //AllReduce will let every rank know the max dim 
     int partial_sum_size[ndims] = {0};
     
-    auto start = std::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     MPI_Scan(data_size, partial_sum_size, ndims, MPI_INT, MPI_SUM, comm);
     std::chrono::microseconds scantime = std::chrono::duration_cast<decltype(scantime)>(std::chrono::high_resolution_clock::now() - start);
     
@@ -56,7 +61,9 @@ namespace {
     std::chrono::microseconds reducetime = std::chrono::duration_cast<decltype(reducetime)>(std::chrono::high_resolution_clock::now() - start);
     hsize_t new_dims[ndims];
     new_dims[0] = old_dims[0] + max_size[0];
+    start = std::chrono::high_resolution_clock::now();
     dset.set_extent(new_dims);
+    std::chrono::microseconds setextenttime = std::chrono::duration_cast<decltype(setextenttime)>(std::chrono::high_resolution_clock::now() - start);
     hsize_t slab_size[ndims];
     slab_size[0] = data.size();
     hsize_t slab_offset[ndims] = {old_dims[0] + partial_sum_size[0] - slab_size[0]};
@@ -66,7 +73,7 @@ namespace {
     start = std::chrono::high_resolution_clock::now();
     dset.parallel_write<T>(mem_space, new_fspace, data); //H5Dwrite
     std::chrono::microseconds writetime = std::chrono::duration_cast<decltype(writetime)>(std::chrono::high_resolution_clock::now() - start);
-    return {scantime, reducetime, writetime};
+    return {dsopentime, getspacetime, setextenttime, scantime, reducetime, writetime};
   }
 
 }
@@ -89,6 +96,9 @@ PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, u
   serialization_{iSerialization},
   serialTime_{std::chrono::microseconds::zero()},
   parallelTime_{0},
+  h5dsopenTime_{std::chrono::microseconds::zero()},
+  h5getspaceTime_{std::chrono::microseconds::zero()},
+  h5setextentTime_{std::chrono::microseconds::zero()},
   mpiscanTime_{std::chrono::microseconds::zero()},
   mpireduceTime_{std::chrono::microseconds::zero()},
   h5dswriteTime_{std::chrono::microseconds::zero()}
@@ -194,6 +204,9 @@ void PHDFBatchEventsOutputer::printSummary() const  {
   fout << "Batch Size: "<< batchSize_ << "\n";
   fout << "Chunk Size: "<< chunkSize_ << "\n";
   fout << "Events written: "<< localEventswritten_ << "\n";
+  fout << "HDF5 dataset open time: "<< h5dsopenTime_.count() << "\n";
+  fout << "HDF5 get space time: "<< h5getspaceTime_.count() << "\n";
+  fout << "HDF5 set extent time: "<< h5setextentTime_.count() << "\n";
   fout << "MPI Scan time: "<< mpiscanTime_.count() << "\n";
   fout << "MPI All reduce time: "<< mpireduceTime_.count() << "\n";
   fout << "HDF5 datasets write time: "<< h5dswriteTime_.count() << "\n";
@@ -291,18 +304,30 @@ PHDFBatchEventsOutputer::output(std::vector<EventIdentifier> iEventIDs,
   std::chrono::microseconds a;
   std::chrono::microseconds b;
   std::chrono::microseconds c;
-  std::tie(a, b, c) = write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids, MPI_COMM_WORLD);
-  mpiscanTime_+=a;
-  mpireduceTime_+=b;
-  h5dswriteTime_+=c;
-  std::tie(a, b, c) = write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer, MPI_COMM_WORLD);
-  mpiscanTime_+=a;
-  mpireduceTime_+=b;
-  h5dswriteTime_+=c;
-  std::tie(a, b, c) = write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets, MPI_COMM_WORLD);
-  mpiscanTime_+=a;
-  mpireduceTime_+=b;
-  h5dswriteTime_+=c;
+  std::chrono::microseconds d;
+  std::chrono::microseconds e;
+  std::chrono::microseconds f;
+  std::tie(a, b, c, d, e, f) = write_ds<unsigned long long>(group_, EVENTS_DSNAME, ids, MPI_COMM_WORLD);
+  h5dsopenTime_+=a;
+  h5getspaceTime_+=b;
+  h5setextentTime_+=c;
+  mpiscanTime_+=d;
+  mpireduceTime_+=e;
+  h5dswriteTime_+=f;
+  std::tie(a, b, c, d, e, f) = write_ds<char>(group_, PRODUCTS_DSNAME, iBuffer, MPI_COMM_WORLD);
+  h5dsopenTime_+=a;
+  h5getspaceTime_+=b;
+  h5setextentTime_+=c;
+  mpiscanTime_+=d;
+  mpireduceTime_+=e;
+  h5dswriteTime_+=f;
+  std::tie(a, b, c, d, e, f) = write_ds<uint32_t>(group_, OFFSETS_DSNAME, iOffsets, MPI_COMM_WORLD);
+  h5dsopenTime_+=a;
+  h5getspaceTime_+=b;
+  h5setextentTime_+=c;
+  mpiscanTime_+=d;
+  mpireduceTime_+=e;
+  h5dswriteTime_+=f;
        
 }
 

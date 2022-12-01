@@ -75,6 +75,9 @@ private:
   pds::Serialization serialization_;
   mutable std::chrono::microseconds serialTime_;
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
+  mutable std::chrono::microseconds h5dsopenTime_;
+  mutable std::chrono::microseconds h5getspaceTime_;
+  mutable std::chrono::microseconds h5setextentTime_;
   mutable std::chrono::microseconds mpiscanTime_;
   mutable std::chrono::microseconds mpireduceTime_;
   mutable std::chrono::microseconds h5dswriteTime_;

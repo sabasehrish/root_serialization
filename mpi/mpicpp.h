@@ -106,7 +106,7 @@ Mpi::Mpi(int argc, char* argv[])
 inline
 Mpi::~Mpi()
 {
-  //MPI_Finalize();
+  MPI_Finalize();
 }
 
 inline

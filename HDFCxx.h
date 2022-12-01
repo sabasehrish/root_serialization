@@ -45,7 +45,7 @@ class File {
         auto plist_id = H5Pcreate (H5P_FILE_ACCESS);
         auto  ret = H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
         auto f = File(H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id));
-    //    H5Pset_fclose_degree(f, H5F_CLOSE_STRONG);
+        H5Pclose(plist_id);
         return f;
     }
 
@@ -58,12 +58,14 @@ class File {
         MPI_Info_create(&info);
         auto plist_id = H5Pcreate (H5P_FILE_ACCESS);
         auto  ret = H5Pset_fapl_mpio(plist_id, comm, info);
-        return File(H5Fopen(name, H5F_ACC_RDWR, plist_id));
+        auto f =  File(H5Fopen(name, H5F_ACC_RDWR, plist_id));
+        H5Pclose(plist_id);
+        return f;
     }
 
     herr_t close() {
-     //   H5Pset_fclose_degree(file_, H5F_CLOSE_STRONG);
-        return H5Fclose(file_);
+        auto f = H5Fclose(file_);
+        return f;
     }
     herr_t flush() {
       return H5Fflush(file_, H5F_SCOPE_GLOBAL);

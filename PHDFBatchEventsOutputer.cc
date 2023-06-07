@@ -57,7 +57,15 @@ namespace {
     
     int max_size[ndims] = {0};
     start = std::chrono::high_resolution_clock::now();
-    MPI_Allreduce(partial_sum_size, max_size, ndims, MPI_INT, MPI_MAX, comm);
+    max_size[0] = 0;//partial_sum_size[0];
+    //MPI_Allreduce(partial_sum_size, max_size, ndims, MPI_INT, MPI_MAX, comm);
+    //last rank's partial_sum_size will be the max_size by definition
+    //so we can replace the MPI_Allreduce with an MPI_Bcast by the last rank
+    // MPI_Bcast(void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
+    int nranks;
+    MPI_Comm_size (MPI_COMM_WORLD, &nranks);
+    int last_rank = nranks-1;
+    MPI_Bcast(max_size, ndims, MPI_INT, last_rank, comm);
     std::chrono::microseconds reducetime = std::chrono::duration_cast<decltype(reducetime)>(std::chrono::high_resolution_clock::now() - start);
     hsize_t new_dims[ndims];
     new_dims[0] = old_dims[0] + max_size[0];
@@ -101,7 +109,8 @@ PHDFBatchEventsOutputer::PHDFBatchEventsOutputer(std::string const& iFileName, u
   h5setextentTime_{std::chrono::microseconds::zero()},
   mpiscanTime_{std::chrono::microseconds::zero()},
   mpireduceTime_{std::chrono::microseconds::zero()},
-  h5dswriteTime_{std::chrono::microseconds::zero()}
+  h5dswriteTime_{std::chrono::microseconds::zero()},
+  fileheaderTime_{std::chrono::microseconds::zero()}
   {
     for(auto& v: waitingEventsInBatch_) {
       v.store(0);
@@ -126,7 +135,9 @@ void PHDFBatchEventsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
     s.emplace_back(dp.name(), dp.classType());
   }
   if(iLaneIndex == 0) { //and my rank == 0 
+    auto start = std::chrono::high_resolution_clock::now();
     writeFileHeader(s);
+    fileheaderTime_ = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-start);
   }
 }
 
@@ -208,8 +219,9 @@ void PHDFBatchEventsOutputer::printSummary() const  {
   fout << "HDF5 get space time: "<< h5getspaceTime_.count() << "\n";
   fout << "HDF5 set extent time: "<< h5setextentTime_.count() << "\n";
   fout << "MPI Scan time: "<< mpiscanTime_.count() << "\n";
-  fout << "MPI All reduce time: "<< mpireduceTime_.count() << "\n";
+  fout << "MPI Broadcast time: "<< mpireduceTime_.count() << "\n"; //did not change the variable name, but this does capture bcast time
   fout << "HDF5 datasets write time: "<< h5dswriteTime_.count() << "\n";
+  fout << "HDF5 file header write time: "<< fileheaderTime_.count() << "\n";
 
   summarize_serializers(serializers_);
 }

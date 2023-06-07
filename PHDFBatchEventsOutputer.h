@@ -81,6 +81,7 @@ private:
   mutable std::chrono::microseconds mpiscanTime_;
   mutable std::chrono::microseconds mpireduceTime_;
   mutable std::chrono::microseconds h5dswriteTime_;
+  mutable std::chrono::microseconds fileheaderTime_;
   };    
 }
 #endif

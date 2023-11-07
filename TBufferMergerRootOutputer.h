@@ -47,7 +47,7 @@ class TBufferMergerRootOutputer :public OutputerBase {
 
 private:
   struct PerLane {
-    std::shared_ptr<ROOT::Experimental::TBufferMergerFile> file_;
+    std::shared_ptr<ROOT::TBufferMergerFile> file_;
     TTree* eventTree_;
     std::vector<TBranch*> branches_;
     std::vector<DataProductRetriever> const* retrievers_;
@@ -62,7 +62,7 @@ private:
   void writeWhenBytesFull(unsigned int iLaneIndex);
   void writeWhenEnoughEvents(unsigned int iLaneIndex);
   static std::unique_ptr<TFile> createFile(const char *filename, const char *option, Config const&);
-  ROOT::Experimental::TBufferMerger buffer_;
+  ROOT::TBufferMerger buffer_;
   SerialTaskQueue queue_;
   std::vector<PerLane> lanes_;
   const int basketSize_;

@@ -33,11 +33,9 @@ void RNTupleOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProd
     throw std::logic_error("setupForLane should be sequential");
   }
   // would be nice to have ntuple_->CreateEntry(field_map) or such
-  // for now we create an entry, use it to build our own, then discard
-  auto tmp_entry = ntuple_->CreateEntry();
   for(auto const& dp: iDPs) {
     auto name = dp.name().substr(0, dp.name().find("."));
-    auto* field = tmp_entry->GetValue(name).GetField();
+    auto* field = ntuple_->GetModel()->GetField(name);
     entries_[iLaneIndex].fields.push_back(field);
     entries_[iLaneIndex].ptrs.push_back(dp.address());
     if ( field == nullptr ) continue;
@@ -86,14 +84,14 @@ void RNTupleOutputer::collateProducts(
   // iEventID.event
   if ( verbose_ > 0 ) std::cout << thisOffset << " event id " << iEventID.run << "\n";
 
-  ROOT::Experimental::REntry rentry;
+  auto rentry = ntuple_->CreateEntry();
   for(size_t i=0; i < entry.fields.size(); ++i) {
     auto* field = entry.fields[i];
     void** ptr = entry.ptrs[i];
     if ( field == nullptr ) continue;
-    rentry.CaptureValue(field->CaptureValue(*ptr));
+    rentry->CaptureValueUnsafe(field->GetName(), *ptr);
   }
-  ntuple_->Fill(rentry);
+  ntuple_->Fill(*rentry);
 
   collateTime_ += std::chrono::duration_cast<decltype(collateTime_)>(std::chrono::high_resolution_clock::now() - start);
 }

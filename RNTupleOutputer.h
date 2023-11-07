@@ -39,8 +39,8 @@ class RNTupleOutputer : public OutputerBase {
 
 private:
   struct EntryContainer {
-    // ROOT::Experimental::REntry entry;
-    std::vector<ROOT::Experimental::Detail::RFieldBase*> fields;
+    // std::unique_ptr<ROOT::Experimental::REntry> entry;
+    std::vector<const ROOT::Experimental::Detail::RFieldBase*> fields;
     std::vector<void**> ptrs;
     // std::chrono::microseconds serializeTime{0};
     std::chrono::microseconds accumulatedTime() const { return std::chrono::microseconds::zero(); };

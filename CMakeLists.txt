@@ -25,7 +25,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
 
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree ROOTNTuple)
 find_package(TBB REQUIRED)
 find_package(zstd REQUIRED)
 find_package(lz4 REQUIRED)
@@ -92,16 +92,22 @@ add_executable(threaded_io_test
   pds_common.cc
   SourceFactory.cc
   sourceFactoryGenerator.cc
+  RNTupleOutputer.cc
   threaded_io_test.cc)
 
 # for task_group::defer
 target_compile_definitions(threaded_io_test PUBLIC TBB_PREVIEW_TASK_GROUP_EXTENSIONS=1)
+
+# sanitizer?
+#target_compile_options(threaded_io_test PRIVATE -fsanitize=address)
+#target_link_options(threaded_io_test PRIVATE -fsanitize=address)
 
 target_link_libraries(threaded_io_test
                       PRIVATE LZ4::lz4
                               ROOT::Core
                               ROOT::RIO
                               ROOT::Tree
+                              ROOT::ROOTNTuple
                               TBB::tbb
                               Threads::Threads
                               configKeys

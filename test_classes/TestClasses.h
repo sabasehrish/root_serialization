@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <array>
 
 namespace cce::tf::test {
 

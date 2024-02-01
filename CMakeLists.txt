@@ -40,17 +40,17 @@ add_library(configKeys configKeyValuePairs.cc)
 add_library(configParams ConfigurationParameters.cc)
 
 #make the library holding the root dictionaries
-REFLEX_GENERATE_DICTIONARY(G__sequence_classes SequenceFinderForBuiltins.h SELECTION classes_def.xml)
+REFLEX_GENERATE_DICTIONARY(sequence_classes_dict SequenceFinderForBuiltins.h SELECTION classes_def.xml)
 
-add_library(sequence_classes_dict SHARED G__sequence_classes.cxx)
-target_link_libraries(sequence_classes_dict PUBLIC ROOT::RIO ROOT::Net)
+add_library(sequence_classes_dictDict SHARED sequence_classes_dict.cxx)
+target_link_libraries(sequence_classes_dictDict PUBLIC ROOT::RIO ROOT::Net)
 
 
 #make the library holding the root dictionaries for RootBatchEvents
-REFLEX_GENERATE_DICTIONARY(G__batchevents_classes EventIdentifiers.h SELECTION batchevents_def.xml)
+REFLEX_GENERATE_DICTIONARY(batchevents_classes_dict EventIdentifiers.h SELECTION batchevents_def.xml)
 
-add_library(batchevents_classes_dict SHARED G__batchevents_classes.cxx)
-target_link_libraries(batchevents_classes_dict PUBLIC ROOT::RIO ROOT::Net)
+add_library(batchevents_classes_dictDict SHARED batchevents_classes_dict.cxx)
+target_link_libraries(batchevents_classes_dictDict PUBLIC ROOT::RIO ROOT::Net)
 
 add_executable(threaded_io_test
   DeserializeStrategy.cc
@@ -93,6 +93,7 @@ add_executable(threaded_io_test
   SourceFactory.cc
   sourceFactoryGenerator.cc
   RNTupleOutputer.cc
+  RNTupleOutputerConfig.cc
   threaded_io_test.cc)
 
 # for task_group::defer
@@ -111,8 +112,8 @@ target_link_libraries(threaded_io_test
                               TBB::tbb
                               Threads::Threads
                               configKeys
-                              sequence_classes_dict
-                              batchevents_classes_dict
+                              sequence_classes_dictDict
+                              batchevents_classes_dictDict
                               zstd::libzstd_shared)
 
 add_subdirectory(cms)
@@ -130,7 +131,7 @@ target_link_libraries(unroll_test
                               ROOT::Tree
                               TBB::tbb
                               cms_dict
-                              sequence_classes_dict
+                              sequence_classes_dictDict
                               test_classes_dict)
 
 enable_testing()
@@ -172,6 +173,8 @@ add_test(NAME UseIMTTest COMMAND threaded_io_test -s EmptySource -t 1 --use-IMT=
 add_test(NAME ScaleWaiterTest COMMAND threaded_io_test -s TestProductsSource -t 1 -n 10 -w ScaleWaiter=scale=1000.)
 add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -w EventSleepWaiter=filename=times.wait")
 
+add_test(NAME RNTupleOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleOutputer=test_empty.rntpl)
+add_test(NAME RNTupleOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; #${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s RNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)
   if(NOT DEFINED HDF5_DIR)

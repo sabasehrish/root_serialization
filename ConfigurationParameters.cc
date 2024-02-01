@@ -22,6 +22,11 @@ namespace cce::tf {
   }
 
   template<>
+  std::size_t ConfigurationParameters::convert<std::size_t>(std::string const& iValue) {
+    return std::stoull(iValue);
+  }
+
+  template<>
   bool ConfigurationParameters::convert<bool>(std::string const& iValue) {
     return (iValue.empty()) or (
                                      (iValue[0] == 't') or (iValue[0] == 'T') or (iValue[0] == 'y') or (iValue[0] == 'Y')

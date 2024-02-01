@@ -77,6 +77,9 @@ namespace cce::tf {
   template<>
     float ConfigurationParameters::convert<float>(std::string const& iValue);
 
+  template<>
+  std::size_t ConfigurationParameters::convert<std::size_t>(std::string const& iValue);
+
 
 }
 

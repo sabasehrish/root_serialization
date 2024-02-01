@@ -214,7 +214,7 @@ or
 Writes the _event_ data products into a buffer that is then written to a ROOT file. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
 - splitLevel: split level for the branches, default 99
 - compressionLevel: compression level 0-9, default 9
-- compressionAlgorithm: name of compression algorithm. Allowed valued "", "ZLIB", "LZMA", "LZ4"
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "ZLIB", "LZMA", "LZ4", "ZSTD"
 - basketSize: default size of all baskets, default size 16384
 - treeMaxVirtualSize: Size of ROOT TTree TBasket cache. Use ROOT default if value is <0. Default -1.
 - autoFlush: passed value to TTree SetAutoFlush. Use of the default value -1 means no call is made.
@@ -231,6 +231,26 @@ or
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o TBufferMergerRootOutputer=test.root:splitLevel=1:cacheSize:1048576
 ```
 
+#### RNTupleOutputer
+Writes the _event_ data products into a ROOT file using an RNTuple. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+- compressionLevel: compression level 0-9, default 9
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "zlib", "lzma", "lz4", "zstd"
+- approxUnzippedPageSize:  should be just large enough so compression algorithm doesn't benefit from larger page sizes: Default size 64*1024
+- approxZippedClusterSize: Target compressed cluster size: Default size 50,000,000
+- maxUnzippedClusterSize: Memory limit for commiting a cluster. Default 512*1024*1024
+- hasSmallClusters: If 'true', use 32 bit index columns instead of 64 bit columns. Limits cluster size to 512MB. Default false
+- useBufferedWrite: default true
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleOutputer=test.rntpl
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleOutputer=test.rntpl:compressionAlgorithm=zstd
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleOutputer=test.root:compressionAlgorithm=zstd:compressionLevel=6
+```
 
 #### PDSOutputer
 Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write as well as compression options:

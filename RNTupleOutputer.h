@@ -5,10 +5,8 @@
 #include <string>
 #include <iostream>
 #include <cassert>
-
-#define TBB_PREVIEW_TASK_GROUP_EXTENSIONS 1 // for task_group::defer
-#include "tbb/task_group.h"
-#include "tbb/concurrent_vector.h"
+#include <chrono>
+#include <memory>
 
 #include "OutputerBase.h"
 #include "EventIdentifier.h"
@@ -16,20 +14,15 @@
 #include "DataProductRetriever.h"
 #include "summarize_serializers.h"
 #include "SerialTaskQueue.h"
-
+#include "RNTupleOutputerConfig.h"
 #include <ROOT/RNTuple.hxx>
 
 namespace cce::tf {
 
+
 class RNTupleOutputer : public OutputerBase {
  public:
-  RNTupleOutputer(unsigned int iNLanes, std::string fileName, int iVerbose):
-    entries_(iNLanes),
-    fileName_(fileName),
-    verbose_(iVerbose),
-    collateTime_{std::chrono::microseconds::zero()},
-    parallelTime_{0}
-  { }
+  RNTupleOutputer(std::string const& fileName, unsigned int iNLanes, RNTupleOutputerConfig const&);
 
   void setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) final;
   bool usesProductReadyAsync() const final {return true;}
@@ -40,34 +33,37 @@ class RNTupleOutputer : public OutputerBase {
 private:
   struct EntryContainer {
     // std::unique_ptr<ROOT::Experimental::REntry> entry;
-    std::vector<const ROOT::Experimental::Detail::RFieldBase*> fields;
     std::vector<void**> ptrs;
-    // std::chrono::microseconds serializeTime{0};
-    std::chrono::microseconds accumulatedTime() const { return std::chrono::microseconds::zero(); };
   };
 
   // Plan:
   // productReadyAsync() is threadsafe because entries_ is one per lane (also doesn't do anything right now)
   // outputAsync puts collateProducts() in collateQueue_
   // collateProducts() appends a new event to the RNTuple
-  void collateProducts(EventIdentifier const& iEventID, EntryContainer& entry, TaskHolder iCallback) const;
+  void collateProducts(EventIdentifier const& iEventID, EntryContainer const& entry, TaskHolder iCallback) const;
 
   // configuration options
-  const int verbose_;
   const std::string fileName_;
+  const RNTupleOutputerConfig config_;
 
   // initialized in lane 0 setupForLane(), modified only in collateProducts()
   mutable std::unique_ptr<ROOT::Experimental::RNTupleWriter> ntuple_;
 
-  // only modified by productReadyAsync()
-  mutable std::vector<EntryContainer> entries_;
+  //identifiers used to specify which field to use
+  std::vector<std::string> fieldIDs_;
+  
+  std::vector<EntryContainer> entries_;
 
-  // only modified in collateProducts()
   mutable SerialTaskQueue collateQueue_;
+  
+  // only modified in collateProducts()
   mutable size_t eventGlobalOffset_{0};
   mutable std::chrono::microseconds collateTime_;
+  mutable std::shared_ptr<EventIdentifier> id_;
 
   mutable std::atomic<std::chrono::microseconds::rep> parallelTime_;
+
+
 };
 }
 #endif

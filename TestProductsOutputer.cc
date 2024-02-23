@@ -27,6 +27,10 @@ bool TestProductsOutputer::usesProductReadyAsync() const {
 void TestProductsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto const& retrievers = *retrieverPerLane_[iLaneIndex];
 
+  if (retrievers.size() != 2) {
+    std::cout<<"ERROR: wrong number of data products, expected 2 but see "<<retrievers.size() <<std::endl;
+    abort();
+  }
   auto const index = iEventID.event -1;
   for(auto const& prod: retrievers) {
     if(prod.name() == "ints") {
@@ -49,7 +53,7 @@ void TestProductsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier 
       }
       for(int i=0; i<3; ++i) {
         if( (*floats)[i] != index*(i+1.f)) {
-          std::cout <<"ERROR: floats index "<<i<<" has wrong value "<<(*floats)[i]<<" in event "<<iEventID.event<<std::endl;
+          std::cout <<"ERROR: floats index "<<i<<" has wrong value "<<(*floats)[i]<<" (expected "<<index*(i+1.f)<< ") in event "<<iEventID.event<<std::endl;
           abort();
         }
       }

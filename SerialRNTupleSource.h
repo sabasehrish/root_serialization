@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <atomic>
 
 #include "DataProductRetriever.h"
 #include "DelayedProductRetriever.h"
@@ -16,19 +17,16 @@
 namespace cce::tf {
   class SerialRNTuplePromptRetriever : public DelayedProductRetriever {
   public:
-    SerialRNTuplePromptRetriever(SerialTaskQueue* iQueue,
-                                  ROOT::Experimental::REntry* iEntry,
-                                  std::vector<std::string> const* iFieldIDs):
-      queue_(iQueue), entry_(iEntry), fieldIDs_(iFieldIDs),
-      accumulatedTime_{std::chrono::microseconds::zero()}{}
+    SerialRNTuplePromptRetriever():
+      accumulatedTime_{std::chrono::microseconds::zero().count()}{}
+    SerialRNTuplePromptRetriever(SerialRNTuplePromptRetriever&&) = default;
+    SerialRNTuplePromptRetriever(SerialRNTuplePromptRetriever const& iOther):
+      accumulatedTime_(iOther.accumulatedTime_.load()) {}
     void getAsync(DataProductRetriever&, int index, TaskHolder) final;
-    std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
+    std::chrono::microseconds accumulatedTime() const { return std::chrono::microseconds{accumulatedTime_.load()};}
 
   private:
-    SerialTaskQueue* queue_;
-    ROOT::Experimental::REntry* entry_;
-    std::vector<std::string> const* fieldIDs_;
-    std::chrono::microseconds accumulatedTime_;
+    std::atomic<std::chrono::microseconds::rep> accumulatedTime_;
   };
 
   class SerialRNTupleDelayedRetriever : public DelayedProductRetriever {
@@ -74,7 +72,6 @@ namespace cce::tf {
     
     SerialTaskQueue queue_;
     std::unique_ptr<ROOT::Experimental::RNTupleReader> events_;
-    std::vector<std::string> fieldIDs_;
     long nEvents_;
     std::chrono::microseconds accumulatedTime_;
 

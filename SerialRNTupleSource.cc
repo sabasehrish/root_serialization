@@ -33,7 +33,8 @@ SerialRNTupleSource::SerialRNTupleSource(unsigned iNLanes, unsigned long long iN
   bool hasEventAux = false;
   auto const& model = events_->GetModel();
   auto const& subfields = model.GetFieldZero().GetSubFields();
-  fieldIDs_.reserve(subfields.size());
+  std::vector<std::string> fieldIDs;
+  fieldIDs.reserve(subfields.size());
   std::vector<std::string> fieldType;
   fieldType.reserve(subfields.size());
   for(auto* field: subfields) {
@@ -41,7 +42,7 @@ SerialRNTupleSource::SerialRNTupleSource(unsigned iNLanes, unsigned long long iN
       hasEventID = true;
       continue;
     }
-    fieldIDs_.emplace_back(field->GetFieldName());
+    fieldIDs.emplace_back(field->GetFieldName());
     fieldType.emplace_back(field->GetTypeName());
   }
 
@@ -50,24 +51,24 @@ SerialRNTupleSource::SerialRNTupleSource(unsigned iNLanes, unsigned long long iN
     dataProductsPerLane_.emplace_back();
     auto& dataProducts = dataProductsPerLane_.back();
     
-    dataProducts.reserve(fieldIDs_.size());
+    dataProducts.reserve(fieldIDs.size());
     DelayedProductRetriever* delayedReader = nullptr;
     if(not delayReading_) {
-      promptReaders_.emplace_back(&queue_, entries_.back().get(),&fieldIDs_);
+      promptReaders_.emplace_back();
       delayedReader = &promptReaders_.back();
     } else {
-      delayedReaders_.emplace_back(&queue_, *events_.get(), fieldIDs_, &ptrToDataProducts_[laneId]);
+      delayedReaders_.emplace_back(&queue_, *events_.get(), fieldIDs, &ptrToDataProducts_[laneId]);
       delayedReader = &delayedReaders_.back();
     }
 
     auto& addressDataProducts = ptrToDataProducts_[laneId];
-    addressDataProducts.reserve(fieldIDs_.size());
-    for(int i=0; i< fieldIDs_.size(); ++i) {
+    addressDataProducts.reserve(fieldIDs.size());
+    for(int i=0; i< fieldIDs.size(); ++i) {
       TClass* class_ptr=TClass::GetClass(fieldType[i].c_str());
-      addressDataProducts.push_back(entries_.back()->GetPtr<void>(fieldIDs_[i]).get());
+      addressDataProducts.push_back(entries_.back()->GetPtr<void>(fieldIDs[i]).get());
       dataProducts.emplace_back(i,
                                 &addressDataProducts[i],
-                                fieldIDs_[i],
+                                fieldIDs[i],
                                 class_ptr,
                                 delayedReader);
     }
@@ -107,15 +108,11 @@ void SerialRNTupleSource::printSummary() const {
 }
 
 void SerialRNTuplePromptRetriever::getAsync(DataProductRetriever& dataProduct, int index, TaskHolder iTask) {
-  auto group = iTask.group();
-  queue_->push(*group, [&dataProduct, index,this, task = std::move(iTask)]() mutable { 
-      auto start = std::chrono::high_resolution_clock::now();
-      dataProduct.setSize(0);
-      accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
-      task.doneWaiting();
-    });
+  auto start = std::chrono::high_resolution_clock::now();
+  dataProduct.setSize(0);
+  accumulatedTime_ += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count();
+  iTask.doneWaiting();
 };
-
 
 void SerialRNTupleDelayedRetriever::fillViews(ROOT::Experimental::RNTupleReader& iReader, std::vector<std::string> const& iFieldIDs) {
   views_.reserve(iFieldIDs.size());

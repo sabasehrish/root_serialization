@@ -176,6 +176,7 @@ add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${
 
 add_test(NAME RNTupleOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleOutputer=test_empty.rntpl)
 add_test(NAME RNTupleOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
+add_test(NAME RNTupleOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)
   if(NOT DEFINED HDF5_DIR)

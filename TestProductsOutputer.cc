@@ -8,8 +8,8 @@
 
 using namespace cce::tf;
 
-TestProductsOutputer::TestProductsOutputer(unsigned int iNLanes):
-  retrieverPerLane_(iNLanes) {}
+TestProductsOutputer::TestProductsOutputer(unsigned int iNLanes, int iNProducts):
+  retrieverPerLane_(iNLanes), nProducts_(iNProducts) {}
 
 void TestProductsOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iRetrievers) {
   retrieverPerLane_[iLaneIndex] = &iRetrievers;
@@ -27,7 +27,7 @@ bool TestProductsOutputer::usesProductReadyAsync() const {
 void TestProductsOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto const& retrievers = *retrieverPerLane_[iLaneIndex];
 
-  if (retrievers.size() != 2) {
+  if (retrievers.size() != nProducts_) {
     std::cout<<"ERROR: wrong number of data products, expected 2 but see "<<retrievers.size() <<std::endl;
     abort();
   }
@@ -75,7 +75,7 @@ namespace {
   public:
     TestProductsMaker(): OutputerMakerBase("TestProductsOutputer") {}
     std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
-      return std::make_unique<TestProductsOutputer>(iNLanes);
+      return std::make_unique<TestProductsOutputer>(iNLanes, params.get<int>("nProducts",2));
     }
     };
 

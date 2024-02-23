@@ -33,7 +33,7 @@ void RNTupleOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProd
       auto name = dp.name().substr(0, dp.name().find("."));
       if ( config_.verbose_ > 1 ) std::cout << "-------- Creating field for " << name << " of type " << dp.classType()->GetName() << "\n";
       try { 
-        auto field = ROOT::Experimental::Detail::RFieldBase::Create(name, dp.classType()->GetName()).Unwrap();
+        auto field = ROOT::Experimental::RFieldBase::Create(name, dp.classType()->GetName()).Unwrap();
         assert(field);
         if ( config_.verbose_ > 1 ) ROOT::Experimental::RPrintSchemaVisitor(std::cout, '*', 1000, 10).VisitField(*field);
         model->AddField(std::move(field));
@@ -47,7 +47,7 @@ void RNTupleOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProd
     }
     if(not hasEventAuxiliaryBranch) {
       id_ = std::make_shared<EventIdentifier>();
-      auto field = ROOT::Experimental::Detail::RFieldBase::Create("EventID", "cce::tf::EventIdentifier").Unwrap();
+      auto field = ROOT::Experimental::RFieldBase::Create("EventID", "cce::tf::EventIdentifier").Unwrap();
       if ( config_.verbose_ > 1 ) ROOT::Experimental::RPrintSchemaVisitor(std::cout, '*', 1000, 10).VisitField(*field);
       assert(field);
       model->AddField(std::move(field));
@@ -113,11 +113,11 @@ void RNTupleOutputer::collateProducts(
   auto rentry = ntuple_->CreateEntry();
   for(size_t i=0; i < entry.ptrs.size(); ++i) {
     void** ptr = entry.ptrs[i];
-    rentry->CaptureValueUnsafe(fieldIDs_[i], *ptr);
+    rentry->BindRawPtr(fieldIDs_[i], *ptr);
   }
   if(id_) {
     *id_ = iEventID;
-    rentry->CaptureValueUnsafe("EventID", id_.get());
+    rentry->BindRawPtr("EventID", id_.get());
   }
   ntuple_->Fill(*rentry);
 

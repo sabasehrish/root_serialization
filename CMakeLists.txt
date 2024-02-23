@@ -156,7 +156,7 @@ add_test(NAME RootOutputerEmptyAllOptionsTest COMMAND threaded_io_test -s EmptyS
 add_test(NAME TestProductsROOT COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootOutputer=test_prod.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRootSource=test_prod.root -t 1 -n 10 -o TestProductsOutputer")
 add_test(NAME TestProductsROOTReplicated COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootOutputer=test_prod_repl.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s ReplicatedRootSource=test_prod_repl.root -t 1 -n 10 -o TestProductsOutputer")
 add_test(NAME TestProductsROOTRepeating COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootOutputer=test_prod_rep.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s RepeatingRootSource=test_prod_rep.root:repeat=5 -t 1 -n 100 -o TestProductsOutputer")
-add_test(NAME TestProductsROOTRepeatingOneBranch COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootOutputer=test_prod_rep_1branch.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s RepeatingRootSource=test_prod_rep_1branch.root:repeat=5:branchToRead=floats -t 1 -n 100 -o TestProductsOutputer")
+add_test(NAME TestProductsROOTRepeatingOneBranch COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootOutputer=test_prod_rep_1branch.root; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s RepeatingRootSource=test_prod_rep_1branch.root:repeat=5:branchToRead=floats -t 1 -n 100 -o TestProductsOutputer:nProducts=1")
 
 add_test(NAME RootEventOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RootEventOutputer=test_empty.eroot)
 add_test(NAME TestProductsRootEvent COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RootEventOutputer=test_prod.eroot; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SharedRootEventSource=test_prod.eroot -t 1 -n 10 -o TestProductsOutputer")
@@ -176,6 +176,7 @@ add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${
 
 add_test(NAME RNTupleOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleOutputer=test_empty.rntpl)
 add_test(NAME RNTupleOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
+add_test(NAME RNTupleOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)
   if(NOT DEFINED HDF5_DIR)

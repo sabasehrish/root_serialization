@@ -1,13 +1,16 @@
-#include "SerialRNTupleSource.h"
+#include "SerialRNTupleTFileSource.h"
 #include "SourceFactory.h"
+
+#include "TFile.h"
 
 #include <iostream>
 
 using namespace cce::tf;
 
-SerialRNTupleSource::SerialRNTupleSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName, bool iDelayReading):
+SerialRNTupleTFileSource::SerialRNTupleTFileSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName, bool iDelayReading):
   SharedSourceBase(iNEvents),
-  events_{ROOT::Experimental::RNTupleReader::Open("Events", iName.c_str())},
+  file_{TFile::Open(iName.c_str())},
+  events_{ROOT::Experimental::RNTupleReader::Open(file_->Get<ROOT::Experimental::RNTuple>("Events"))},
   accumulatedTime_{std::chrono::microseconds::zero()},
   delayReading_{iDelayReading}
  {
@@ -72,7 +75,7 @@ SerialRNTupleSource::SerialRNTupleSource(unsigned iNLanes, unsigned long long iN
   }
 }
 
-void SerialRNTupleSource::readEventAsync(unsigned int iLane, long iEventIndex, OptionalTaskHolder iTask) {
+void SerialRNTupleTFileSource::readEventAsync(unsigned int iLane, long iEventIndex, OptionalTaskHolder iTask) {
   if(nEvents_ > iEventIndex) {
     auto temptask = iTask.releaseToTaskHolder();
     auto group = temptask.group();
@@ -91,7 +94,7 @@ void SerialRNTupleSource::readEventAsync(unsigned int iLane, long iEventIndex, O
   }
 }
 
-std::chrono::microseconds SerialRNTupleSource::accumulatedTime() const {
+std::chrono::microseconds SerialRNTupleTFileSource::accumulatedTime() const {
   auto fullTime = accumulatedTime_;
   for(auto& delayedReader: promptReaders_) {
     fullTime += delayedReader.accumulatedTime();
@@ -99,23 +102,22 @@ std::chrono::microseconds SerialRNTupleSource::accumulatedTime() const {
   return fullTime;
 }
 
-void SerialRNTupleSource::printSummary() const {
+void SerialRNTupleTFileSource::printSummary() const {
   std::chrono::microseconds sourceTime = accumulatedTime();
   std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 }
 
-
 namespace {
     class Maker : public SourceMakerBase {
   public:
-    Maker(): SourceMakerBase("SerialRNTupleSource") {}
+    Maker(): SourceMakerBase("SerialRNTupleTFileSource") {}
       std::unique_ptr<SharedSourceBase> create(unsigned int iNLanes, unsigned long long iNEvents, ConfigurationParameters const& params) const final {
         auto fileName = params.get<std::string>("fileName");
         if(not fileName) {
           std::cout <<"no file name given\n";
           return {};
         }
-        return std::make_unique<SerialRNTupleSource>(iNLanes, iNEvents, *fileName, params.get<bool>("delayReading",false));
+        return std::make_unique<SerialRNTupleTFileSource>(iNLanes, iNEvents, *fileName, params.get<bool>("delayReading",false));
     }
     };
 

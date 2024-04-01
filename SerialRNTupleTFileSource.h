@@ -1,5 +1,5 @@
-#if !defined(SerialRNTupleSource_h)
-#define SerialRNTupleSource_h
+#if !defined(SerialRNTupleTFileSource_h)
+#define SerialRNTupleTFileSource_h
 
 #include <string>
 #include <memory>
@@ -14,12 +14,14 @@
 #include "SerialTaskQueue.h"
 #include "ROOT/RNTuple.hxx"
 #include "ROOT/RNTupleReader.hxx"
+
 #include "SerialRNTupleRetrievers.h"
 
+
 namespace cce::tf {
-  class SerialRNTupleSource : public SharedSourceBase {
+  class SerialRNTupleTFileSource : public SharedSourceBase {
   public:
-    SerialRNTupleSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName, bool iDelayReading);
+    SerialRNTupleTFileSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName, bool iDelayReading);
     size_t numberOfDataProducts() const final {return dataProductsPerLane_[0].size();}
 
     std::vector<DataProductRetriever>& dataProducts(unsigned int iLane, long iEventIndex) final {
@@ -35,6 +37,7 @@ namespace cce::tf {
     void readEventAsync(unsigned int iLane, long iEventIndex,  OptionalTaskHolder) final;
 
     
+    std::unique_ptr<TFile> file_;
     SerialTaskQueue queue_;
     std::unique_ptr<ROOT::Experimental::RNTupleReader> events_;
     long nEvents_;

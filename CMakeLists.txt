@@ -93,8 +93,11 @@ add_executable(threaded_io_test
   SourceFactory.cc
   sourceFactoryGenerator.cc
   RNTupleOutputer.cc
+  RNTupleTFileOutputer.cc
   RNTupleOutputerConfig.cc
   SerialRNTupleSource.cc
+  SerialRNTupleTFileSource.cc
+  SerialRNTupleRetrievers.cc
   threaded_io_test.cc)
 
 # for task_group::defer
@@ -177,6 +180,11 @@ add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${
 add_test(NAME RNTupleOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleOutputer=test_empty.rntpl)
 add_test(NAME RNTupleOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
 add_test(NAME RNTupleOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
+
+add_test(NAME RNTupleTFileOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleTFileOutputer=test_empty.rntpl)
+add_test(NAME RNTupleTFileOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleTFileOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleTFileSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
+add_test(NAME RNTupleTFileOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleTFileOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleTFileSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
+
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)
   if(NOT DEFINED HDF5_DIR)

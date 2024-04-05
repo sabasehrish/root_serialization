@@ -68,11 +68,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
   else if ( not ntuple_ ) {
     throw std::logic_error("setupForLane should be sequential");
   }
-  // would be nice to have ntuple_->CreateEntry(field_map) or such
-  for(auto const& dp: iDPs) {
-    entries_[iLaneIndex].ptrs.push_back(dp.address());
-    // entries_[iLaneIndex].entry.CaptureValue(field->CaptureValue(dp.address()));
-  }
+  entries_[iLaneIndex].retrievers = &iDPs;
 }
 
 void RNTupleTFileOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
@@ -112,8 +108,8 @@ void RNTupleTFileOutputer::collateProducts(
   if ( config_.verbose_ > 0 ) std::cout << thisOffset << " event id " << iEventID.run << ", "<< iEventID.lumi<<", "<<iEventID.event<<"\n";
 
   auto rentry = ntuple_->CreateEntry();
-  for(size_t i=0; i < entry.ptrs.size(); ++i) {
-    void** ptr = entry.ptrs[i];
+  for(size_t i=0; i < entry.retrievers->size(); ++i) {
+    void** ptr = (*entry.retrievers)[i].address();
     rentry->BindRawPtr(fieldIDs_[i], *ptr);
   }
   if(id_) {

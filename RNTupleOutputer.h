@@ -34,7 +34,7 @@ class RNTupleOutputer : public OutputerBase {
 private:
   struct EntryContainer {
     // std::unique_ptr<ROOT::Experimental::REntry> entry;
-    std::vector<void**> ptrs;
+    std::vector<DataProductRetriever> const* retrievers;
   };
 
   // Plan:

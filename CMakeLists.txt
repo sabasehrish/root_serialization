@@ -94,6 +94,7 @@ add_executable(threaded_io_test
   sourceFactoryGenerator.cc
   RNTupleOutputer.cc
   RNTupleTFileOutputer.cc
+  RNTupleParallelOutputer.cc
   RNTupleOutputerConfig.cc
   SerialRNTupleSource.cc
   SerialRNTupleTFileSource.cc
@@ -184,6 +185,9 @@ add_test(NAME RNTupleOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CU
 add_test(NAME RNTupleTFileOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleTFileOutputer=test_empty.rntpl)
 add_test(NAME RNTupleTFileOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleTFileOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleTFileSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
 add_test(NAME RNTupleTFileOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleTFileOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleTFileSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
+
+add_test(NAME RNTupleParallelOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleParallelOutputer=test_empty.rntpl)
+add_test(NAME RNTupleParallelOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleParallelOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
 
 option(ENABLE_HDF5 "Build HDF5 Sources and Outputers" ON) # default ON
 if(ENABLE_HDF5)

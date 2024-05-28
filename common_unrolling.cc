@@ -79,7 +79,7 @@ namespace {
             //Container with no dictionary defined
             abort();
           }
-          if (inklass->TestBit(TClass::kHasCustomStreamerMember)) {
+          if (inklass->HasCustomStreamerMember()) {
             //do not support custom streamers as they can't be split
             abort();
           }
@@ -91,7 +91,7 @@ namespace {
         abort();
       }
       
-      if (!iClass->GetCollectionProxy() && iClass->TestBit(TClass::kHasCustomStreamerMember)) {
+      if (!iClass->GetCollectionProxy() && iClass->HasCustomStreamerMember()) {
         //do not support custom streamer
         abort();
       }  

@@ -16,20 +16,20 @@
 using namespace cce::tf;
 
 namespace {
-  ROOT::ECompressionAlgorithm algorithmChoice(std::string const& iName) {
+  ROOT::RCompressionSetting::EAlgorithm::EValues algorithmChoice(std::string const& iName) {
     if(not iName.empty()) {
       if(iName == "ZLIB") {
-        return ROOT::kZLIB;
+        return ROOT::RCompressionSetting::EAlgorithm::EValues::kZLIB;
       } else if(iName == "LZMA") {
-        return ROOT::kLZMA;
+        return ROOT::RCompressionSetting::EAlgorithm::EValues::kLZMA;
       } else if(iName == "LZ4") {
-        return ROOT::kLZ4;
+        return ROOT::RCompressionSetting::EAlgorithm::EValues::kLZ4;
       } else {
         std::cout <<"unknown compression algorithm "<<iName<<std::endl;
         abort();
       }
     }
-    return ROOT::kUseGlobalSetting;
+    return ROOT::RCompressionSetting::EAlgorithm::EValues::kUseGlobal;
   }
 }
 

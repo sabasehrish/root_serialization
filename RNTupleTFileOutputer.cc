@@ -24,7 +24,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     bool hasEventAuxiliaryBranch = false;
     
-    auto model = ROOT::Experimental::RNTupleModel::Create();
+    auto model = ROOT::Experimental::RNTupleModel::CreateBare();
     fieldIDs_.reserve(iDPs.size());
     for(auto const& dp: iDPs) {
       // chop last . if present

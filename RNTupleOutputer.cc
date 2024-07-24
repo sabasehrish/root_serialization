@@ -61,6 +61,11 @@ void RNTupleOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProd
     writeOptions.SetMaxUnzippedClusterSize(config_.maxUnzippedClusterSize_);
     writeOptions.SetHasSmallClusters(config_.hasSmallClusters_);
     writeOptions.SetUseBufferedWrite(config_.useBufferedWrite_);
+    writeOptions.SetUseTailPageOptimization(config_.useTailPageOptimization_);
+    writeOptions.SetEnablePageChecksums(config_.enablePageChecksums_);
+    if(config_.printEstimateWriteMemoryUsage_) {
+      std::cout <<"RNTupleWriter: EstimateWriteMemoryUsage "<<model->EstimateWriteMemoryUsage(writeOptions)<<std::endl;
+    }
     
     ntuple_ = ROOT::Experimental::RNTupleWriter::Recreate(std::move(model), "Events", fileName_, writeOptions);
   }

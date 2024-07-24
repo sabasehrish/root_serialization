@@ -16,6 +16,9 @@ namespace cce::tf {
     std::size_t maxUnzippedClusterSize_ = 512 * 1024 * 1024;
     bool hasSmallClusters_=false;
     bool useBufferedWrite_=true;
+    bool useTailPageOptimization_=true;
+    bool enablePageChecksums_=true;
+    bool printEstimateWriteMemoryUsage_=false;
   };
 
 

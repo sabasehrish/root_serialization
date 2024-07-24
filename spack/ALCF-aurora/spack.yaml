@@ -1,0 +1,24 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+#
+# I'm keeping this one deliberately high level: you can tell your own spack
+# installation about external packages and preferred MPI implementations
+# usage:
+#    spack env activate .
+#    spack install
+
+spack:
+  modules:
+    prefix_inspections:
+      lib: [LD_LIBRARY_PATH]
+      lib64: [LD_LIBRARY_PATH]
+  specs:
+  - hdf5+mpi+hl%oneapi
+  - root@master~opengl+root7+daos~x~minuit%oneapi cxxstd=17
+  - darshan-runtime%oneapi
+  - darshan-util%oneapi
+  view: true
+  concretizer:
+    unify: true

@@ -12,11 +12,35 @@ TEST_CASE("Test configKeyValuePairs function", "[configKeyValuePairs]") {
     REQUIRE( v.begin()->first == "foo");
     REQUIRE( v.begin()->second.empty());
   }
+  SECTION("single file name") {
+    auto v = configKeyValuePairs("foo.root");
+    REQUIRE(v.size() == 1);
+    REQUIRE( v.begin()->first == "fileName");
+    REQUIRE( v.begin()->second == "foo.root");
+  }
+  SECTION("single file name with quotes") {
+    auto v = configKeyValuePairs("\"foo.root\"");
+    REQUIRE(v.size() == 1);
+    REQUIRE( v.begin()->first == "fileName");
+    REQUIRE( v.begin()->second == "foo.root");
+  }
   SECTION("single item with value") {
     auto v = configKeyValuePairs("foo=3");
     REQUIRE(v.size() == 1);
     REQUIRE( v.begin()->first == "foo");
     REQUIRE( v.begin()->second == "3");
+  }
+  SECTION("single item with quoted value") {
+    auto v = configKeyValuePairs("foo=\"3\"");
+    REQUIRE(v.size() == 1);
+    REQUIRE( v.begin()->first == "foo");
+    REQUIRE( v.begin()->second == "3");
+  }
+  SECTION("single item with quoted value containing :") {
+    auto v = configKeyValuePairs("foo=\"http://foo.com\"");
+    REQUIRE(v.size() == 1);
+    REQUIRE( v.begin()->first == "foo");
+    REQUIRE( v.begin()->second == "http://foo.com");
   }
   SECTION("single item with empty value") {
     auto v = configKeyValuePairs("foo=");

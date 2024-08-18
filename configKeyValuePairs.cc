@@ -1,7 +1,31 @@
 #include "configKeyValuePairs.h"
+#include <iostream>
 
 namespace cce::tf {
 
+  namespace {
+    std::string::size_type keyValueEnd(std::string_view iToParse, std::string::size_type iStart) {
+      auto colonPos = iToParse.find(':', iStart);
+      auto quotePos = iToParse.find('"', iStart);
+      if (quotePos < colonPos) {
+        //find ending quote
+        auto lastQuotePos = iToParse.find('"', quotePos+1);
+        if (lastQuotePos == std::string::npos) {
+          std::cerr <<"Missing end quote in configuration";
+          exit(1);
+        }
+        colonPos = iToParse.find(':', lastQuotePos);
+      }
+      return colonPos;
+    }
+    std::string stripQuoteFromValue(std::string iValue) {
+      if( iValue.empty() or iValue[0] != '"') {
+        return iValue;
+      }
+      return iValue.substr(1,iValue.size()-2);
+    }
+  }
+  
   ConfigKeyValueMap configKeyValuePairs(std::string_view iToParse) {
     ConfigKeyValueMap keyValues;
     std::string::size_type start=0;
@@ -9,7 +33,7 @@ namespace cce::tf {
 
     bool firstEntry = true;
     do {
-      pos = iToParse.find(':',start);
+      auto pos = keyValueEnd(iToParse, start);
       std::string keyValue;
       if(pos != std::string::npos) {
 	keyValue = iToParse.substr(start,pos-start);
@@ -24,17 +48,17 @@ namespace cce::tf {
 	break;
       }
       if( (pos = keyValue.find('=')) != std::string::npos ) {
-	keyValues.emplace(keyValue.substr(0,pos), keyValue.substr(pos+1));
+	keyValues.emplace(keyValue.substr(0,pos), stripQuoteFromValue(keyValue.substr(pos+1)));
       } else {
         if(firstEntry) {
           //this might be a file name
           auto pos = keyValue.find('/',0);
           if(pos != std::string::npos) {
-            keyValues.emplace("fileName",keyValue);
+            keyValues.emplace("fileName",stripQuoteFromValue(keyValue));
           } else {
             pos = keyValue.find('.',0);
             if(pos != std::string::npos) {
-              keyValues.emplace("fileName",keyValue);
+              keyValues.emplace("fileName",stripQuoteFromValue(keyValue));
             } else {
               keyValues.emplace(keyValue,"");
             }

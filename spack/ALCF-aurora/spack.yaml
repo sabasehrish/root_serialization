@@ -19,6 +19,11 @@ spack:
   - root@master~opengl+root7+daos~x~minuit%oneapi cxxstd=17
   - darshan-runtime%oneapi
   - darshan-util%oneapi
+  - clhep%oneapi
+  - fmt%oneapi
+  - boost%oneapi
+  - hepmc3%oneapi
+  - hepmc%oneapi
   view: true
   concretizer:
     unify: true

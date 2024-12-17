@@ -15,15 +15,18 @@ spack:
       lib: [LD_LIBRARY_PATH]
       lib64: [LD_LIBRARY_PATH]
   specs:
-  - hdf5+mpi+hl%oneapi
-  - root@master~opengl+root7+daos~x~minuit%oneapi cxxstd=17
-  - darshan-runtime%oneapi
-  - darshan-util%oneapi
-  - clhep%oneapi
-  - fmt%oneapi
-  - boost%oneapi
-  - hepmc3%oneapi
-  - hepmc%oneapi
+# for the mimicking framework
+  - hdf5+mpi+hl
+  - root@master~opengl+root7+daos~x~minuit%gcc cxxstd=17
+# need a fairly new Darshan to get DAOS information
+  - darshan-runtime
+  - darshan-util
+# additional dependencies for the CMS libraries
+  - clhep
+  - fmt
+  - boost
+  - hepmc3
+  - hepmc
   view: true
   concretizer:
     unify: true

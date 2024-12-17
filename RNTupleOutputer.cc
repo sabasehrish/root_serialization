@@ -56,12 +56,10 @@ void RNTupleOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProd
     // https://root.cern/doc/v626/classROOT_1_1Experimental_1_1RNTupleWriteOptions.html
     auto writeOptions = ROOT::Experimental::RNTupleWriteOptions();
     writeOptions.SetCompression(config_.compressionAlgorithm_, config_.compressionLevel_);
-    writeOptions.SetApproxUnzippedPageSize(config_.approxUnzippedPageSize_);
+    writeOptions.SetMaxUnzippedPageSize(config_.maxUnzippedPageSize_);
     writeOptions.SetApproxZippedClusterSize(config_.approxZippedClusterSize_);
     writeOptions.SetMaxUnzippedClusterSize(config_.maxUnzippedClusterSize_);
-    writeOptions.SetHasSmallClusters(config_.hasSmallClusters_);
     writeOptions.SetUseBufferedWrite(config_.useBufferedWrite_);
-    writeOptions.SetUseTailPageOptimization(config_.useTailPageOptimization_);
     writeOptions.SetEnablePageChecksums(config_.enablePageChecksums_);
     if(config_.printEstimateWriteMemoryUsage_) {
       std::cout <<"RNTupleWriter: EstimateWriteMemoryUsage "<<model->EstimateWriteMemoryUsage(writeOptions)<<std::endl;

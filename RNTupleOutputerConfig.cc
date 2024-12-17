@@ -28,12 +28,10 @@ namespace cce::tf {
       return std::nullopt;
     }
     config.verbose_ = params.get<int>("verbose", config.verbose_);
-    config.approxUnzippedPageSize_ = params.get<std::size_t>("approxUnzippedPageSize", config.approxUnzippedPageSize_);
+    config.maxUnzippedPageSize_ = params.get<std::size_t>("maxUnzippedPageSize", config.maxUnzippedPageSize_);
     config.approxZippedClusterSize_ = params.get<std::size_t>("approxZippedClusterSize", config.approxZippedClusterSize_);
     config.maxUnzippedClusterSize_ = params.get<std::size_t>("maxUnzippedClusterSize", config.maxUnzippedClusterSize_);
-    config.hasSmallClusters_ =  params.get<bool>("hasSmallClusters", config.hasSmallClusters_);
     config.useBufferedWrite_ = params.get<bool>("useBufferedWrite", config.useBufferedWrite_);
-    config.useTailPageOptimization_ = params.get<bool>("useTailPageOptimization", config.useTailPageOptimization_);
     config.enablePageChecksums_ = params.get<bool>("enablePageChecksums", config.enablePageChecksums_);
     config.printEstimateWriteMemoryUsage_ = params.get<bool>("printEstimateWriteMemoryUsage", config.printEstimateWriteMemoryUsage_);
     return std::make_pair(*fileName,config);

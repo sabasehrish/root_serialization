@@ -10,7 +10,7 @@ using namespace cce::tf;
 SerialRNTupleTFileSource::SerialRNTupleTFileSource(unsigned iNLanes, unsigned long long iNEvents, std::string const& iName, bool iDelayReading):
   SharedSourceBase(iNEvents),
   file_{TFile::Open(iName.c_str())},
-  events_{ROOT::Experimental::RNTupleReader::Open(*file_->Get<ROOT::Experimental::RNTuple>("Events"))},
+  events_{ROOT::Experimental::RNTupleReader::Open(*file_->Get<ROOT::RNTuple>("Events"))},
   accumulatedTime_{std::chrono::microseconds::zero()},
   delayReading_{iDelayReading}
  {
@@ -32,7 +32,7 @@ SerialRNTupleTFileSource::SerialRNTupleTFileSource(unsigned iNLanes, unsigned lo
   bool hasEventID = false;
   bool hasEventAux = false;
   auto const& model = events_->GetModel();
-  auto const& subfields = model.GetFieldZero().GetSubFields();
+  auto const& subfields = model.GetConstFieldZero().GetSubFields();
   std::vector<std::string> fieldIDs;
   fieldIDs.reserve(subfields.size());
   std::vector<std::string> fieldType;

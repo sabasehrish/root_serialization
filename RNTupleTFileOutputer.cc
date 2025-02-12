@@ -41,7 +41,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
         fieldIDs_.emplace_back(std::move(name));
         
       }
-      catch (ROOT::Experimental::RException& e) {
+      catch (ROOT::RException& e) {
          std::cout << "Failed: " << e.what() << "\n";
          throw std::runtime_error("Failed to create field");
       }

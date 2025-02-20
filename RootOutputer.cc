@@ -26,13 +26,13 @@ RootOutputer::RootOutputer(std::string const& iFileName, unsigned int iNLanes, C
   }
   if(not iConfig.compressionAlgorithm_.empty()) {
     if(iConfig.compressionAlgorithm_ == "ZLIB") {
-      file_.SetCompressionAlgorithm(ROOT::kZLIB);
+      file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kZLIB);
     } else if(iConfig.compressionAlgorithm_ == "LZMA") {
-      file_.SetCompressionAlgorithm(ROOT::kLZMA);
+      file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kLZMA);
     } else if(iConfig.compressionAlgorithm_ == "LZ4") {
-      file_.SetCompressionAlgorithm(ROOT::kLZ4);
+      file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kLZ4);
     } else if(iConfig.compressionAlgorithm_ == "ZSTD") {
-      file_.SetCompressionAlgorithm(ROOT::kZSTD);
+      file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kZSTD);
     }else {
       std::cout <<"unknown compression algorithm "<<iConfig.compressionAlgorithm_<<std::endl;
       abort();

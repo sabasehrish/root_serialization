@@ -40,7 +40,7 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
         fieldIDs_.emplace_back(std::move(name));
         
       }
-      catch (ROOT::Experimental::RException& e) {
+      catch (ROOT::RException& e) {
          std::cout << "Failed: " << e.what() << "\n";
          throw std::runtime_error("Failed to create field");
       }
@@ -56,10 +56,9 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
     // https://root.cern/doc/v626/classROOT_1_1Experimental_1_1RNTupleWriteOptions.html
     auto writeOptions = ROOT::Experimental::RNTupleWriteOptions();
     writeOptions.SetCompression(config_.compressionAlgorithm_, config_.compressionLevel_);
-    writeOptions.SetApproxUnzippedPageSize(config_.approxUnzippedPageSize_);
+    writeOptions.SetMaxUnzippedPageSize(config_.maxUnzippedPageSize_);
     writeOptions.SetApproxZippedClusterSize(config_.approxZippedClusterSize_);
     writeOptions.SetMaxUnzippedClusterSize(config_.maxUnzippedClusterSize_);
-    writeOptions.SetHasSmallClusters(config_.hasSmallClusters_);
     writeOptions.SetUseBufferedWrite(config_.useBufferedWrite_);
     
     ntuple_ = ROOT::Experimental::RNTupleParallelWriter::Recreate(std::move(model), "Events", fileName_, writeOptions);

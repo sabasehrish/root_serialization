@@ -39,13 +39,13 @@ RootBatchEventsOutputer::RootBatchEventsOutputer(std::string const& iFileName, u
 
     if(not iTFileCompression.empty()) {
       if(iTFileCompression == "ZLIB") {
-        file_.SetCompressionAlgorithm(ROOT::kZLIB);
+        file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kZLIB);
       } else if(iTFileCompression == "LZMA") {
-        file_.SetCompressionAlgorithm(ROOT::kLZMA);
+        file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kLZMA);
       } else if(iTFileCompression == "LZ4") {
-        file_.SetCompressionAlgorithm(ROOT::kLZ4);
+        file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kLZ4);
       } else if(iTFileCompression == "ZSTD") {
-        file_.SetCompressionAlgorithm(ROOT::kZSTD);
+        file_.SetCompressionAlgorithm(ROOT::RCompressionSetting::EAlgorithm::kZSTD);
       }else {
         std::cout <<"unknown compression algorithm "<<iTFileCompression<<std::endl;
         abort();

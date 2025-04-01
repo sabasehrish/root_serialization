@@ -44,7 +44,7 @@ namespace cce::tf {
     std::chrono::microseconds accumulatedTime_;
 
     //per lane items
-    std::vector<std::unique_ptr<ROOT::Experimental::REntry>> entries_;
+    std::vector<std::unique_ptr<ROOT::REntry>> entries_;
     std::vector<SerialRNTuplePromptRetriever> promptReaders_;
     std::vector<SerialRNTupleDelayedRetriever> delayedReaders_;
     std::vector<EventIdentifier> identifiers_;

@@ -48,7 +48,7 @@ private:
   const RNTupleOutputerConfig config_;
 
   // initialized in lane 0 setupForLane(), modified only in collateProducts()
-  mutable std::unique_ptr<ROOT::Experimental::RNTupleWriter> ntuple_;
+  mutable std::unique_ptr<ROOT::RNTupleWriter> ntuple_;
 
   //identifiers used to specify which field to use
   std::vector<std::string> fieldIDs_;

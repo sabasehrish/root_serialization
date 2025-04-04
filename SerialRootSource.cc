@@ -97,11 +97,26 @@ void SerialRootSource::printSummary() const {
   std::cout <<"\nSource time: "<<sourceTime.count()<<"us\n"<<std::endl;
 }
 
+void SerialRootDelayedRetriever::setupBuffer() {
+  buffers_.reserve(branches_->size());
+  for(auto b : *branches_) {
+    b->SetupAddresses();
+    TClass* class_ptr=nullptr;
+    EDataType type;
+    b->GetExpectedType(class_ptr,type);
+    assert(class_ptr != nullptr);
+    buffers_.push_back(class_ptr->New());
+  }
+}
+
 void SerialRootDelayedRetriever::getAsync(DataProductRetriever& dataProduct, int index, TaskHolder iTask) {
   auto group = iTask.group();
   queue_->push(*group, [&dataProduct, index,this, task = std::move(iTask)]() mutable { 
       auto start = std::chrono::high_resolution_clock::now();
+      (*branches_)[index]->SetAddress(&buffers_[index]);
       dataProduct.setSize( (*branches_)[index]->GetEntry(entry_) );
+      dataProduct.setAddress(&buffers_[index]);
+      (*branches_)[index]->SetAddress(nullptr);
       accumulatedTime_ += std::chrono::duration_cast<decltype(accumulatedTime_)>(std::chrono::high_resolution_clock::now() - start);
       task.doneWaiting();
     });

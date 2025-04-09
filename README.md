@@ -275,6 +275,29 @@ or
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleParallelOutputer=test.root:compressionAlgorithm=zstd:compressionLevel=6
 ```
 
+#### RNTupleAsyncOutputer
+Writes the _event_ data products into a ROOT file using an RNTupleParallelWriter per lane to allow concurrent writing.
+This version uses FillNoFlush and FlushCluster APIs to allow the framework to handle the synchronous writing.
+Specify both the name of the Outputer and the file to write as well as many  optional parameters:
+- compressionLevel: compression level 0-9, default 9
+- compressionAlgorithm: name of compression algorithm. Allowed valued "", "zlib", "lzma", "lz4", "zstd"
+- approxUnzippedPageSize:  should be just large enough so compression algorithm doesn't benefit from larger page sizes: Default size 64*1024
+- approxZippedClusterSize: Target compressed cluster size: Default size 50,000,000
+- maxUnzippedClusterSize: Memory limit for commiting a cluster. Default 512*1024*1024
+- hasSmallClusters: If 'true', use 32 bit index columns instead of 64 bit columns. Limits cluster size to 512MB. Default false
+- useBufferedWrite: default true
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleAsyncOutputer=test.rntpl
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleAsyncOutputer=test.rntpl:compressionAlgorithm=zstd
+```
+or
+```
+> threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleAsyncOutputer=test.root:compressionAlgorithm=zstd:compressionLevel=6
+```
+
 #### PDSOutputer
 Writes the _event_ data products into a PDS file. Specify both the name of the Outputer and the file to write as well as compression options:
 - compressionLevel: compression level. Allowed value depends on algorithm. For now ZSTD is the only one and allows values

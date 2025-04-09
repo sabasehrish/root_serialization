@@ -9,7 +9,7 @@ void SerialRNTuplePromptRetriever::getAsync(DataProductRetriever& dataProduct, i
   iTask.doneWaiting();
 };
 
-void SerialRNTupleDelayedRetriever::fillViews(ROOT::Experimental::RNTupleReader& iReader, std::vector<std::string> const& iFieldIDs) {
+void SerialRNTupleDelayedRetriever::fillViews(ROOT::RNTupleReader& iReader, std::vector<std::string> const& iFieldIDs) {
   views_.reserve(iFieldIDs.size());
   for(auto const& id: iFieldIDs) {
     views_.push_back(iReader.GetView<void>(id));

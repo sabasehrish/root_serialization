@@ -23,7 +23,7 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     bool hasEventAuxiliaryBranch = false;
     
-    auto model = ROOT::Experimental::RNTupleModel::CreateBare();
+    auto model = ROOT::RNTupleModel::CreateBare();
     fieldIDs_.reserve(iDPs.size());
     for(auto const& dp: iDPs) {
       // chop last . if present
@@ -33,7 +33,7 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
       auto name = dp.name().substr(0, dp.name().find("."));
       if ( config_.verbose_ > 1 ) std::cout << "-------- Creating field for " << name << " of type " << dp.classType()->GetName() << "\n";
       try { 
-        auto field = ROOT::Experimental::RFieldBase::Create(name, dp.classType()->GetName()).Unwrap();
+        auto field = ROOT::RFieldBase::Create(name, dp.classType()->GetName()).Unwrap();
         assert(field);
         if ( config_.verbose_ > 1 ) ROOT::Internal::RPrintSchemaVisitor(std::cout, '*', 1000, 10).VisitField(*field);
         model->AddField(std::move(field));
@@ -47,14 +47,14 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
     }
     if(not hasEventAuxiliaryBranch) {
       hasEventAuxiliaryBranch_ = false;
-      auto field = ROOT::Experimental::RFieldBase::Create("EventID", "cce::tf::EventIdentifier").Unwrap();
+      auto field = ROOT::RFieldBase::Create("EventID", "cce::tf::EventIdentifier").Unwrap();
       if ( config_.verbose_ > 1 ) ROOT::Internal::RPrintSchemaVisitor(std::cout, '*', 1000, 10).VisitField(*field);
       assert(field);
       model->AddField(std::move(field));
       fieldIDs_.emplace_back("EventID");
     }
     // https://root.cern/doc/v626/classROOT_1_1Experimental_1_1RNTupleWriteOptions.html
-    auto writeOptions = ROOT::Experimental::RNTupleWriteOptions();
+    auto writeOptions = ROOT::RNTupleWriteOptions();
     writeOptions.SetCompression(config_.compressionAlgorithm_, config_.compressionLevel_);
     writeOptions.SetMaxUnzippedPageSize(config_.maxUnzippedPageSize_);
     writeOptions.SetApproxZippedClusterSize(config_.approxZippedClusterSize_);

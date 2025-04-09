@@ -36,7 +36,7 @@ namespace cce::tf {
 
     
     SerialTaskQueue queue_;
-    std::unique_ptr<ROOT::Experimental::RNTupleReader> events_;
+    std::unique_ptr<ROOT::RNTupleReader> events_;
     long nEvents_;
     std::chrono::microseconds accumulatedTime_;
 

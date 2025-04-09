@@ -31,7 +31,7 @@ namespace cce::tf {
   class SerialRNTupleDelayedRetriever : public DelayedProductRetriever {
   public:
     SerialRNTupleDelayedRetriever(SerialTaskQueue* iQueue,
-                                  ROOT::Experimental::RNTupleReader& iReader,
+                                  ROOT::RNTupleReader& iReader,
                                   std::vector<std::string> const& iFieldIDs,
                                   std::vector<void*>* iProductPtrs):
       queue_(iQueue), addresses_(iProductPtrs), accumulatedTime_{std::chrono::microseconds::zero()}{
@@ -43,9 +43,9 @@ namespace cce::tf {
     std::chrono::microseconds accumulatedTime() const { return accumulatedTime_;}
 
   private:
-    void fillViews(ROOT::Experimental::RNTupleReader& iReader, std::vector<std::string> const& iFieldIDs);
+    void fillViews(ROOT::RNTupleReader& iReader, std::vector<std::string> const& iFieldIDs);
     SerialTaskQueue* queue_;
-    std::vector<ROOT::Experimental::RNTupleView<void>> views_;
+    std::vector<ROOT::RNTupleView<void>> views_;
     std::vector<void*>* addresses_;
     std::chrono::microseconds accumulatedTime_;
     std::uint64_t eventIndex_ = 0;

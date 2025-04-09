@@ -1,5 +1,5 @@
 #include <iostream>
-#include "RNTupleParallelOutputer.h"
+#include "RNTupleAsyncOutputer.h"
 #include "OutputerFactory.h"
 #include "FunctorTask.h"
 #include "RNTupleOutputerConfig.h"
@@ -10,7 +10,7 @@
 
 using namespace cce::tf;
 
-RNTupleParallelOutputer::RNTupleParallelOutputer(std::string const& fileName, unsigned int iNLanes, RNTupleOutputerConfig const& iConfig):
+RNTupleAsyncOutputer::RNTupleAsyncOutputer(std::string const& fileName, unsigned int iNLanes, RNTupleOutputerConfig const& iConfig):
     fileName_(fileName),
     laneInfos_(iNLanes),
     config_(iConfig),
@@ -18,7 +18,7 @@ RNTupleParallelOutputer::RNTupleParallelOutputer(std::string const& fileName, un
     parallelTime_{0}
   { }
 
-void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
+void RNTupleAsyncOutputer::setupForLane(unsigned int iLaneIndex, std::vector<DataProductRetriever> const& iDPs) {
   if ( iLaneIndex == 0 ) {
     const std::string eventAuxiliaryBranchName{"EventAuxiliary"}; 
     bool hasEventAuxiliaryBranch = false;
@@ -70,21 +70,31 @@ void RNTupleParallelOutputer::setupForLane(unsigned int iLaneIndex, std::vector<
   laneInfos_[iLaneIndex].fillContext = ntuple_->CreateFillContext();
 }
 
-void RNTupleParallelOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
+void RNTupleAsyncOutputer::productReadyAsync(unsigned int iLaneIndex, DataProductRetriever const& iDataProduct, TaskHolder iCallback) const {
 }
 
-void RNTupleParallelOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
+void RNTupleAsyncOutputer::outputAsync(unsigned int iLaneIndex, EventIdentifier const& iEventID, TaskHolder iCallback) const {
   auto runningClock = startClock();
   auto start = std::chrono::high_resolution_clock::now();
 
-  fillProducts(iEventID, laneInfos_[iLaneIndex]);
+  auto context = fillProducts(iEventID, laneInfos_[iLaneIndex]);
 
+  if(context) {
+    auto pTime = &flushClusterTime_;
+    queue_.push(*iCallback.group(), [context, pTime, callback=std::move(iCallback)]() mutable {
+       auto start = std::chrono::high_resolution_clock::now();
+       context->FlushCluster();
+       auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+       *pTime += time.count();
+                                    });
+  }
+  
   auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
   parallelTime_ += time.count();
   stopClock(runningClock);
 }
 
-decltype(std::chrono::high_resolution_clock::now()) RNTupleParallelOutputer::startClock() const {
+decltype(std::chrono::high_resolution_clock::now()) RNTupleAsyncOutputer::startClock() const {
   std::lock_guard guard(wallclockMutex_);
   if( 1 == ++nConcurrentCalls_) {
     wallclockStartTime_ = std::chrono::high_resolution_clock::now();
@@ -92,7 +102,7 @@ decltype(std::chrono::high_resolution_clock::now()) RNTupleParallelOutputer::sta
   return wallclockStartTime_;
 }
 
-void RNTupleParallelOutputer::stopClock(decltype(std::chrono::high_resolution_clock::now()) const& start) const {
+void RNTupleAsyncOutputer::stopClock(decltype(std::chrono::high_resolution_clock::now()) const& start) const {
   bool shouldAdd = false;
   decltype(std::chrono::high_resolution_clock::now()) end;
   {
@@ -109,7 +119,7 @@ void RNTupleParallelOutputer::stopClock(decltype(std::chrono::high_resolution_cl
   }
 }
 
-void RNTupleParallelOutputer::printSummary() const {
+void RNTupleAsyncOutputer::printSummary() const {
   auto start = std::chrono::high_resolution_clock::now();
   laneInfos_.clear();
   ntuple_.reset();
@@ -117,15 +127,16 @@ void RNTupleParallelOutputer::printSummary() const {
 
   start = std::chrono::high_resolution_clock::now();
 
-  std::cout <<"RNTupleParallelOutputer\n"
+  std::cout <<"RNTupleAsyncOutputer\n"
     "  total wallclock time at end event: "<<wallclockTime_.load()<<"us\n"
     "  total non-serializer parallel time at end event: "<<parallelTime_.load()<<"us\n"
-    "  end of job RNTupleParallelWriter shutdown time: "<<deleteTime.count()<<"us\n";
+    "  time in FlushCluster: "<<flushClusterTime_<<"us\n"
+    "  end of job RNTupleAsyncWriter shutdown time: "<<deleteTime.count()<<"us\n";
 }
 
-void RNTupleParallelOutputer::fillProducts(
+ROOT::Experimental::RNTupleFillContext* RNTupleAsyncOutputer::fillProducts(
     EventIdentifier const& iEventID,
-    RNTupleParallelOutputer::LaneContainer const& entry ) const
+    RNTupleAsyncOutputer::LaneContainer const& entry ) const
 {
   auto start = std::chrono::high_resolution_clock::now();
   auto thisOffset = eventGlobalOffset_++;
@@ -140,23 +151,34 @@ void RNTupleParallelOutputer::fillProducts(
   if(not hasEventAuxiliaryBranch_) {
     rentry->BindRawPtr("EventID", &temp);
   }
-  entry.fillContext->Fill(*rentry);
+  ROOT::RNTupleFillStatus status;
+  entry.fillContext->FillNoFlush(*rentry, status);
+  if(status.ShouldFlushCluster()) {
+    //doesn't require calls to the TFile
+    entry.fillContext->FlushColumns();
+    collateTime_ += std::chrono::duration_cast<decltype(collateTime_)>(std::chrono::high_resolution_clock::now() - start);
 
+    return entry.fillContext.get();
+     //this need synchronization across all callers to the TFile
+     //fillContext.FlushCluster();
+  }
+  
   collateTime_ += std::chrono::duration_cast<decltype(collateTime_)>(std::chrono::high_resolution_clock::now() - start);
+  return nullptr;
 }
 
 
 namespace {
 class Maker : public OutputerMakerBase {
   public:
-    Maker(): OutputerMakerBase("RNTupleParallelOutputer") {}
+    Maker(): OutputerMakerBase("RNTupleAsyncOutputer") {}
     std::unique_ptr<OutputerBase> create(unsigned int iNLanes, ConfigurationParameters const& params) const final {
 
       auto result = parseRNTupleConfig(params);
       if(not result) {
         return {};
       }
-      return std::make_unique<RNTupleParallelOutputer>(result->first, iNLanes, result->second);
+      return std::make_unique<RNTupleAsyncOutputer>(result->first, iNLanes, result->second);
     }
 };
 

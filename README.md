@@ -106,6 +106,12 @@ Reads a standard ROOT file. All concurrent Events share the same Source. Access 
 > threaded_io_test -s SerialRootSource=test.root -t 1 -n 1000
 ```
 
+#### SerialRootTreeGetEntrySource
+Reads a standard ROOT file. All concurrent Events share the same Source. Access to the Source is serialized for thread-safety. All the Event data is read via a `TTree::GetEntry` the first time any data from that entry is required. In addition to its name, one needs to give the file to read, e.g.
+```
+> threaded_io_test -s SerialRootTreeGetEntrySource=test.root -t 1 -n 1000
+```
+
 
 #### RepeatingRootSource
 Reads the first N events from a standard ROOT file at construction time. The deserialized data products are held in memory. Going from event to event is just a switch of the memory addresses to be used. In addition to its name, one needs to give the file to read and, optionally, the number of events to read (default is 10) and a singular TBranch to read, e.g.

@@ -63,10 +63,14 @@ int main(int argc, char* argv[]) {
     CLI11_PARSE(app, argc, argv);
     
     tbb::global_control c(tbb::global_control::max_allowed_parallelism, parallelism);
-    
+    tbb::task_arena arena(parallelism);
+        
     //Tell Root we want to be multi-threaded
     if(useIMT) {
-      ROOT::EnableImplicitMT(parallelism);
+      //force ROOT to use the major arena
+      arena.execute([]() {
+       ROOT::EnableImplicitMT(ROOT::EIMTConfig::kExistingTBBArena);
+                    });
     } else {
       ROOT::EnableThreadSafety();
     }
@@ -151,8 +155,6 @@ int main(int argc, char* argv[]) {
     }
     
     std::atomic<long> ievt{0};
-    
-    tbb::task_arena arena(parallelism);
     
     decltype(std::chrono::high_resolution_clock::now()) start;
     auto pOut = out.get();

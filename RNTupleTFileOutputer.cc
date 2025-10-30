@@ -55,12 +55,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
       fieldIDs_.emplace_back("EventID");
     }
     // https://root.cern/doc/v626/classROOT_1_1Experimental_1_1RNTupleWriteOptions.html
-    auto writeOptions = ROOT::RNTupleWriteOptions();
-    writeOptions.SetCompression(config_.compressionAlgorithm_, config_.compressionLevel_);
-    writeOptions.SetMaxUnzippedPageSize(config_.maxUnzippedPageSize_);
-    writeOptions.SetApproxZippedClusterSize(config_.approxZippedClusterSize_);
-    writeOptions.SetMaxUnzippedClusterSize(config_.maxUnzippedClusterSize_);
-    writeOptions.SetUseBufferedWrite(config_.useBufferedWrite_);
+    auto writeOptions = writeOptionsFrom(config_);
     
     ntuple_ = ROOT::RNTupleWriter::Append(std::move(model), "Events", file_, writeOptions);
   }

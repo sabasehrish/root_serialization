@@ -3,6 +3,7 @@
 #include "OutputerFactory.h"
 #include "FunctorTask.h"
 #include "RNTupleOutputerConfig.h"
+#include "RNTupleOutputerFieldMaker.h"
 
 #include <ROOT/RNTupleModel.hxx>
 #include <ROOT/RField.hxx>
@@ -26,6 +27,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
     
     auto model = ROOT::RNTupleModel::CreateBare();
     fieldIDs_.reserve(iDPs.size());
+    RNTupleOutputerFieldMaker fieldMaker(config_);
     for(auto const& dp: iDPs) {
       // chop last . if present
       if(dp.name() == eventAuxiliaryBranchName) {
@@ -34,7 +36,7 @@ void RNTupleTFileOutputer::setupForLane(unsigned int iLaneIndex, std::vector<Dat
       auto name = dp.name().substr(0, dp.name().find("."));
       if ( config_.verbose_ > 1 ) std::cout << "-------- Creating field for " << name << " of type " << dp.classType()->GetName() << "\n";
       try { 
-        auto field = ROOT::RFieldBase::Create(name, dp.classType()->GetName()).Unwrap();
+        auto field = fieldMaker.make(name, dp.classType()->GetName());
         assert(field);
         if ( config_.verbose_ > 1 ) ROOT::Internal::RPrintSchemaVisitor(std::cout, '*', 1000, 10).VisitField(*field);
         model->AddField(std::move(field));

@@ -98,6 +98,7 @@ add_executable(threaded_io_test
   RNTupleAsyncOutputer.cc
   RNTupleParallelOutputer.cc
   RNTupleOutputerConfig.cc
+  RNTupleOutputerFieldMaker.cc
   SerialRNTupleSource.cc
   SerialRNTupleTFileSource.cc
   SerialRNTupleRetrievers.cc
@@ -183,6 +184,8 @@ add_test(NAME EventSleepWaiterTest COMMAND bash -c "echo 300000 > times.wait; ${
 
 add_test(NAME RNTupleOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleOutputer=test_empty.rntpl)
 add_test(NAME RNTupleOutputerTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl -t 1 -n 10 -o TestProductsOutputer")
+add_test(NAME RNTupleOutputerTestProductsNoSplit COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod_nosplit.rntpl:noSplitFields=all; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod_nosplit.rntpl -t 1 -n 10 -o TestProductsOutputer")
+add_test(NAME RNTupleOutputerTestProductsExplicitNoSplit COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod_nosplit.rntpl:noSplitFields=ints._0,floats._0; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod_nosplit.rntpl -t 1 -n 10 -o TestProductsOutputer")
 add_test(NAME RNTupleOutputerDelayedReadTestProducts COMMAND bash -c "${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s TestProductsSource -t 1 -n 10 -o RNTupleOutputer=test_prod.rntpl; ${CMAKE_CURRENT_BINARY_DIR}/threaded_io_test -s SerialRNTupleSource=test_prod.rntpl:delayReading=y -t 1 -n 10 -o TestProductsOutputer")
 
 add_test(NAME RNTupleTFileOutputerEmptyTest COMMAND threaded_io_test -s EmptySource -t 1 -n 10 -o RNTupleTFileOutputer=test_empty.rntpl)

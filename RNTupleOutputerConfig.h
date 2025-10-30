@@ -3,6 +3,8 @@
 
 #include <optional>
 #include <utility>
+#include <set>
+#include <string>
 #include <Compression.h>
 #include <ROOT/RNTupleWriter.hxx>
 
@@ -11,14 +13,17 @@ namespace cce::tf {
     RNTupleOutputerConfig() {
       ROOT::RNTupleWriteOptions options;
       maxUnzippedPageSize_ = options.GetMaxUnzippedPageSize();
-      approxZippedClusterSize_ = options.GetApproxZippedClusterSize();
+      initialUnzippedPageSize_ = options.GetInitialUnzippedPageSize();
+  approxZippedClusterSize_ = options.GetApproxZippedClusterSize();
       maxUnzippedClusterSize_ = options.GetMaxUnzippedClusterSize();
       pageBufferBudget_ = options.GetPageBufferBudget();
     }
+    std::set<std::string> noSplitFields_;
     int verbose_=0;
     int compressionLevel_=9;
     ROOT::RCompressionSetting::EAlgorithm::EValues compressionAlgorithm_= ROOT::RCompressionSetting::EAlgorithm::kUseGlobal;
     std::size_t maxUnzippedPageSize_;
+    std::size_t initialUnzippedPageSize_;
     std::size_t approxZippedClusterSize_;
     std::size_t maxUnzippedClusterSize_;
     std::size_t pageBufferBudget_;

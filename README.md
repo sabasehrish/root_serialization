@@ -241,11 +241,15 @@ or
 Writes the _event_ data products into a ROOT file using an RNTuple. Specify both the name of the Outputer and the file to write as well as many  optional parameters:
 - compressionLevel: compression level 0-9, default 9
 - compressionAlgorithm: name of compression algorithm. Allowed valued "", "zlib", "lzma", "lz4", "zstd"
-- approxUnzippedPageSize:  should be just large enough so compression algorithm doesn't benefit from larger page sizes: Default size 64*1024
-- approxZippedClusterSize: Target compressed cluster size: Default size 50,000,000
-- maxUnzippedClusterSize: Memory limit for commiting a cluster. Default 512*1024*1024
-- hasSmallClusters: If 'true', use 32 bit index columns instead of 64 bit columns. Limits cluster size to 512MB. Default false
+- approxZippedClusterSize: Target compressed cluster size: Default size is ROOT's default.
+- maxUnzippedClusterSize: Memory limit for commiting a cluster. Default is ROOT's default.
+- initialUnzippedPageSize: Initially, columns start with a page of this size (bytes). 
+- pageBufferBudget:The maximum size that the sum of all page buffers used for writing into a persistent sink are allowed to use. If set to zero, RNTuple will auto-adjust the budget based on the value of 'approxZippedClusterSize'. If set manually, the size needs to be large enough to hold all initial page buffers.
+- useDirectIO: Set use of direct IO. this introduces alignment requirements that may vary between filesystems and platforms.
 - useBufferedWrite: default true
+- enablePageChecksums: default true
+- printEstimateWriteMemoryUsage: 
+- noSplitFields: a comma separated list of sub field names which should not be split. If 'all' is given as the only field name, all possible fields will not be split.
 ```
 > threaded_io_test -s ReplicatedRootSource=test.root -t 1 -n 10 -o RNTupleOutputer=test.rntpl
 ```

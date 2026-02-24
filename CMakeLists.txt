@@ -52,6 +52,12 @@ REFLEX_GENERATE_DICTIONARY(batchevents_classes_dict EventIdentifiers.h SELECTION
 add_library(batchevents_classes_dictDict SHARED batchevents_classes_dict.cxx)
 target_link_libraries(batchevents_classes_dictDict PUBLIC ROOT::RIO ROOT::Net)
 
+#make the library holding the root dictionaries for RootEventOutputer/RootBatchEventsOutputer Meta branch
+REFLEX_GENERATE_DICTIONARY(rootevent_classes_dict rootevent_classes.h SELECTION rootevent_classes_def.xml)
+
+add_library(rootevent_classes_dictDict SHARED rootevent_classes_dict.cxx)
+target_link_libraries(rootevent_classes_dictDict PUBLIC ROOT::RIO ROOT::Net)
+
 add_executable(threaded_io_test
   DeserializeStrategy.cc
   EmptySource.cc
@@ -122,6 +128,7 @@ target_link_libraries(threaded_io_test
                               configKeys
                               sequence_classes_dictDict
                               batchevents_classes_dictDict
+                              rootevent_classes_dictDict
                               zstd::libzstd_shared)
 
 add_subdirectory(cms)
